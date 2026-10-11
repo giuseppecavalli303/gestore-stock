@@ -1,0 +1,6 @@
+# Le stampe dello stock contengono nomi di clienti e venditori: non vanno mai pubblicate
+*.pdf
+*.PDF
+node_modules/
+dist/
+.claude/
