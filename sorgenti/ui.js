@@ -136,8 +136,12 @@
     if (m.demo) { $('metaLine').textContent = 'Dati di esempio'; $('demo').hidden = false; return; }
     $('demo').hidden = true;
     const ok = m.expected != null && m.expected === m.count && !(m.badSec || []).length;
-    const when = m.printDate ? `Stampa del ${dIt(m.day)} ore ${m.printDate.slice(11)}` : 'Stampa caricata';
-    $('metaLine').innerHTML = `${esc(when)} · <b class="${ok ? '' : 'warn'}">${ok ? N(m.count) + ' veicoli, totale verificato' : N(m.count) + ' letti su ' + N(m.expected || 0) + ' dichiarati'}</b>${m.day && m.day < new Date().toLocaleDateString('sv') ? ' · <b class="warn">non è la stampa di oggi</b>' : ''}`;
+    const ora = m.printDate ? m.printDate.slice(11) : '';
+    const stale = m.day && m.day < new Date().toLocaleDateString('sv');
+    const conta = ok ? N(m.count) + ' veicoli, totale verificato' : N(m.count) + ' letti su ' + N(m.expected || 0) + ' dichiarati';
+    // sul telefono la riga e' corta e l'avviso viene per primo, cosi' non finisce tagliato
+    $('metaLine').innerHTML = `<span class="m-long">${m.printDate ? `Stampa del ${dIt(m.day)} ore ${ora}` : 'Stampa caricata'} · <b class="${ok ? '' : 'warn'}">${conta}</b>${stale ? ' · <b class="warn">non è la stampa di oggi</b>' : ''}</span>`
+      + `<span class="m-short">${stale ? '<b class="warn">Non di oggi</b> · ' : ''}${dIt(m.day).slice(0, 5)} ${ora} · <b class="${ok ? '' : 'warn'}">${ok ? N(m.count) + ' veicoli' : N(m.count) + ' su ' + N(m.expected || 0)}</b></span>`;
   }
   const PRESETS = {
     all: { label: 'Veicoli in stock', set() {} },
@@ -187,6 +191,7 @@
     const range = r => { const v = F.r[r.k] || [null, null]; return `<details class="fg" ${r.open ? 'open' : ''}><summary><span>${r.label}</span></summary><div class="body"><div class="range"><label for="r_${r.k}_0">Da<input id="r_${r.k}_0" type="number" inputmode="numeric" min="0" step="${r.step}" data-r="${r.k}" data-i="0" value="${v[0] ?? ''}"></label><label for="r_${r.k}_1">A<input id="r_${r.k}_1" type="number" inputmode="numeric" min="0" step="${r.step}" data-r="${r.k}" data-i="1" value="${v[1] ?? ''}"></label></div>${(r.quick || []).map(q => `<button class="chip" data-q="${r.k}" data-lo="${q[0] ?? ''}" data-hi="${q[1] ?? ''}" aria-pressed="${v[0] === q[0] && v[1] === q[1]}">${q[2]}</button>`).join('')}</div></details>`; };
     h += facet(FACETS[0]) + facet(FACETS[1]) + facet(FACETS[2]) + range(RANGES[0]) + range(RANGES[1]) + range(RANGES[2]) + range(RANGES[3]) + facet(FACETS[3]) + facet(FACETS[4]) + range(RANGES[4]) + FACETS.slice(5).map(facet).join('');
     h += `<details class="fg" open><summary><span>Altro</span></summary><div class="body">${TRIS.map(t => `<div class="tri"><span>${t.label}</span>${seg('tri:' + t.k, [['', 'Tutte'], ['true', 'Sì'], ['false', 'No']], F.tri[t.k] == null ? '' : F.tri[t.k])}</div>`).join('')}</div></details>`;
+    h += `<div class="fdone"><button class="btn btn-primary" id="fClose2">Mostra <span id="fCount" class="num"></span></button></div>`;
     pendingScroll = $('filters').scrollTop;
     $('filters').innerHTML = h;
   }
@@ -215,6 +220,7 @@
   }
   function renderCount() {
     const n = S.list.length, tot = (F.delta === 'gone' ? S.gone : S.cars).length;
+    if ($('fCount')) $('fCount').textContent = N(n) + (n === 1 ? ' veicolo' : ' veicoli');
     $('count').innerHTML = `<span class="num">${N(n)}</span> ${n === 1 ? 'veicolo' : 'veicoli'}<small>${n === tot ? '' : 'su ' + N(tot)}${F.delta === 'gone' ? ' usciti dallo stock' : ''}</small>`;
   }
   function renderActive() {
@@ -225,6 +231,7 @@
     for (const f of FACETS) for (const v of F.sets[f.k]) a.push(['set:' + f.k + ':' + v, v]);
     for (const r of RANGES) { const v = F.r[r.k]; if (v && (v[0] != null || v[1] != null)) a.push(['r:' + r.k, `${r.label.replace(/ \(.*/, '')}: ${v[0] != null ? 'da ' + N(v[0]) : ''} ${v[1] != null ? 'a ' + N(v[1]) : ''}`.replace(/(\d)\.(\d{3})(?=\D|$)/g, r.k === 'anno' ? '$1$2' : '$1.$2')]); }
     for (const t of TRIS) if (F.tri[t.k] != null) a.push(['tri:' + t.k, t.label + ': ' + (F.tri[t.k] ? 'sì' : 'no')]);
+    $('btnFilters').textContent = a.length ? `Filtri · ${a.length}` : 'Filtri';
     $('active').innerHTML = a.map(([k, l]) => `<button class="chip x" data-rm="${esc(k)}" aria-label="Rimuovi filtro ${esc(l)}">${esc(l)} ✕</button>`).join('') + (a.length > 1 ? '<button class="linkbtn" data-rm="all">Azzera tutto</button>' : '');
   }
   const stPill = c => (c._gone ? '<span class="pill s-4">Uscita</span>' : c.free ? '<span class="pill s-free">Libera</span>' : c.st === 1 || (c.st === 0 && c.booked) ? '<span class="pill s-booked">Prenotata</span>' : `<span class="pill s-${c.st}">${esc(c.stato)}</span>`);
@@ -274,11 +281,11 @@
         <section><h4>Pubblicazione e pratiche</h4><dl class="dl">${row('AutoScout', c.as ? 'Sì' + (c.asDate ? ', dal ' + dIt(c.asDate) : '') : 'No')}${row('Check list', c.check ? 'Sì' + (c.checkDate ? ', il ' + dIt(c.checkDate) : '') : 'No')}${row('Prezzo speciale', yn(c.spec))}${row('IVA esposta', yn(c.iva))}${row('Mini PP', yn(c.mini))}${row('Foglio verde', yn(c.fv))}${row('Note', c.note, true)}</dl></section>
       </div>`;
     $('drawer').hidden = false;
-    requestAnimationFrame(() => { $('drawer').classList.add('on'); $('scrim').classList.add('on'); });
+    requestAnimationFrame(() => { $('drawer').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); });
     $('dClose').focus();
     $('dCopy').onclick = () => copy(c.targa, 'Targa copiata');
   }
-  function closeAll() { $('drawer').classList.remove('on'); $('filters').classList.remove('on'); $('scrim').classList.remove('on'); setTimeout(() => { if (!$('drawer').classList.contains('on')) $('drawer').hidden = true; }, 350); }
+  function closeAll() { document.documentElement.classList.remove('locked'); $('drawer').classList.remove('on'); $('filters').classList.remove('on'); $('scrim').classList.remove('on'); setTimeout(() => { if (!$('drawer').classList.contains('on')) $('drawer').hidden = true; }, 350); }
 
   let toastT;
   function toast(msg, err) { const t = $('toast'); t.textContent = msg; t.classList.toggle('err', !!err); t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), err ? 6000 : 2800); }
@@ -340,7 +347,7 @@
   $('sort').onchange = () => { S.col = null; apply(); };
   const setView = v => { S.view = v; $('vCards').setAttribute('aria-pressed', String(v === 'cards')); $('vTable').setAttribute('aria-pressed', String(v === 'table')); try { localStorage.setItem('su.view', v); } catch (e) {} renderList(); };
   $('vCards').onclick = () => setView('cards'); $('vTable').onclick = () => setView('table');
-  $('btnFilters').onclick = () => { $('filters').classList.add('on'); $('scrim').classList.add('on'); };
+  $('btnFilters').onclick = () => { $('filters').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); };
   $('scrim').onclick = closeAll;
   addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('q').focus(); } });
   $('btnCopy').onclick = () => {
@@ -350,10 +357,10 @@
   };
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose');
+    const t = e.target.closest('th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose,#fClose2');
     if (!t) return;
     if (t.dataset.col != null) { const i = +t.dataset.col; S.col = S.col && S.col.i === i ? { i, dir: -S.col.dir } : { i, dir: 1 }; $('sort').value = 'col'; return apply(); }
-    if (t.id === 'fClose') return closeAll();
+    if (t.id === 'fClose' || t.id === 'fClose2') return closeAll();
     if (t.id === 'fReset') { resetF(); activePreset = 'all'; renderFilters(); return apply(); }
     if (t.dataset.preset) return usePreset(t.dataset.preset === activePreset ? 'all' : t.dataset.preset);
     if (t.dataset.delta) { const v = t.dataset.delta; F.delta = F.delta === v ? null : v; return apply(); }

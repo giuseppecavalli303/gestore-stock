@@ -230,19 +230,81 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--hover)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 .toast.err{color:var(--bad)}
 
+.m-short,.fdone{display:none}
+html.locked,html.locked body{overflow:hidden}
+@media (hover:none){
+  .card:hover{transform:none;box-shadow:var(--shadow-sm),inset 0 1px 0 var(--spec)}
+  .kpi:hover{transform:none}
+}
+
+/* telefono e tablet: ricerca sempre in vista, comandi in basso a portata di pollice, pannelli che salgono dal fondo */
 @media (max-width:980px){
-  .app{padding-inline:16px}
-  .top{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px 12px;border-radius:22px}
+  .app{padding-inline:16px;padding-block:10px 112px;gap:12px}
+  .glass{-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
+  .sky i{animation:none;filter:blur(60px)}
+  .m-long{display:none} .m-short{display:inline}
+
+  /* la riga del marchio scorre via, resta agganciata solo la ricerca */
+  .top{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px;border-radius:24px;top:calc(env(safe-area-inset-top,0px) - 58px)}
+  .brand{height:44px;gap:10px}
+  .brand>div:last-child{min-width:0}
+  .mark{width:36px;height:36px;border-radius:11px}
+  .brand h1{font-size:17px}
+  .brand small{font-size:11.5px;overflow:hidden;text-overflow:ellipsis}
+  #btnLoad{width:44px;padding:0;justify-content:center}
+  #btnLoad span{display:none}
   .search{grid-column:1/-1;order:3}
-  .brand small{white-space:normal}
+  .search input{font-size:16px;height:46px}
+
   .layout{grid-template-columns:minmax(0,1fr)}
-  .filters{position:fixed;z-index:70;inset:auto 8px calc(env(safe-area-inset-bottom,0px) + 8px) 8px;top:auto;max-height:82vh;transform:translateY(110%);transition:transform .35s cubic-bezier(.2,.8,.2,1);background:linear-gradient(140deg,var(--solid),var(--glass-hi))}
+  .bar{margin-bottom:8px}
+  .bar .tools{position:fixed;z-index:40;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;padding:8px;border-radius:999px;background:linear-gradient(140deg,var(--solid),var(--glass-hi));-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);border:1px solid var(--edge);box-shadow:var(--shadow),inset 0 1px 0 var(--spec)}
+  .filters-btn{display:inline-flex;height:44px;padding:0 18px;font-size:15px;background:var(--accent);color:var(--accent-ink);border:0;justify-content:center}
+  .bar .tools .sel{height:44px;width:100%;font-size:16px}
+  .bar .tools .seg{height:44px}
+  .bar .tools .seg button{height:38px;padding:0 12px}
+  #btnCopy{display:none}
+
+  .filters{position:fixed;z-index:70;inset:auto 0 0 0;top:auto;max-height:88vh;max-height:88dvh;border-radius:26px 26px 0 0;padding:8px 16px 0;transform:translateY(105%);transition:transform .35s cubic-bezier(.2,.8,.2,1);background:linear-gradient(140deg,var(--solid),var(--glass-hi))}
   .filters.on{transform:none}
-  .filters-btn{display:inline-flex}
   .sheet-close{display:inline}
-  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .kpi .v{font-size:24px}
+  .fdone{display:block;position:sticky;bottom:0;z-index:3;padding:14px 0 calc(env(safe-area-inset-bottom,0px) + 14px);background:linear-gradient(transparent,var(--bg) 38%)}
+  .fdone .btn{width:100%;justify-content:center;height:50px;font-size:16px}
+
+  .drawer{top:auto;left:0;right:0;bottom:0;width:auto;max-height:92vh;max-height:92dvh;border-radius:26px 26px 0 0;transform:translateY(105%)}
+  .drawer .scroll{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}
+  .drawer .close{width:44px;height:44px}
+  .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 86px)}
   .grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+}
+
+@media (max-width:700px){
+  /* riepilogo e viste rapide scorrono di lato invece di occupare mezza pagina */
+  .kpis{display:flex;overflow-x:auto;gap:8px;margin-inline:-16px;padding:2px 16px 8px;scroll-snap-type:x proximity;scrollbar-width:none}
+  .kpis::-webkit-scrollbar,.strip::-webkit-scrollbar{display:none}
+  .kpi{flex:0 0 130px;padding:12px 14px;scroll-snap-align:start;box-shadow:var(--shadow-sm),inset 0 1px 0 var(--spec)}
+  .kpi .v{font-size:23px}
+  .kpi .l{font-size:12px}
+  .strip{flex-wrap:nowrap;overflow-x:auto;margin-inline:-16px;padding-inline:16px;scrollbar-width:none}
+  .strip .chip,.strip .lab{flex:none}
+  .chip{min-height:38px;padding:6px 13px}
+  .seg button{height:38px}
+  .tri{grid-template-columns:minmax(0,1fr) 172px}
+  .tri .seg button{height:34px}
+  .range input{font-size:16px;height:44px}
+  .grid{grid-template-columns:minmax(0,1fr);gap:12px}
+  .card{padding:14px;border-radius:20px}
+  .card .mod{min-height:0}
+  .bar .count{font-size:19px}
+  .demo{padding:16px}
+  .demo .btn{width:100%;justify-content:center}
+  .drawer header h2{font-size:23px}
+  .bigprice .price{font-size:30px}
+}
+@media (max-width:480px){
+  /* sul telefono si lavora a schede: la tabella resta per schermi piu' larghi */
+  .bar .tools{grid-template-columns:auto minmax(0,1fr)}
+  .bar .tools .seg{display:none}
 }
 </style>
 
