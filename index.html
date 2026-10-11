@@ -8,7 +8,7 @@
   --bg:#e6ecf4; --ink:#0c1a2b; --ink2:#44556a; --ink3:#73829a;
   --glass:rgba(255,255,255,.46); --glass-hi:rgba(255,255,255,.74); --solid:rgba(255,255,255,.82);
   --edge:rgba(255,255,255,.95); --hair:rgba(12,26,43,.09); --spec:rgba(255,255,255,.9);
-  --field:rgba(255,255,255,.6); --hover:rgba(12,26,43,.05);
+  --field:rgba(255,255,255,.6); --menu:#ffffff; --hover:rgba(12,26,43,.05);
   --accent:#0a5cf5; --accent-ink:#ffffff; --accent-soft:rgba(10,92,245,.11);
   --ok:#0b7f57; --ok-soft:rgba(11,127,87,.13); --warn:#a85f00; --warn-soft:rgba(214,138,0,.17);
   --bad:#c2332a; --bad-soft:rgba(194,51,42,.12); --info:#5a45d6; --info-soft:rgba(90,69,214,.12); --mute-soft:rgba(12,26,43,.07);
@@ -25,7 +25,7 @@
   --bg:#060b13; --ink:#edf2f9; --ink2:#a8b5c8; --ink3:#72819a;
   --glass:rgba(28,40,62,.44); --glass-hi:rgba(52,68,98,.5); --solid:rgba(22,31,48,.86);
   --edge:rgba(255,255,255,.16); --hair:rgba(255,255,255,.08); --spec:rgba(255,255,255,.22);
-  --field:rgba(255,255,255,.07); --hover:rgba(255,255,255,.07);
+  --field:rgba(255,255,255,.07); --menu:#172236; --hover:rgba(255,255,255,.07);
   --accent:#62a4ff; --accent-ink:#04101f; --accent-soft:rgba(98,164,255,.16);
   --ok:#55d9a6; --ok-soft:rgba(85,217,166,.14); --warn:#f3b750; --warn-soft:rgba(243,183,80,.15);
   --bad:#ff8077; --bad-soft:rgba(255,128,119,.15); --info:#ab9dff; --info-soft:rgba(171,157,255,.16); --mute-soft:rgba(255,255,255,.08);
@@ -38,7 +38,7 @@
   --bg:#060b13; --ink:#edf2f9; --ink2:#a8b5c8; --ink3:#72819a;
   --glass:rgba(28,40,62,.44); --glass-hi:rgba(52,68,98,.5); --solid:rgba(22,31,48,.86);
   --edge:rgba(255,255,255,.16); --hair:rgba(255,255,255,.08); --spec:rgba(255,255,255,.22);
-  --field:rgba(255,255,255,.07); --hover:rgba(255,255,255,.07);
+  --field:rgba(255,255,255,.07); --menu:#172236; --hover:rgba(255,255,255,.07);
   --accent:#62a4ff; --accent-ink:#04101f; --accent-soft:rgba(98,164,255,.16);
   --ok:#55d9a6; --ok-soft:rgba(85,217,166,.14); --warn:#f3b750; --warn-soft:rgba(243,183,80,.15);
   --bad:#ff8077; --bad-soft:rgba(255,128,119,.15); --info:#ab9dff; --info-soft:rgba(171,157,255,.16); --mute-soft:rgba(255,255,255,.08);
@@ -151,6 +151,7 @@ h1,h2,h3,p{margin:0}
 .bar .count small{font-family:var(--f-body);font-weight:500;font-size:13px;color:var(--ink2);letter-spacing:0;margin-left:6px}
 .bar .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sel{height:36px;border-radius:999px;border:1px solid var(--hair);background:var(--field);padding:0 12px;font-weight:500;font-size:13px;max-width:100%}
+.sel option{background:var(--menu);color:var(--ink)}
 .active{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px}
 .card{--mx:50%;--my:0%;position:relative;text-align:left;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:22px;background:radial-gradient(420px circle at var(--mx) var(--my),var(--spec),transparent 45%),linear-gradient(150deg,var(--solid),var(--glass-hi));border:1px solid var(--edge);box-shadow:var(--shadow-sm),inset 0 1px 0 var(--spec);transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s;min-width:0;width:100%}
