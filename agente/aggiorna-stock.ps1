@@ -38,6 +38,13 @@ try {
 
     if (-not $trovato) { Scrivi "Nessuna mail con lo stock negli ultimi $GiorniMax giorni."; exit 0 }
 
+    # gia' pubblicata: esco in silenzio, cosi' i controlli ripetuti nella giornata non riempiono il registro
+    $attuale = Join-Path $repo 'data\stock.json'
+    if ((Test-Path $attuale) -and -not $NonPubblicare) {
+        $online = (& git -C $repo status --porcelain data) -eq $null
+        if ($online -and (Get-Content $attuale -Raw -Encoding utf8) -match ('"source":"' + [regex]::Escape($trovato.Allegato.FileName) + '"')) { exit 0 }
+    }
+
     $pdf = Join-Path $arrivi $trovato.Allegato.FileName
     if (-not (Test-Path $pdf)) { $trovato.Allegato.SaveAsFile($pdf) }
     Scrivi "Trovato $($trovato.Allegato.FileName) da $($trovato.Mittente), ricevuto il $($trovato.Quando.ToString('dd/MM/yyyy HH:mm'))."
@@ -46,15 +53,15 @@ try {
     $esito = & node agente\converti.js $pdf 2>&1 | Out-String
     $codice = $LASTEXITCODE
     Scrivi $esito.Trim()
-    if ($codice -eq 3) { exit 0 }                                     # gia' pubblicato
-    if ($codice -ne 0) { exit $codice }
+    if ($codice -ne 0 -and $codice -ne 3) { exit $codice }            # 3 = dati gia' convertiti, restano solo da pubblicare
 
     if ($NonPubblicare) { Scrivi 'Prova: dati preparati in data\, niente pubblicazione.'; exit 0 }
 
-    & git add data 2>&1 | Out-Null
-    & git commit -q -m "Stock aggiornato dalla stampa $($trovato.Allegato.FileName)" 2>&1 | Out-Null
+    # git scrive i suoi messaggi normali sul canale degli errori: passo da cmd perche' PowerShell non li scambi per un guasto
     $env:GIT_TERMINAL_PROMPT = '0'
-    $push = & git push 2>&1 | Out-String
+    cmd /c "git add data 2>&1" | Out-Null
+    cmd /c "git commit -q -m ""Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"" 2>&1" | Out-Null
+    $push = cmd /c "git push 2>&1" | Out-String
     if ($LASTEXITCODE -ne 0) { Scrivi "Pubblicazione non riuscita: $($push.Trim())"; exit 4 }
     Scrivi 'Pubblicato sul sito.'
 
