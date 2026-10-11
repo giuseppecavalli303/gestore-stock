@@ -110,9 +110,22 @@
     pa: (a, b) => (a.prezzo || 1e12) - (b.prezzo || 1e12), pd: (a, b) => b.prezzo - a.prezzo,
     km: (a, b) => a.km - b.km, anno: (a, b) => (b.imm > a.imm ? 1 : b.imm < a.imm ? -1 : 0), cv: (a, b) => b.cv - a.cv
   };
+  /* colonne della tabella: [titolo, valore, numerica] */
+  const stLabel = c => (c._gone ? 'Uscita' : c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato);
+  const TCOLS = [['Stato', stLabel], ['Targa', c => c.targa], ['Veicolo', c => c.brand + ' ' + c.family], ['Allestimento', c => c.modello], ['Imm.', c => c.imm],
+    ['Km', c => c.km, 1], ['CV', c => c.cv || null, 1], ['Alim.', c => c.fuel], ['Cambio', c => c.cambio], ['Colore', c => c.colore], ['Prezzo', c => c.prezzo || null, 1],
+    ['Ubicazione', c => c.ubic], ['Giorni', c => c.giorni, 1], ['AutoScout', c => (c.as ? 'Sì' : 'No')], ['Acquirente', c => c.acq], ['Venditore', c => c.vend]];
+  function colCmp({ i, dir }) {
+    const get = TCOLS[i][1], num = TCOLS[i][2];
+    return (a, b) => {
+      const x = get(a), y = get(b), ex = x == null || x === '', ey = y == null || y === '';
+      if (ex || ey) return ex - ey;                      // i vuoti sempre in fondo
+      return dir * (num ? x - y : String(x).localeCompare(String(y), 'it', { numeric: true, sensitivity: 'base' }));
+    };
+  }
   function apply() {
     const src = F.delta === 'gone' ? S.gone : S.cars;
-    S.list = src.filter(c => pass(c)).sort(SORTS[$('sort').value] || SORTS.ingr);
+    S.list = src.filter(c => pass(c)).sort(S.col ? colCmp(S.col) : SORTS[$('sort').value] || SORTS.ingr);
     S.shown = 60;
     renderUnderstood(); renderCount(); renderActive(); renderFacetCounts(); renderList(); syncPressed();
   }
@@ -240,7 +253,7 @@
       $('more').textContent = ''; return;
     }
     if (cards) $('grid').innerHTML = part.map(cardHtml).join('');
-    else $('tablewrap').innerHTML = `<table><thead><tr><th>Stato</th><th>Targa</th><th>Veicolo</th><th>Allestimento</th><th>Imm.</th><th class="r">Km</th><th class="r">CV</th><th>Alim.</th><th>Cambio</th><th>Colore</th><th class="r">Prezzo</th><th>Ubicazione</th><th class="r">Giorni</th><th>AutoScout</th><th>Acquirente</th><th>Venditore</th></tr></thead><tbody>${part.map(rowHtml).join('')}</tbody></table>`;
+    else { const sl = $('tablewrap').scrollLeft; $('tablewrap').innerHTML = `<table><thead><tr>${TCOLS.map((t, i) => `<th class="${t[2] ? 'r' : ''}" data-col="${i}"${S.col && S.col.i === i ? ` aria-sort="${S.col.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button title="Ordina per ${t[0]}">${t[0]}${S.col && S.col.i === i ? (S.col.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}</tr></thead><tbody>${part.map(rowHtml).join('')}</tbody></table>`; $('tablewrap').scrollLeft = sl; }
     $('more').textContent = S.shown < S.list.length ? `Mostrati ${N(part.length)} di ${N(S.list.length)} · scorri per vederne altri` : '';
   }
   new IntersectionObserver(es => { if (es[0].isIntersecting && S.shown < S.list.length) { S.shown += 60; renderList(); } }, { rootMargin: '600px' }).observe($('more'));
@@ -324,7 +337,7 @@
   let qT;
   $('q').addEventListener('input', () => { $('qClear').hidden = !$('q').value; clearTimeout(qT); qT = setTimeout(() => { S.Q = parseQuery($('q').value, S.vocab); apply(); }, 120); });
   $('qClear').onclick = () => { $('q').value = ''; $('qClear').hidden = true; S.Q = parseQuery('', S.vocab); apply(); $('q').focus(); };
-  $('sort').onchange = apply;
+  $('sort').onchange = () => { S.col = null; apply(); };
   const setView = v => { S.view = v; $('vCards').setAttribute('aria-pressed', String(v === 'cards')); $('vTable').setAttribute('aria-pressed', String(v === 'table')); try { localStorage.setItem('su.view', v); } catch (e) {} renderList(); };
   $('vCards').onclick = () => setView('cards'); $('vTable').onclick = () => setView('table');
   $('btnFilters').onclick = () => { $('filters').classList.add('on'); $('scrim').classList.add('on'); };
@@ -337,8 +350,9 @@
   };
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose');
+    const t = e.target.closest('th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose');
     if (!t) return;
+    if (t.dataset.col != null) { const i = +t.dataset.col; S.col = S.col && S.col.i === i ? { i, dir: -S.col.dir } : { i, dir: 1 }; $('sort').value = 'col'; return apply(); }
     if (t.id === 'fClose') return closeAll();
     if (t.id === 'fReset') { resetF(); activePreset = 'all'; renderFilters(); return apply(); }
     if (t.dataset.preset) return usePreset(t.dataset.preset === activePreset ? 'all' : t.dataset.preset);

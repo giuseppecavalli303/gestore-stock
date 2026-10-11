@@ -189,6 +189,9 @@ h1,h2,h3,p{margin:0}
 .tablewrap{overflow-x:auto;border-radius:var(--r-lg);padding:6px}
 table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
 th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);text-align:left;padding:10px;font-weight:600;border-bottom:1px solid var(--hair)}
+th button{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;font-weight:inherit;white-space:nowrap}
+th button:hover{color:var(--ink)}
+th[aria-sort] button{color:var(--accent)}
 td{padding:9px 10px;border-bottom:1px solid var(--hair);font-variant-numeric:tabular-nums}
 td.r,th.r{text-align:right}
 tbody tr{cursor:pointer} tbody tr:hover{background:var(--hover)}
@@ -288,6 +291,7 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--hover)}
             <option value="km">Meno chilometri</option>
             <option value="anno">Più recenti (immatricolazione)</option>
             <option value="cv">Più potenti</option>
+            <option value="col" hidden>Colonna della tabella</option>
           </select>
           <div class="seg" role="group" aria-label="Vista"><button id="vCards" aria-pressed="true">Schede</button><button id="vTable" aria-pressed="false">Tabella</button></div>
           <button class="btn btn-ghost btn-sm" id="btnCopy">Copia elenco</button>
