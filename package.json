@@ -1,0 +1,11 @@
+{
+  "name": "gestore-stock",
+  "private": true,
+  "description": "Ricerca nello stock dell'usato a partire dalla stampa PDF giornaliera",
+  "scripts": {
+    "build": "node sorgenti/build.js"
+  },
+  "dependencies": {
+    "pdfjs-dist": "3.11.174"
+  }
+}

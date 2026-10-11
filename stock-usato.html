@@ -805,7 +805,7 @@ function matchQuery(c, Q) {
     $('demo').hidden = true;
     const ok = m.expected != null && m.expected === m.count && !(m.badSec || []).length;
     const when = m.printDate ? `Stampa del ${dIt(m.day)} ore ${m.printDate.slice(11)}` : 'Stampa caricata';
-    $('metaLine').innerHTML = `${esc(when)} · <b class="${ok ? '' : 'warn'}">${ok ? N(m.count) + ' veicoli, totale verificato' : N(m.count) + ' letti su ' + N(m.expected || 0) + ' dichiarati'}</b>`;
+    $('metaLine').innerHTML = `${esc(when)} · <b class="${ok ? '' : 'warn'}">${ok ? N(m.count) + ' veicoli, totale verificato' : N(m.count) + ' letti su ' + N(m.expected || 0) + ' dichiarati'}</b>${m.day && m.day < new Date().toLocaleDateString('sv') ? ' · <b class="warn">non è la stampa di oggi</b>' : ''}`;
   }
   const PRESETS = {
     all: { label: 'Veicoli in stock', set() {} },
@@ -1056,6 +1056,18 @@ function matchQuery(c, Q) {
   try { const v = localStorage.getItem('su.view'); if (v === 'table') { S.view = 'table'; $('vCards').setAttribute('aria-pressed', 'false'); $('vTable').setAttribute('aria-pressed', 'true'); } } catch (e) {}
   const cur = store.get('su.cur');
   if (cur && cur.cars && cur.cars.length) setData(cur, store.get('su.prev')); else setData(demoData(), null);
+  // stock condiviso: pubblicato ogni mattina accanto alla pagina, vince se e' piu' recente di quello caricato a mano
+  (async () => {
+    try {
+      const get = async f => { const r = await fetch(f + '?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? r.json() : null; };
+      const shared = await get('data/stock.json');
+      if (!shared || !shared.cars || !shared.cars.length) return;
+      if (S.meta.printDate && !S.meta.demo && S.meta.printDate >= shared.meta.printDate) return;
+      let prev = null;
+      try { prev = await get('data/prev.json'); } catch (e) {}
+      setData(shared, prev);
+    } catch (e) { /* nessuno stock condiviso qui: restano i dati locali */ }
+  })();
 })();
 
 </script>
