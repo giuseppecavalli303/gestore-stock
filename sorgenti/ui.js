@@ -282,10 +282,16 @@
       </div>`;
     $('drawer').hidden = false;
     requestAnimationFrame(() => { $('drawer').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); });
+    sheetOpened();
+    $('dClose').onclick = closeAll;
     $('dClose').focus();
     $('dCopy').onclick = () => copy(c.targa, 'Targa copiata');
   }
-  function closeAll() { document.documentElement.classList.remove('locked'); $('drawer').classList.remove('on'); $('filters').classList.remove('on'); $('scrim').classList.remove('on'); setTimeout(() => { if (!$('drawer').classList.contains('on')) $('drawer').hidden = true; }, 350); }
+  // sul telefono il tasto Indietro chiude scheda e filtri invece di uscire dall'app
+  function sheetOpened() { try { if (!(history.state && history.state.sheet)) history.pushState({ sheet: 1 }, ''); } catch (e) {} }
+  function closeAll() { closeView(); try { if (history.state && history.state.sheet) history.back(); } catch (e) {} }
+  addEventListener('popstate', () => closeView());
+  function closeView() { document.documentElement.classList.remove('locked'); $('drawer').classList.remove('on'); $('filters').classList.remove('on'); $('scrim').classList.remove('on'); setTimeout(() => { if (!$('drawer').classList.contains('on')) $('drawer').hidden = true; }, 350); }
 
   let toastT;
   function toast(msg, err) { const t = $('toast'); t.textContent = msg; t.classList.toggle('err', !!err); t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), err ? 6000 : 2800); }
@@ -347,7 +353,7 @@
   $('sort').onchange = () => { S.col = null; apply(); };
   const setView = v => { S.view = v; $('vCards').setAttribute('aria-pressed', String(v === 'cards')); $('vTable').setAttribute('aria-pressed', String(v === 'table')); try { localStorage.setItem('su.view', v); } catch (e) {} renderList(); };
   $('vCards').onclick = () => setView('cards'); $('vTable').onclick = () => setView('table');
-  $('btnFilters').onclick = () => { $('filters').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); };
+  $('btnFilters').onclick = () => { $('filters').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); sheetOpened(); };
   $('scrim').onclick = closeAll;
   addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('q').focus(); } });
   $('btnCopy').onclick = () => {
