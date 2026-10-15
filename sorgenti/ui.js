@@ -12,6 +12,10 @@
   const foto = (c, size, i = 0) => (c.web && c.web.foto && c.web.foto[i] ? fotoBase() + size + '/' + c.web.foto[i] : '');
   // indirizzo per le richieste di avviso, composto qui per non lasciarlo in chiaro nella pagina
   const IO = ['giuseppe.cavalli', 'valentinoautomobili.it'].join('@');
+  // assistente: servizio Google Apps Script che custodisce la chiave di Gemini (vedi assistente/Codice.gs)
+  const AI_URL = '';
+  const AI_TOKEN = 'FTcdlNGgGU7WXN-L';
+  const aiAttivo = () => !!AI_URL && !inFrame && !S.meta.demo;
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
@@ -65,7 +69,7 @@
       S.delta = { day: prev.meta.day, new: S.cars.filter(c => c._d === 'new').length, gone: S.gone.length, price: S.cars.filter(c => c._dp != null).length, state: S.cars.filter(c => c._ds != null).length };
     }
     resetF();
-    S.Q = parseQuery($('q').value, S.vocab);
+    S.Q = capisci($('q').value);
     renderMeta(); renderKpis(); renderDelta(); renderViews(); renderFilters(true); apply();
     if (!$('stats').hidden) renderStats();
     apriDaLink();
@@ -232,8 +236,12 @@
 
   /* ---------- risultati ---------- */
   function renderUnderstood() {
-    const ch = S.Q.chips; $('understood').hidden = !ch.length;
-    $('understood').innerHTML = ch.length ? '<span>Ho capito:</span>' + ch.map(c => `<span class="u">${esc(c)}</span>`).join('') + (inFrame ? '' : `<a class="linkbtn" href="mailto:${IO}?subject=${encodeURIComponent('AVVISO STOCK: ' + $('q').value.trim())}" title="Ricevi una mail quando entra un'auto che corrisponde">Avvisami quando entra</a>`) : '';
+    const ch = S.Q.chips, testo = $('q').value.trim(), ai = aiAttivo() && testo.length > 2;
+    $('understood').hidden = !ch.length && !ai;
+    const ign = (S.Q.ignorate || []).length ? `<span class="ign">non considero: ${S.Q.ignorate.map(esc).join(', ')}</span>` : '';
+    $('understood').hidden = !ch.length && !ai && !ign;
+    if (!ch.length) { $('understood').innerHTML = (ai ? `<button class="askai" id="askAI">${ICONA_AI}Chiedi all'assistente</button>` : '') + ign; return; }
+    $('understood').innerHTML = ch.length ? '<span>Ho capito:</span>' + ch.map(c => `<span class="u">${esc(c)}</span>`).join('') + ign + (ai ? `<button class="askai" id="askAI">${ICONA_AI}Chiedi all'assistente</button>` : '') + (inFrame ? '' : `<a class="linkbtn" href="mailto:${IO}?subject=${encodeURIComponent('AVVISO STOCK: ' + $('q').value.trim())}" title="Ricevi una mail quando entra un'auto che corrisponde">Avvisami quando entra</a>`) : '';
   }
   function renderCount() {
     const n = S.list.length, tot = (F.delta === 'gone' ? S.gone : S.cars).length;
@@ -286,11 +294,11 @@
   new IntersectionObserver(es => { if (es[0].isIntersecting && S.shown < S.list.length) { S.shown += 60; renderList(); } }, { rootMargin: '600px' }).observe($('more'));
 
   /* ---------- scheda dettaglio ---------- */
-  function openDrawer(c) {
+  function openDrawer(c, daAI) {
     const row = (k, v, wide) => (v === '' || v == null ? '' : `<div class="${wide ? 'wide' : ''}"><dt>${k}</dt><dd>${esc(v)}</dd></div>`);
     const yn = b => (b ? 'Sì' : 'No');
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <header><div class="r3">${stPill(c)}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span></div>
+      <header>${daAI && S.aiUltimo ? '<button class="linkbtn" id="dBack">← Torna ai consigli</button>' : ''}<div class="r3">${stPill(c)}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span></div>
       <h2>${esc(c.brand)} ${esc(c.family)}</h2><p style="color:var(--ink2)">${esc(c.modello)}</p>
       <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button></div></header>
       <div class="scroll">
@@ -311,6 +319,7 @@
     $('dClose').focus();
     $('dCopy').onclick = () => copy(c.targa, 'Targa copiata');
     $('dShare').onclick = () => condividi(c);
+    if ($('dBack')) $('dBack').onclick = () => mostraAI(S.aiUltimo);
     storiaAuto(c);
     try { history.replaceState(history.state, '', '#' + c.targa); } catch (e) {}
   }
@@ -366,6 +375,61 @@
     const fallback = () => { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); let done = false; try { done = document.execCommand('copy'); } catch (e) {} ta.remove(); toast(done ? ok : 'Copia non riuscita in questa finestra', !done); };
     try { navigator.clipboard.writeText(text).then(() => toast(ok), fallback); } catch (e) { fallback(); }
   }
+
+  // le parole che non compaiono in nessuna auto ("figli", "vuole") non devono azzerare i risultati: le ignoro e lo dico
+  function capisci(testo) {
+    const Q = parseQuery(testo, S.vocab);
+    Q.ignorate = Q.terms.filter(w => !S.cars.some(c => c._h.includes(w)));
+    if (Q.ignorate.length) { Q.terms = Q.terms.filter(w => !Q.ignorate.includes(w)); Q.chips = Q.chips.filter(ch => !Q.ignorate.some(w => ch === '“' + w + '”')); }
+    return Q;
+  }
+
+  /* ---------- assistente (Gemini, tramite il servizio Apps Script) ---------- */
+  const ICONA_AI = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>';
+  // le auto che l'assistente puo' proporre: quelle dei filtri laterali (non la ricerca scritta, che e' la domanda), non prenotate e vendibili
+  function candidatiAI() {
+    const Q = S.Q; S.Q = parseQuery('', []);
+    let l = S.cars.filter(c => !c.booked && c.st !== 4 && pass(c));
+    S.Q = Q;
+    return l.sort(SORTS.cons).slice(0, 700);
+  }
+  const rigaAI = c => [c.targa, `${c.brand} ${c.family} ${c.modello}`.slice(0, 70), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, (c.giorni ?? '?') + ' gg', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
+  function mostraAI(st) {
+    S.aiUltimo = st;
+    const auto = (st.auto || []).map(a => ({ a, c: S.cars.find(x => x.targa === String(a.targa).toUpperCase().replace(/\s+/g, '')) })).filter(x => x.c);
+    const corpo = st.attesa ? `<div class="ai-wait"><span class="spin"></span>Gemini sta valutando ${N(st.n)} auto disponibili…</div>`
+      : st.errore ? `<p class="ai-err">${esc(st.errore)}</p>`
+      : `<div class="ai-ans">${esc(st.risposta || '')}</div>
+         <ul class="ai-list">${auto.map(({ a, c }) => `<li data-open="${esc(c.targa)}"><div class="th">${foto(c, 200) ? `<img src="${foto(c, 200)}" alt="" loading="lazy">` : ''}</div><div class="tx"><b>${esc(c.brand)} ${esc(c.family)}</b> ${plate(c.targa)}<span>${immIt(c)} · ${N(c.km)} km · ${esc(c.fuel)} · ${esc(c.cambio)} · <b>${eur(c.prezzo) || 'prezzo n.d.'}</b></span><em>${esc(a.perche)}</em></div></li>`).join('')}</ul>
+         ${(st.auto || []).length > auto.length ? '<p class="hint">Alcune auto proposte non sono state trovate nello stock e le ho tolte.</p>' : ''}
+         <p class="hint">Risposta generata da Gemini su ${N(st.n)} auto disponibili${st.filtri ? ' con i filtri attivi' : ''}. Controlla sempre i dati nella scheda prima di proporla al cliente.</p>`;
+    $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <header><span class="ai-badge">${ICONA_AI}Assistente</span><h2 class="ai-q">${esc(st.domanda)}</h2></header>
+      <div class="scroll ai">${corpo}</div>`;
+    if ($('drawer').hidden || !$('drawer').classList.contains('on')) {
+      $('drawer').hidden = false;
+      requestAnimationFrame(() => { $('drawer').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); });
+      sheetOpened();
+    }
+    $('dClose').onclick = closeAll;
+  }
+  async function chiediAI(domanda) {
+    if (!aiAttivo() || !domanda) return;
+    const lista = candidatiAI();
+    const filtri = lista.length < S.cars.filter(c => !c.booked && c.st !== 4).length;
+    if (!lista.length) return toast('Con i filtri attivi non resta nessuna auto disponibile da proporre', true);
+    const base = { domanda, n: lista.length, filtri };
+    mostraAI({ ...base, attesa: true });
+    const ctl = new AbortController(), t0 = setTimeout(() => ctl.abort(), 60000);
+    try {
+      const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: AI_TOKEN, domanda, elenco: lista.map(rigaAI).join('\n') }), signal: ctl.signal });
+      const j = await r.json();
+      if (S.aiUltimo && S.aiUltimo.domanda === domanda) mostraAI({ ...base, ...j });
+    } catch (e) {
+      mostraAI({ ...base, errore: e.name === 'AbortError' ? "L'assistente non ha risposto in tempo. Riprova." : "Non riesco a raggiungere l'assistente. Controlla la connessione e riprova." });
+    } finally { clearTimeout(t0); }
+  }
+  $('q').addEventListener('keydown', e => { if (e.key === 'Enter' && aiAttivo() && /\?\s*$/.test($('q').value)) { e.preventDefault(); chiediAI($('q').value.trim()); } });
 
   /* ---------- statistiche ---------- */
   const mediana = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
@@ -513,7 +577,7 @@
   addEventListener('drop', e => { e.preventDefault(); dragN = 0; $('drophint').hidden = true; loadFile(e.dataTransfer.files[0]); });
 
   let qT;
-  $('q').addEventListener('input', () => { $('qClear').hidden = !$('q').value; clearTimeout(qT); qT = setTimeout(() => { S.Q = parseQuery($('q').value, S.vocab); apply(); }, 120); });
+  $('q').addEventListener('input', () => { $('qClear').hidden = !$('q').value; clearTimeout(qT); qT = setTimeout(() => { S.Q = capisci($('q').value); apply(); }, 120); });
   $('qClear').onclick = () => { $('q').value = ''; $('qClear').hidden = true; S.Q = parseQuery('', S.vocab); apply(); $('q').focus(); };
   $('sort').onchange = () => { S.col = null; apply(); };
   const setView = v => { S.view = v; $('vCards').setAttribute('aria-pressed', String(v === 'cards')); $('vTable').setAttribute('aria-pressed', String(v === 'table')); try { localStorage.setItem('su.view', v); } catch (e) {} renderList(); };
@@ -561,10 +625,11 @@
   };
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-tab],[data-open],th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose,#fClose2');
+    const t = e.target.closest('#askAI,[data-tab],[data-open],th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose,#fClose2');
     if (!t) return;
     if (t.dataset.tab) return setTab(t.dataset.tab);
-    if (t.dataset.open) { const c = S.cars.find(x => x.targa === t.dataset.open); if (c) openDrawer(c); return; }
+    if (t.dataset.open) { const c = S.cars.find(x => x.targa === t.dataset.open); if (c) openDrawer(c, !!t.closest('#drawer .ai')); return; }
+    if (t.id === 'askAI') return chiediAI($('q').value.trim());
     if (t.dataset.col != null) { const i = +t.dataset.col; S.col = S.col && S.col.i === i ? { i, dir: -S.col.dir } : { i, dir: 1 }; $('sort').value = 'col'; return apply(); }
     if (t.id === 'fClose' || t.id === 'fClose2') return closeAll();
     if (t.id === 'fReset') { resetF(); activePreset = 'all'; renderFilters(); return apply(); }

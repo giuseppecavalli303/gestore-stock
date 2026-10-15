@@ -47,6 +47,8 @@ function parseQuery(raw, vocab) {
   take(/\b(\d+)\s*(km|chilometri)\b/g, (m, n) => { put('km', null, +n); });
   take(/\b(\d+)\s*(euro|eur)\b/g, (m, n) => { put('prezzo', null, +n); });
   take(/\b(19\d\d|20[0-3]\d)\b/g, (m, n) => { put('anno', +n, +n); });
+  // una cifra da sola tra 3.000 e 300.000 e' un budget: "cliente con 18 mila"
+  take(/\b(\d{4,6})\b/g, (m, n) => { n = +n; if (n < 3000 || n > 300000) return false; put('prezzo', null, n); });
 
   const kw = (re, fn) => { if (re.test(t)) { t = t.replace(re, ' '); fn(); } };
   kw(/\bnon (?:e |sono )?su autoscout|\bsenza autoscout|\bno autoscout|\bnon pubblicat\w*/g, () => { Q.as = false; });

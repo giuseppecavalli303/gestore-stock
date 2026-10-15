@@ -288,6 +288,25 @@ table.vel{white-space:nowrap}
   .stats .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .card{--cp:14px}
 }
+/* assistente */
+.understood .ign{color:var(--ink3);font-size:12.5px}
+.askai{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--accent-ink);background:linear-gradient(135deg,var(--accent),var(--info));box-shadow:var(--shadow-sm)}
+.ai-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+.drawer header h2.ai-q{font-size:20px;line-height:1.25;padding-right:44px}
+.ai-ans{font-size:15px;line-height:1.5;background:var(--accent-soft);border-radius:var(--r-md);padding:14px 16px}
+.ai-err{color:var(--bad);background:var(--bad-soft);border-radius:var(--r-md);padding:12px 14px}
+.ai-wait{display:flex;align-items:center;gap:12px;color:var(--ink2);padding:18px 4px}
+.spin{width:20px;height:20px;border-radius:50%;border:3px solid var(--accent-soft);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ai-list li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:10px;border-radius:var(--r-md);background:var(--mute-soft);cursor:pointer}
+.ai-list li:hover{background:var(--hover)}
+.ai-list .th{aspect-ratio:4/3;border-radius:10px;overflow:hidden;background:var(--glass)}
+.ai-list .th img{width:100%;height:100%;object-fit:cover;display:block}
+.ai-list .tx{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:13px}
+.ai-list .tx>span{color:var(--ink2)}
+.ai-list em{font-style:normal;color:var(--ink)}
+.ai-list .plate{vertical-align:1px;margin-left:4px;font-size:11px}
 .m-short,.fdone{display:none}
 html.locked,html.locked body{overflow:hidden}
 @media (hover:none){
@@ -376,7 +395,7 @@ html.locked,html.locked body{overflow:hidden}
     </div>
     <div class="search">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
-      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Scrivi come parli: golf diesel automatica sotto 25.000 libera a Tiburtina" aria-label="Ricerca intelligente">
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Cerca o chiedi: golf diesel automatica sotto 25.000 libera, oppure: cliente con 18 mila e due figli?" aria-label="Ricerca intelligente">
       <button class="clear" id="qClear" hidden aria-label="Cancella ricerca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <button class="btn btn-ghost" id="btnInstall" hidden>Installa app</button>
