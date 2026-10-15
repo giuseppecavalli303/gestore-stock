@@ -1,24 +1,67 @@
-# Cerca in Outlook l'ultima mail con la stampa dello stock, la converte e la pubblica sul sito.
-# Uso:  powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 [-NonPubblicare]
-param([switch]$NonPubblicare)
+# Agente dello stock usato. Gira ogni 10 minuti (operazione pianificata di Windows) e:
+#  1. legge in Outlook le richieste di avviso dei colleghi (oggetto "AVVISO STOCK: ..." / "STOP AVVISO")
+#  2. se c'e' una stampa nuova: annunci del sito -> conversione -> storico -> pubblicazione -> riepilogo e avvisi via mail
+#  3. aggiorna foto e annunci dal sito ogni 6 ore
+#  4. dalle 13, se la stampa di oggi non e' arrivata, ti avvisa una volta
+# Uso:  powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 [-NonPubblicare] [-NonInviare]
+param([switch]$NonPubblicare, [switch]$NonInviare)
 
 $ErrorActionPreference = 'Stop'
-$Mittenti  = @('Muschitiello', 'Quartieri')      # la mail deve arrivare da una di queste persone
+$Mittenti  = @('Muschitiello', 'Quartieri')      # la stampa deve arrivare da una di queste persone
 $Allegato  = 'stock_auto_usato*.pdf'
 $GiorniMax = 3                                   # quanto indietro guardare nella posta
+$OraAllarme = 13                                 # da quest'ora, se la stampa manca, mando un avviso
 
 $repo   = Split-Path $PSScriptRoot -Parent
 $arrivi = Join-Path $PSScriptRoot 'arrivi'
 $log    = Join-Path $PSScriptRoot 'agente.log'
+$statoF = Join-Path $PSScriptRoot 'stato.json'
 New-Item -ItemType Directory -Force $arrivi | Out-Null
-function Scrivi($msg) { $riga = "{0}  {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm'), $msg; Add-Content -Path $log -Value $riga -Encoding utf8; Write-Output $riga }
+Set-Location $repo
+$env:GIT_TERMINAL_PROMPT = '0'
+$oggi = (Get-Date).ToString('yyyy-MM-dd')
+
+function Scrivi($msg) { $riga = "{0}  {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm'), $msg; Add-Content -Path $log -Value $riga -Encoding utf8; Write-Host $riga }
+# node e git scrivono anche sul canale degli errori: passo da cmd perche' PowerShell non li scambi per un guasto
+function Esegui($riga) { $out = cmd /c "$riga 2>&1" | Out-String; return @{ Codice = $LASTEXITCODE; Testo = $out.Trim() } }
+function LeggiStato { if (Test-Path $statoF) { try { return Get-Content $statoF -Raw -Encoding UTF8 | ConvertFrom-Json } catch {} } return [pscustomobject]@{} }
+function SegnaStato($chiave, $valore) { $s = LeggiStato; $s | Add-Member -NotePropertyName $chiave -NotePropertyValue $valore -Force; $s | ConvertTo-Json | Set-Content $statoF -Encoding UTF8 }
+function GiaFatto($chiave) { $s = LeggiStato; return ($s.$chiave -eq $oggi) }
+
+function InviaPosta {
+    $f = Join-Path $PSScriptRoot 'posta-da-inviare.json'
+    if (-not (Test-Path $f)) { return }
+    $lista = @(Get-Content $f -Raw -Encoding UTF8 | ConvertFrom-Json)
+    foreach ($m in $lista) {
+        if ($NonInviare) { Scrivi "Prova, non inviata a $($m.to): $($m.subject)"; continue }
+        $it = $outlook.CreateItem(0)
+        $it.To = $m.to; $it.Subject = $m.subject; $it.HTMLBody = $m.html
+        $it.Send()
+        Scrivi "Mail inviata a $($m.to): $($m.subject)"
+    }
+    Remove-Item $f -Force
+}
+
+function Pubblica($messaggio) {
+    if ($NonPubblicare) { Scrivi "Prova, non pubblicato: $messaggio"; return $false }
+    $mod = Esegui 'git status --porcelain data'
+    if (-not $mod.Testo) { return $false }
+    Esegui 'git add data' | Out-Null
+    Esegui "git commit -q -m ""$messaggio""" | Out-Null
+    $push = Esegui 'git push'
+    if ($push.Codice -ne 0) { throw "Pubblicazione non riuscita: $($push.Testo)" }
+    Scrivi "Pubblicato sul sito: $messaggio"
+    return $true
+}
 
 try {
     $outlook = New-Object -ComObject Outlook.Application
     $mapi    = $outlook.GetNamespace('MAPI')
     $limite  = (Get-Date).AddDays(-$GiorniMax)
     $trovato = $null
+    $richieste = @()
 
+    # una sola passata sulla posta recente: stampe dello stock e richieste di avviso
     foreach ($store in $mapi.Stores) {
         try { $inbox = $store.GetDefaultFolder(6) } catch { continue }
         $items = $inbox.Items
@@ -26,46 +69,89 @@ try {
         foreach ($mail in $items) {
             if ($mail.Class -ne 43) { continue }                      # solo messaggi di posta
             if ($mail.ReceivedTime -lt $limite) { break }
-            if ($trovato -and $mail.ReceivedTime -le $trovato.Quando) { break }
+            if ($mail.Subject -match '^\s*((r|re|i|fw|fwd)\s*:\s*)*(stop\s+avviso|avviso\s+stock)') {
+                $richieste += [pscustomobject]@{ id = $mail.EntryID; email = $mail.SenderEmailAddress; nome = $mail.SenderName; oggetto = $mail.Subject; corpo = ($mail.Body -replace '\s+$', '').Substring(0, [Math]::Min(300, $mail.Body.Length)) }
+                continue
+            }
+            if ($trovato) { continue }
             $daChi = "$($mail.SenderName) $($mail.SenderEmailAddress)"
             if (-not ($Mittenti | Where-Object { $daChi -match $_ })) { continue }
             foreach ($att in $mail.Attachments) {
                 if ($att.FileName -like $Allegato) { $trovato = @{ Quando = $mail.ReceivedTime; Allegato = $att; Mittente = $mail.SenderName }; break }
             }
-            if ($trovato -and $trovato.Quando -eq $mail.ReceivedTime) { break }
         }
     }
 
-    if (-not $trovato) { Scrivi "Nessuna mail con lo stock negli ultimi $GiorniMax giorni."; exit 0 }
-
-    # gia' pubblicata: esco in silenzio, cosi' i controlli ripetuti nella giornata non riempiono il registro
-    $attuale = Join-Path $repo 'data\stock.json'
-    if ((Test-Path $attuale) -and -not $NonPubblicare) {
-        $online = (& git -C $repo status --porcelain data) -eq $null
-        if ($online -and (Get-Content $attuale -Raw -Encoding utf8) -match ('"source":"' + [regex]::Escape($trovato.Allegato.FileName) + '"')) { exit 0 }
+    # 1. richieste di avviso dei colleghi
+    if ($richieste.Count) {
+        $richieste | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $PSScriptRoot 'richieste.json') -Encoding UTF8
+        $r = Esegui 'node agente\posta.js richieste'
+        if ($r.Codice -ne 0) { Scrivi $r.Testo } else { InviaPosta }
     }
 
-    $pdf = Join-Path $arrivi $trovato.Allegato.FileName
-    if (-not (Test-Path $pdf)) { $trovato.Allegato.SaveAsFile($pdf) }
-    Scrivi "Trovato $($trovato.Allegato.FileName) da $($trovato.Mittente), ricevuto il $($trovato.Quando.ToString('dd/MM/yyyy HH:mm'))."
+    # 2. stampa nuova
+    $nuova = $false
+    if ($trovato) {
+        $attuale = Join-Path $repo 'data\stock.json'
+        $giaOnline = $false
+        if (Test-Path $attuale) {
+            $pulito = -not (Esegui 'git status --porcelain data/stock.json').Testo
+            $giaOnline = $pulito -and ((Get-Content $attuale -Raw -Encoding UTF8) -match ('"source":"' + [regex]::Escape($trovato.Allegato.FileName) + '"'))
+        }
+        if (-not $giaOnline) {
+            $pdf = Join-Path $arrivi $trovato.Allegato.FileName
+            if (-not (Test-Path $pdf)) { $trovato.Allegato.SaveAsFile($pdf) }
+            Scrivi "Trovato $($trovato.Allegato.FileName) da $($trovato.Mittente), ricevuto il $($trovato.Quando.ToString('dd/MM/yyyy HH:mm'))."
 
-    Set-Location $repo
-    $esito = & node agente\converti.js $pdf 2>&1 | Out-String
-    $codice = $LASTEXITCODE
-    Scrivi $esito.Trim()
-    if ($codice -ne 0 -and $codice -ne 3) { exit $codice }            # 3 = dati gia' convertiti, restano solo da pubblicare
+            $a = Esegui 'node agente\annunci.js'                      # se il sito non risponde si va avanti senza foto nuove
+            Scrivi $a.Testo
+            $c = Esegui "node agente\converti.js ""$pdf"""
+            Scrivi $c.Testo
+            if ($c.Codice -ne 0 -and $c.Codice -ne 3) { throw "Stampa non pubblicata. $($c.Testo)" }
+            $s = Esegui 'node agente\storico.js'
+            Scrivi $s.Testo
+            $nuova = Pubblica "Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"
 
-    if ($NonPubblicare) { Scrivi 'Prova: dati preparati in data\, niente pubblicazione.'; exit 0 }
+            $giorno = ((Get-Content $attuale -Raw -Encoding UTF8 | ConvertFrom-Json).meta.day)
+            if ($nuova -and (LeggiStato).riepilogo -ne $giorno) {
+                $p = Esegui 'node agente\posta.js riepilogo avvisi'
+                if ($p.Codice -ne 0) { Scrivi $p.Testo } else { InviaPosta; SegnaStato 'riepilogo' $giorno }
+            }
+            Get-ChildItem $arrivi -Filter *.pdf | Sort-Object LastWriteTime -Descending | Select-Object -Skip 15 | Remove-Item -Force
+        }
+    }
 
-    # git scrive i suoi messaggi normali sul canale degli errori: passo da cmd perche' PowerShell non li scambi per un guasto
-    $env:GIT_TERMINAL_PROMPT = '0'
-    cmd /c "git add data 2>&1" | Out-Null
-    cmd /c "git commit -q -m ""Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"" 2>&1" | Out-Null
-    $push = cmd /c "git push 2>&1" | Out-String
-    if ($LASTEXITCODE -ne 0) { Scrivi "Pubblicazione non riuscita: $($push.Trim())"; exit 4 }
-    Scrivi 'Pubblicato sul sito.'
+    # 3. foto e annunci dal sito, ogni 6 ore durante la giornata
+    $annunciF = Join-Path $repo 'data\annunci.json'
+    $ora = (Get-Date).Hour
+    if (-not $nuova -and $ora -ge 9 -and $ora -lt 20 -and (-not (Test-Path $annunciF) -or (Get-Item $annunciF).LastWriteTime -lt (Get-Date).AddHours(-6))) {
+        $a = Esegui 'node agente\annunci.js'
+        Scrivi $a.Testo
+        if ($a.Codice -eq 0) {
+            $b = Esegui 'node agente\abbina.js'
+            if ($b.Codice -eq 0) { Scrivi $b.Testo }
+            Pubblica 'Foto e annunci del sito aggiornati' | Out-Null
+        }
+    }
 
-    # tengo solo le ultime 10 stampe scaricate
-    Get-ChildItem $arrivi -Filter *.pdf | Sort-Object LastWriteTime -Descending | Select-Object -Skip 10 | Remove-Item -Force
+    # 4. stampa di oggi non ancora arrivata (domenica esclusa)
+    if ($ora -ge $OraAllarme -and (Get-Date).DayOfWeek -ne 'Sunday' -and -not (GiaFatto 'allarme')) {
+        $giorno = if (Test-Path (Join-Path $repo 'data\stock.json')) { (Get-Content (Join-Path $repo 'data\stock.json') -Raw -Encoding UTF8 | ConvertFrom-Json).meta.day } else { '' }
+        if ($giorno -ne $oggi) {
+            $p = Esegui 'node agente\posta.js allarme mancante'
+            if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'allarme' $oggi; Scrivi 'Avviso inviato: stampa di oggi non ancora arrivata.' }
+        }
+    }
 }
-catch { Scrivi "Errore: $($_.Exception.Message)"; exit 1 }
+catch {
+    $msg = $_.Exception.Message
+    Scrivi "Errore: $msg"
+    if (-not (GiaFatto 'errore')) {
+        try {
+            $testo = ($msg -replace '"', "'")
+            $p = Esegui "node agente\posta.js allarme errore ""$testo"""
+            if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'errore' $oggi }
+        } catch {}
+    }
+    exit 1
+}

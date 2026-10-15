@@ -6,3 +6,8 @@ dist/
 .claude/
 agente/arrivi/
 agente/*.log
+agente/ricerche.json
+agente/richieste.json
+agente/destinatari.txt
+agente/stato.json
+agente/posta-da-inviare.json

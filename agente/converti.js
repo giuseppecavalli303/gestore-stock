@@ -10,6 +10,7 @@ console.warn = _warn; console.log = _log;
 const root = path.join(__dirname, '..');
 const src = f => fs.readFileSync(path.join(root, 'sorgenti', f), 'utf8');
 // stesso lettore usato dall'app nel browser
+const { arricchisci, caricaAnnunci, FOTO_BASE } = require('./abbina.js');
 const { extract, normalize } = new Function(src('parser.js') + '\n' + src('norm.js') + '\nreturn { extract, normalize };')();
 
 const pdfPath = process.argv[2];
@@ -33,6 +34,9 @@ if (!pdfPath || !fs.existsSync(pdfPath)) { console.error('PDF non trovato: ' + p
   // i nomi dei clienti non escono dal PC, a meno di richiesta esplicita
   if (!conClienti) data.cars.forEach(c => { c.acq = ''; });
   m.shared = true;
+  // foto, link e dati in piu' dal sito, se gli annunci sono freschi
+  const ann = caricaAnnunci(root);
+  if (ann) { const r = arricchisci(data.cars, ann.annunci); m.annunci = { aggiornato: ann.aggiornato, totali: ann.annunci.length, abbinati: r.perTarga + r.perKm, fotoBase: FOTO_BASE }; }
   m.source = path.basename(pdfPath);
 
   const dir = path.join(root, 'data');
@@ -46,5 +50,5 @@ if (!pdfPath || !fs.existsSync(pdfPath)) { console.error('PDF non trovato: ' + p
     } catch (e) { /* file precedente illeggibile: lo sovrascrivo */ }
   }
   fs.writeFileSync(curFile, JSON.stringify(data));
-  console.log(`OK: stampa del ${m.printDate}, ${m.count} veicoli, totale verificato${conClienti ? '' : ', nomi dei clienti rimossi'}.`);
+  console.log(`OK: stampa del ${m.printDate}, ${m.count} veicoli, totale verificato${conClienti ? '' : ', nomi dei clienti rimossi'}${m.annunci ? `, ${m.annunci.abbinati} abbinati agli annunci del sito` : ''}.`);
 })().catch(e => { console.error('Errore di lettura: ' + e.message); process.exit(1); });

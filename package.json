@@ -3,7 +3,8 @@
   "private": true,
   "description": "Ricerca nello stock dell'usato a partire dalla stampa PDF giornaliera",
   "scripts": {
-    "build": "node sorgenti/build.js"
+    "build": "node sorgenti/build.js",
+    "test": "node agente/test.js"
   },
   "dependencies": {
     "pdfjs-dist": "3.11.174"
