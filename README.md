@@ -1,29 +1,50 @@
 # Gestore stock
 
-Ricerca veloce nello stock dell'usato a partire dalla stampa PDF giornaliera "Situazione stock autoveicoli usato".
+Ricerca veloce nello stock dell'usato di Valentino Automobili, aggiornata ogni giorno dalla stampa PDF del gestionale.
 
-## Come si usa
+Sito: https://giuseppecavalli303.github.io/gestore-stock/ (dal telefono si può installare come app).
 
-Apri `index.html` nel browser e trascina dentro il PDF del giorno. Il file viene letto solo nel browser: nessun dato viene inviato a un server. Lo stock resta salvato in quel browser fino al caricamento successivo, e caricando il PDF del giorno dopo l'app mostra cosa è cambiato.
+## Cosa fa l'app
 
-Serve la connessione a internet per scaricare il lettore PDF (pdf.js) e i caratteri.
+- ricerca scritta a parole ("golf diesel automatica sotto 25000 libera a Tiburtina") e filtri completi
+- foto, link all'annuncio, giro a 360° e dati in più presi da valentinoautomobili.it
+- scheda veicolo con la storia nelle stampe (cambi di prezzo e di stato) e testo pronto da mandare al cliente
+- vista Statistiche: entrate e uscite, velocità di prenotazione per modello, prezzi ritoccati, auto ferme
+- link diretti: `…/#TARGA` apre un'auto, `…/?q=golf diesel` apre una ricerca, `…/#statistiche` le statistiche
+- Excel della lista filtrata
+
+## L'agente (gira su questo PC)
+
+Un'operazione pianificata di Windows ("Gestore stock - aggiorna dal PDF") lancia `agente\avvia-nascosto.vbs` ogni 10 minuti dalle 8 alle 20. Lo script `agente\aggiorna-stock.ps1`:
+
+1. legge in Outlook le richieste di avviso dei colleghi (oggetto `AVVISO STOCK: la ricerca`, per fermarle `STOP AVVISO`)
+2. quando arriva la stampa da Muschitiello o Quartieri: scarica gli annunci del sito, converte il PDF (solo se i conteggi tornano con il report, e senza i nomi dei clienti), aggiorna lo storico, pubblica, manda il riepilogo e gli avvisi
+3. ogni 6 ore riallinea foto e annunci dal sito
+4. dalle 13, se la stampa del giorno non è arrivata, avvisa una volta
+
+Comandi utili:
+
+```bash
+npm test
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 -NonPubblicare -NonInviare
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 -Riepilogo
+```
+
+Il registro è in `agente\agente.log`. I destinatari del riepilogo stanno in `agente\destinatari.txt` (uno per riga; se manca, va solo a giuseppe.cavalli@valentinoautomobili.it).
 
 ## File
 
-- `index.html`: l'app completa, pronta per GitHub Pages o per il doppio clic.
-- `stock-usato.html`: la stessa app nel formato usato per la pagina su claude.ai.
-- `sorgenti/`: i pezzi da cui i due file vengono generati.
-  - `parser.js` legge le righe della tabella dal PDF
-  - `norm.js` ricava marca, modello, alimentazione, cambio, potenza, anzianità
-  - `query.js` interpreta la ricerca scritta a parole
-  - `ui.js` e `page.html` sono interfaccia e stile
-
-Dopo una modifica ai sorgenti:
-
-```bash
-node sorgenti/build.js
-```
+- `index.html`: l'app completa per il sito; `stock-usato.html`: la stessa per la pagina su claude.ai
+- `sorgenti/`: lettore del PDF (`parser.js`), dati ricavati (`norm.js`), ricerca a parole (`query.js`), interfaccia (`ui.js`, `page.html`); dopo una modifica `node sorgenti/build.js`
+- `agente/`: conversione, annunci, abbinamento, storico, posta, controlli automatici
+- `data/`: stock pubblicato, giorno precedente, storico, annunci del sito
 
 ## Attenzione
 
-Non caricare mai in questo repository i PDF dello stock: contengono nomi di clienti e venditori. Il `.gitignore` li esclude già.
+Non caricare mai in questo repository i PDF dello stock né gli indirizzi dei colleghi: il `.gitignore` li esclude già.

@@ -6,6 +6,12 @@
   const dIt = iso => (iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '');
   const immIt = c => (c.imm ? c.imm.slice(5, 7) + '/' + c.imm.slice(0, 4) : 'n.d.');
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  const XLSXJS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  const fotoBase = () => (S.meta.annunci && S.meta.annunci.fotoBase) || 'https://cdn.dealerk.it/dealer/datafiles/vehicle/images/';
+  const foto = (c, size, i = 0) => (c.web && c.web.foto && c.web.foto[i] ? fotoBase() + size + '/' + c.web.foto[i] : '');
+  // indirizzo per le richieste di avviso, composto qui per non lasciarlo in chiaro nella pagina
+  const IO = ['giuseppe.cavalli', 'valentinoautomobili.it'].join('@');
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
@@ -33,7 +39,8 @@
   ];
   const TRIS = [
     { k: 'as', label: 'Su AutoScout' }, { k: 'hasPrice', label: 'Con prezzo', get: c => c.prezzo > 0 }, { k: 'check', label: 'Check list fatta' },
-    { k: 'spec', label: 'Prezzo speciale' }, { k: 'iva', label: 'IVA esposta' }, { k: 'mini', label: 'Mini PP' }, { k: 'fv', label: 'Foglio verde' }
+    { k: 'spec', label: 'Prezzo speciale' }, { k: 'iva', label: 'IVA esposta' }, { k: 'mini', label: 'Mini PP' }, { k: 'fv', label: 'Foglio verde' },
+    { k: 'web', label: 'Annuncio sul sito', get: c => !!c.web }, { k: 'neo', label: 'Per neopatentati', get: c => !!(c.web && c.web.neopatentati) }
   ];
   const ZERO_OK = { km: 1, giorni: 1 };
 
@@ -60,6 +67,8 @@
     resetF();
     S.Q = parseQuery($('q').value, S.vocab);
     renderMeta(); renderKpis(); renderDelta(); renderViews(); renderFilters(true); apply();
+    if (!$('stats').hidden) renderStats();
+    apriDaLink();
   }
 
   function demoData() {
@@ -103,9 +112,14 @@
     }
     for (const t of TRIS) { const want = F.tri[t.k]; if (want == null) continue; if ((t.get ? t.get(c) : !!c[t.k]) !== want) return false; }
     if (F.preset === 'recentBooked' && !(c.dataPren && dayDiff(S.meta.day, c.dataPren) <= 7)) return false;
+    if (F.preset === 'priceDiff' && !prezzoDiverso(c)) return false;
     return matchQuery(c, S.Q);
   }
+  const prezzoDiverso = c => !!(c.web && c.web.prezzo && c.prezzoV && c.web.prezzo !== c.prezzoV);
+  // consigliato: prima le libere con foto, poi le altre libere, poi in arrivo e il resto, poi le prenotate; a parita' le piu' recenti
+  const rango = c => (c.free ? (c.web ? 0 : 1) : c.booked ? 3 : 2);
   const SORTS = {
+    cons: (a, b) => rango(a) - rango(b) || (a.giorni ?? 1e9) - (b.giorni ?? 1e9),
     ingr: (a, b) => (a.giorni ?? 1e9) - (b.giorni ?? 1e9), old: (a, b) => (b.giorni ?? -1) - (a.giorni ?? -1),
     pa: (a, b) => (a.prezzo || 1e12) - (b.prezzo || 1e12), pd: (a, b) => b.prezzo - a.prezzo,
     km: (a, b) => a.km - b.km, anno: (a, b) => (b.imm > a.imm ? 1 : b.imm < a.imm ? -1 : 0), cv: (a, b) => b.cv - a.cv
@@ -125,7 +139,7 @@
   }
   function apply() {
     const src = F.delta === 'gone' ? S.gone : S.cars;
-    S.list = src.filter(c => pass(c)).sort(S.col ? colCmp(S.col) : SORTS[$('sort').value] || SORTS.ingr);
+    S.list = src.filter(c => pass(c)).sort(S.col ? colCmp(S.col) : SORTS[$('sort').value] || SORTS.cons);
     S.shown = 60;
     renderUnderstood(); renderCount(); renderActive(); renderFacetCounts(); renderList(); syncPressed();
   }
@@ -154,7 +168,10 @@
     noPrice: { label: 'Libere senza prezzo', set() { F.disp = 'free'; F.tri.hasPrice = false; } },
     recentBooked: { label: 'Prenotate negli ultimi 7 giorni', set() { F.disp = 'booked'; F.preset = 'recentBooked'; } },
     spec: { label: 'Prezzo speciale', set() { F.tri.spec = true; } },
-    check: { label: 'Check list fatta', set() { F.tri.check = true; } }
+    check: { label: 'Check list fatta', set() { F.tri.check = true; } },
+    noWeb: { label: 'Libere senza annuncio sul sito', set() { F.disp = 'free'; F.tri.web = false; } },
+    priceDiff: { label: 'Prezzo diverso dal sito', set() { F.preset = 'priceDiff'; } },
+    neo: { label: 'Per neopatentati', set() { F.disp = 'free'; F.tri.neo = true; } }
   };
   let activePreset = 'all';
   function countPreset(id) { const keep = F, kp = activePreset; resetF(); PRESETS[id].set(); const Q = S.Q; S.Q = parseQuery('', []); const n = S.cars.filter(c => pass(c)).length; S.Q = Q; F = keep; activePreset = kp; return n; }
@@ -169,7 +186,7 @@
     $('kpis').innerHTML = tiles.join('');
   }
   function renderViews() {
-    $('views').innerHTML = '<span class="lab">Viste rapide</span>' + ['noAs', 'noPrice', 'recentBooked', 'spec', 'check'].map(id => `<button class="chip" data-preset="${id}" aria-pressed="false">${PRESETS[id].label} <span class="n">${N(countPreset(id))}</span></button>`).join('');
+    $('views').innerHTML = '<span class="lab">Viste rapide</span>' + ['noWeb', 'priceDiff', 'noAs', 'noPrice', 'recentBooked', 'neo', 'spec', 'check'].map(id => `<button class="chip" data-preset="${id}" aria-pressed="false">${PRESETS[id].label} <span class="n">${N(countPreset(id))}</span></button>`).join('');
   }
   function renderDelta() {
     const d = S.delta; $('delta').hidden = !d; if (!d) return;
@@ -216,7 +233,7 @@
   /* ---------- risultati ---------- */
   function renderUnderstood() {
     const ch = S.Q.chips; $('understood').hidden = !ch.length;
-    $('understood').innerHTML = ch.length ? '<span>Ho capito:</span>' + ch.map(c => `<span class="u">${esc(c)}</span>`).join('') : '';
+    $('understood').innerHTML = ch.length ? '<span>Ho capito:</span>' + ch.map(c => `<span class="u">${esc(c)}</span>`).join('') + (inFrame ? '' : `<a class="linkbtn" href="mailto:${IO}?subject=${encodeURIComponent('AVVISO STOCK: ' + $('q').value.trim())}" title="Ricevi una mail quando entra un'auto che corrisponde">Avvisami quando entra</a>`) : '';
   }
   function renderCount() {
     const n = S.list.length, tot = (F.delta === 'gone' ? S.gone : S.cars).length;
@@ -228,6 +245,7 @@
     if (F.disp !== 'all') a.push(['disp', F.disp === 'free' ? 'Libere' : 'Prenotate']);
     if (F.delta) a.push(['delta', { new: 'Nuovi ingressi', gone: 'Usciti dallo stock', price: 'Prezzo cambiato', state: 'Stato cambiato' }[F.delta]]);
     if (F.preset === 'recentBooked') a.push(['preset', 'Prenotate negli ultimi 7 giorni']);
+    if (F.preset === 'priceDiff') a.push(['preset', 'Prezzo diverso dal sito']);
     for (const f of FACETS) for (const v of F.sets[f.k]) a.push(['set:' + f.k + ':' + v, v]);
     for (const r of RANGES) { const v = F.r[r.k]; if (v && (v[0] != null || v[1] != null)) a.push(['r:' + r.k, `${r.label.replace(/ \(.*/, '')}: ${v[0] != null ? 'da ' + N(v[0]) : ''} ${v[1] != null ? 'a ' + N(v[1]) : ''}`.replace(/(\d)\.(\d{3})(?=\D|$)/g, r.k === 'anno' ? '$1$2' : '$1.$2')]); }
     for (const t of TRIS) if (F.tri[t.k] != null) a.push(['tri:' + t.k, t.label + ': ' + (F.tri[t.k] ? 'sì' : 'no')]);
@@ -238,8 +256,10 @@
   const ageCls = g => (g > 90 ? 'a3' : g > 60 ? 'a2' : '');
   const plate = t => `<span class="plate"><em>${esc(t)}</em></span>`;
   function cardHtml(c, i) {
-    const tags = (c._d === 'new' ? '<span class="tag new">Nuovo ingresso</span>' : '') + (c.as ? '<span class="tag as">AutoScout</span>' : '') + (c.spec ? '<span class="tag">Prezzo speciale</span>' : '') + (c.iva ? '<span class="tag">IVA esposta</span>' : '') + (c.booked && c.st !== 1 && c.st !== 0 ? '<span class="tag">Prenotata</span>' : '');
+    const tags = (c._d === 'new' ? '<span class="tag new">Nuovo ingresso</span>' : '') + (c.as ? '<span class="tag as">AutoScout</span>' : '') + (c.spec ? '<span class="tag">Prezzo speciale</span>' : '') + (c.iva ? '<span class="tag">IVA esposta</span>' : '') + (c.booked && c.st !== 1 && c.st !== 0 ? '<span class="tag">Prenotata</span>' : '') + (c.web && c.web.neopatentati ? '<span class="tag">Neopatentati</span>' : '');
+    const ph = foto(c, 400);
     return `<button class="card" data-i="${i}">
+      <div class="ph">${ph ? `<img src="${ph}" alt="" loading="lazy" decoding="async">` : '<span>Nessuna foto sul sito</span>'}${c.web && c.web.foto.length > 1 ? `<i class="nfoto">${c.web.foto.length} foto</i>` : ''}</div>
       <div class="r1">${stPill(c)}<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni === 0 ? 'entrata oggi' : c.giorni === 1 ? 'entrata ieri' : c.giorni + ' gg in stock'}</span></div>
       <div><h3><span>${esc(c.brand)}</span> ${esc(c.family)}</h3><p class="mod">${esc(c.modello)}</p></div>
       <div class="specs"><div><b>${N(c.km)}</b><span>km</span></div><div><b>${immIt(c)}</b><span>immatr.</span></div><div><b>${c.cv ? c.cv + ' CV' : 'n.d.'}</b><span>potenza</span></div><div><b>${esc(c.fuel)}</b><span>alim.</span></div><div><b>${esc(c.cambio)}</b><span>cambio</span></div><div><b><i class="sw" style="background:${COLOR_HEX[c.colorG] || '#9aa3b2'}"></i>${esc(c.colorG)}</b><span>colore</span></div></div>
@@ -272,10 +292,14 @@
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <header><div class="r3">${stPill(c)}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span></div>
       <h2>${esc(c.brand)} ${esc(c.family)}</h2><p style="color:var(--ink2)">${esc(c.modello)}</p>
-      <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button></div></header>
+      <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button></div></header>
       <div class="scroll">
+        ${c.web && c.web.foto.length ? `<div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div>` : ''}
+        ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
         <div class="bigprice"><div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
         <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${row('Categoria del listino', c.section, true)}</dl></section>
+        ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', eur(c.web.prezzo) + (prezzoDiverso(c) ? ` (gestionale ${eur(c.prezzoV)})` : ''), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
+        <section id="dStoria" hidden><h4>Storia nelle stampe</h4><div class="timeline" id="dStoriaBody"></div></section>
         <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${row('Data di ingresso', dIt(c.ingr))}${row('Anticipata', c.antic)}</dl></section>
         ${c.acq || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', c.acq)}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
         <section><h4>Pubblicazione e pratiche</h4><dl class="dl">${row('AutoScout', c.as ? 'Sì' + (c.asDate ? ', dal ' + dIt(c.asDate) : '') : 'No')}${row('Check list', c.check ? 'Sì' + (c.checkDate ? ', il ' + dIt(c.checkDate) : '') : 'No')}${row('Prezzo speciale', yn(c.spec))}${row('IVA esposta', yn(c.iva))}${row('Mini PP', yn(c.mini))}${row('Foglio verde', yn(c.fv))}${row('Note', c.note, true)}</dl></section>
@@ -286,6 +310,49 @@
     $('dClose').onclick = closeAll;
     $('dClose').focus();
     $('dCopy').onclick = () => copy(c.targa, 'Targa copiata');
+    $('dShare').onclick = () => condividi(c);
+    storiaAuto(c);
+    try { history.replaceState(history.state, '', '#' + c.targa); } catch (e) {}
+  }
+
+  /* testo per il cliente: niente dati interni (anticipata, note, giorni di stock) */
+  function testoCliente(c) {
+    const w = c.web || {};
+    const righe = [`${c.brand} ${c.family}${w.url ? '' : ' - ' + c.modello}`.trim(),
+      [immIt(c) !== 'n.d.' && 'Immatricolata ' + immIt(c), N(c.km) + ' km', c.fuel, c.cambio !== 'n.d.' && 'cambio ' + c.cambio.toLowerCase(), c.cv && c.cv + ' CV'].filter(Boolean).join(' · '),
+      (w.colore || c.colore) && 'Colore: ' + (w.colore || c.colore),
+      c.prezzoV ? `Prezzo: ${eur(c.prezzoV)}${c.pp ? ` + passaggio di proprietà ${eur(c.pp)}` : ''}` : '',
+      w.garanzia && `Garanzia ${w.garanzia} mesi`,
+      w.url && 'Foto e dettagli: ' + w.url,
+      'Valentino Automobili Roma · tel. 06 415351'];
+    return righe.filter(Boolean).join('\n');
+  }
+  function condividi(c) {
+    const text = testoCliente(c);
+    if (navigator.share && !inFrame) navigator.share({ text }).catch(() => {});
+    else copy(text, 'Testo per il cliente copiato: incollalo su WhatsApp o in una mail');
+  }
+
+  /* ---------- storico: caricato solo quando serve ---------- */
+  let STO = null;
+  async function storico() {
+    if (STO !== null) return STO;
+    try { const r = await fetch('data/storico.json?t=' + Date.now(), { cache: 'no-store' }); STO = r.ok ? await r.json() : false; } catch (e) { STO = false; }
+    return STO;
+  }
+  async function storiaAuto(c) {
+    const sto = await storico(), a = sto && sto.auto[c.targa];
+    if (!a || !$('dStoria')) return;
+    const ev = [];
+    if (c.ingr) ev.push([c.ingr, `Entrata in stock (${c.giorni != null ? c.giorni + ' giorni fa' : ''})`]);
+    if (a.da > sto.dal) ev.push([a.da, 'Compare per la prima volta nelle stampe']);
+    a.p.forEach((p, k) => { if (k) { const prima = a.p[k - 1][1]; ev.push([p[0], !prima ? `Prezzo inserito: ${eur(p[1])}` : !p[1] ? 'Prezzo tolto' : `Prezzo ${p[1] < prima ? 'ribassato' : 'aumentato'}: ${eur(prima)} → ${eur(p[1])}`]); } });
+    a.s.forEach((s, k) => { if (k) ev.push([s[0], `Stato: ${a.s[k - 1][1]} → ${s[1]}`]); });
+    if (a.pren) ev.push([a.pren, 'Prenotata']);
+    if (a.out) ev.push([a.out, 'Non compare più nella stampa']);
+    ev.sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
+    $('dStoriaBody').innerHTML = ev.map(e => `<div><time>${dIt(e[0])}</time><span>${esc(e[1])}</span></div>`).join('') + `<p class="hint">Le stampe sono registrate dal ${dIt(sto.dal)}.</p>`;
+    $('dStoria').hidden = false;
   }
   // sul telefono il tasto Indietro chiude scheda e filtri invece di uscire dall'app
   function sheetOpened() { try { if (!(history.state && history.state.sheet)) history.pushState({ sheet: 1 }, ''); } catch (e) {} }
@@ -300,6 +367,104 @@
     try { navigator.clipboard.writeText(text).then(() => toast(ok), fallback); } catch (e) { fallback(); }
   }
 
+  /* ---------- statistiche ---------- */
+  const mediana = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
+  const media = a => (a.length ? Math.round(a.reduce((s, x) => s + x, 0) / a.length) : null);
+  const giorniFa = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
+  const ggPren = c => (c.dataPren && c.ingr && c.dataPren >= c.ingr ? dayDiff(c.dataPren, c.ingr) : null);
+  const ddmm = iso => iso.slice(8, 10) + '/' + iso.slice(5, 7);
+
+  function niceStep(span, n) { const raw = span / n, p = Math.pow(10, Math.floor(Math.log10(raw || 1))), m = raw / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
+
+  // una sola serie: veicoli in stock giorno per giorno (asse non da zero: conta la variazione)
+  function graficoLinea(giorni, larg) {
+    const H = 200, ml = 44, mr = 56, mt = 14, mb = 28, W = Math.max(280, larg);
+    const v = giorni.map(g => g.tot), lo0 = Math.min(...v), hi0 = Math.max(...v);
+    const step = niceStep(Math.max(10, hi0 - lo0), 3), lo = Math.floor((lo0 - step / 2) / step) * step, hi = Math.ceil((hi0 + step / 2) / step) * step;
+    const x = i => ml + (giorni.length === 1 ? (W - ml - mr) / 2 : i * (W - ml - mr) / (giorni.length - 1)), y = n => mt + (hi - n) * (H - mt - mb) / (hi - lo);
+    let s = `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Veicoli in stock giorno per giorno">`;
+    for (let t = lo; t <= hi + 1e-9; t += step) s += `<line x1="${ml}" x2="${W - mr}" y1="${y(t)}" y2="${y(t)}" class="grid"/><text x="${ml - 8}" y="${y(t) + 4}" class="ax" text-anchor="end">${N(t)}</text>`;
+    const etich = Math.max(1, Math.ceil(giorni.length / Math.floor((W - ml - mr) / 52)));
+    giorni.forEach((g, i) => { if (i % etich === 0 || i === giorni.length - 1) s += `<text x="${x(i)}" y="${H - 8}" class="ax" text-anchor="middle">${ddmm(g.d)}</text>`; });
+    s += `<path d="${giorni.map((g, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(g.tot).toFixed(1)).join(' ')}" class="ln s1"/>`;
+    giorni.forEach((g, i) => { s += `<circle cx="${x(i)}" cy="${y(g.tot)}" r="${i === giorni.length - 1 ? 5 : 3.5}" class="dot s1"/>`; });
+    const L = giorni.length - 1;
+    s += `<text x="${x(L) + 10}" y="${y(giorni[L].tot) + 4}" class="lab">${N(giorni[L].tot)}</text>`;
+    const colW = (W - ml - mr) / Math.max(1, giorni.length);
+    giorni.forEach((g, i) => { s += `<rect x="${x(i) - colW / 2}" y="${mt}" width="${colW}" height="${H - mt - mb}" class="hit" data-tip="${dIt(g.d)}: ${N(g.tot)} veicoli · ${N(g.libere)} libere · ${N(g.prenotate)} prenotate"/>`; });
+    return s + '</svg>';
+  }
+
+  // due serie affiancate per giorno: entrate e uscite (asse da zero, sono quantita')
+  function graficoBarre(giorni, larg) {
+    const H = 200, ml = 34, mr = 12, mt = 14, mb = 28, W = Math.max(280, larg);
+    const g = giorni.filter(d => d.entrate != null);
+    if (!g.length) return '<p class="hint">Servono almeno due stampe per contare entrate e uscite.</p>';
+    const hi0 = Math.max(1, ...g.map(d => Math.max(d.entrate, d.uscite))), step = niceStep(hi0, 3), hi = Math.ceil(hi0 / step) * step;
+    const y = n => mt + (hi - n) * (H - mt - mb) / hi, colW = (W - ml - mr) / g.length, bw = Math.min(22, (colW - 10) / 2);
+    const barra = (x0, v, cls) => { const h = y(0) - y(v), r = Math.min(4, h, bw / 2); return v ? `<path class="bar ${cls}" d="M${x0} ${y(0)} V${y(v) + r} Q${x0} ${y(v)} ${x0 + r} ${y(v)} H${x0 + bw - r} Q${x0 + bw} ${y(v)} ${x0 + bw} ${y(v) + r} V${y(0)} Z"/>` : ''; };
+    let s = `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Entrate e uscite per giorno">`;
+    for (let t = 0; t <= hi + 1e-9; t += step) s += `<line x1="${ml}" x2="${W - mr}" y1="${y(t)}" y2="${y(t)}" class="grid"/><text x="${ml - 8}" y="${y(t) + 4}" class="ax" text-anchor="end">${N(t)}</text>`;
+    const etich = Math.max(1, Math.ceil(g.length / Math.floor((W - ml - mr) / 52)));
+    g.forEach((d, i) => {
+      const cx = ml + colW * i + colW / 2;
+      s += barra(cx - bw - 1, d.entrate, 's1') + barra(cx + 1, d.uscite, 's2');
+      if (i % etich === 0 || i === g.length - 1) s += `<text x="${cx}" y="${H - 8}" class="ax" text-anchor="middle">${ddmm(d.d)}</text>`;
+      s += `<rect x="${cx - colW / 2}" y="${mt}" width="${colW}" height="${H - mt - mb}" class="hit" data-tip="${dIt(d.d)}: ${N(d.entrate)} entrate · ${N(d.uscite)} uscite"/>`;
+    });
+    return s + '</svg>';
+  }
+
+  async function renderStats() {
+    const el = $('stats');
+    if (S.meta.demo) { el.innerHTML = '<div class="panel glass wide"><h3>Statistiche</h3><p class="hint">Le statistiche usano lo stock pubblicato ogni giorno: con i dati di esempio non ci sono.</p></div>'; return; }
+    el.innerHTML = '<div class="panel glass wide"><p class="hint">Carico lo storico…</p></div>';
+    const sto = await storico(), giorni = sto ? sto.giorni : [];
+    const day = S.meta.day, d7 = giorniFa(day, 7), d14 = giorniFa(day, 14);
+    const ult7 = giorni.filter(g => g.d > d7 && g.entrate != null);
+    const entr7 = ult7.reduce((s, g) => s + g.entrate, 0), usc7 = ult7.reduce((s, g) => s + g.uscite, 0);
+    const pren = S.cars.map(ggPren).filter(v => v != null), med = mediana(pren);
+    const auto = sto ? Object.entries(sto.auto) : [];
+    const ritocchi = [];
+    for (const [t, a] of auto) a.p.forEach((p, k) => { if (k && a.p[k - 1][1] && p[1] && p[0] > d14) ritocchi.push({ t, a, d: p[0], da: a.p[k - 1][1], a_: p[1] }); });
+    ritocchi.sort((x, y) => (x.d < y.d ? 1 : x.d > y.d ? -1 : (x.a_ - x.da) - (y.a_ - y.da)));
+    const ribassi7 = ritocchi.filter(r => r.d > d7 && r.a_ < r.da).length;
+    const uscite = auto.filter(([, a]) => a.out).map(([t, a]) => ({ t, a, gg: a.ingr ? dayDiff(a.a, a.ingr) : null })).sort((x, y) => (x.a.out < y.a.out ? 1 : x.a.out > y.a.out ? -1 : 0));
+    const dal = sto && sto.dal ? ddmm(sto.dal) : '';
+
+    // velocita' per modello
+    const gruppi = new Map();
+    for (const c of S.cars) { const k = c.brand + ' ' + c.family; if (!gruppi.has(k)) gruppi.set(k, { k, libere: [], pren: [], tot: 0, usc: 0 }); const g = gruppi.get(k); g.tot++; if (c.free && c.giorni != null) g.libere.push(c.giorni); const p = ggPren(c); if (p != null) g.pren.push(p); }
+    for (const { a } of uscite) { const g = gruppi.get(a.n); if (g) g.usc++; }
+    const righe = [...gruppi.values()].sort((a, b) => b.tot - a.tot).slice(0, 16);
+    const maxMed = Math.max(1, ...righe.map(r => mediana(r.pren) || 0));
+
+    const tile = (v, l) => `<div class="kpi glass"><span class="v num">${v}</span><span class="l">${l}</span></div>`;
+    const auto1 = (t, nome, sotto) => { const inStock = S.cars.some(c => c.targa === t); return `<li${inStock ? ` data-open="${esc(t)}" class="cl"` : ''}><span><b>${esc(nome)}</b> <span class="mono">${esc(t)}</span></span><span>${sotto}</span></li>`; };
+    // i grafici si disegnano alla larghezza reale del riquadro (meno il suo margine interno)
+    const tutto = el.clientWidth || 360;
+    const largMezzo = Math.max(280, (innerWidth > 980 ? Math.floor((tutto - 14) / 2) : tutto) - 38);
+
+    el.innerHTML = `
+      <div class="kpis wide">${tile(giorni.length > 1 ? N(entr7) : '—', 'Entrate negli ultimi 7 giorni')}${tile(giorni.length > 1 ? N(usc7) : '—', 'Uscite negli ultimi 7 giorni')}${tile(med != null ? med + '<small> gg</small>' : '—', 'Metà delle prenotate si è prenotata entro questi giorni dall’ingresso')}${tile(N(ribassi7), 'Prezzi ribassati negli ultimi 7 giorni')}</div>
+      <div class="panel glass"><h3>Veicoli in stock</h3><p class="hint">Giorno per giorno, dalla stampa del ${dal}. Tocca un punto per i dettagli.</p><div class="chartbox">${giorni.length ? graficoLinea(giorni, largMezzo) : ''}</div></div>
+      <div class="panel glass"><h3>Entrate e uscite</h3><div class="legend"><span><i class="s1"></i>Entrate</span><span><i class="s2"></i>Uscite</span></div><div class="chartbox">${graficoBarre(giorni, largMezzo)}</div></div>
+      <div class="panel glass wide"><h3>Velocità per modello</h3><p class="hint">I 16 modelli con più auto in stock. “Si prenota entro” è il tempo in cui si è prenotata metà delle auto oggi prenotate, contato dalla data di ingresso.</p>
+        <div class="tablewrap"><table class="vel"><thead><tr><th>Modello</th><th class="r">In stock</th><th class="r">Libere</th><th>Si prenota entro</th><th class="r">Giacenza media libere</th><th class="r">Uscite dal ${dal}</th></tr></thead><tbody>
+        ${righe.map(r => { const m = mediana(r.pren); return `<tr><td><b>${esc(r.k)}</b></td><td class="r">${N(r.tot)}</td><td class="r">${N(r.libere.length)}</td><td><div class="hbar">${m != null ? `<i style="width:${Math.max(3, m / maxMed * 100)}%"></i><span>${m} gg <small>(${r.pren.length})</small></span>` : '<span class="muted">—</span>'}</div></td><td class="r">${r.libere.length ? media(r.libere) + ' gg' : '—'}</td><td class="r">${N(r.usc)}</td></tr>`; }).join('')}
+        </tbody></table></div></div>
+      <div class="panel glass"><h3>Ultime uscite dallo stock</h3><p class="hint">Auto che non compaiono più nella stampa, con i giorni passati in stock.</p><ul class="lst">${uscite.slice(0, 20).map(({ t, a, gg }) => auto1(t, a.n, `${dIt(a.out)}${gg != null ? ` · ${gg} gg in stock` : ''}`)).join('') || '<li class="muted">Ancora nessuna</li>'}</ul></div>
+      <div class="panel glass"><h3>Prezzi ritoccati</h3><p class="hint">Ultimi 14 giorni. Tocca un'auto per aprirla.</p><ul class="lst">${ritocchi.slice(0, 20).map(r => auto1(r.t, r.a.n, `${ddmm(r.d)} · ${eur(r.da)} → <b>${eur(r.a_)}</b> <span class="${r.a_ < r.da ? 'down' : 'up'}">${r.a_ < r.da ? '−' : '+'}${eur(Math.abs(r.a_ - r.da))}</span>`)).join('') || '<li class="muted">Nessun ritocco</li>'}</ul></div>
+      <div class="panel glass"><h3>Libere ferme da più tempo</h3><ul class="lst">${S.cars.filter(c => c.free && c.giorni != null).sort((a, b) => b.giorni - a.giorni).slice(0, 15).map(c => auto1(c.targa, c.brand + ' ' + c.family, `${c.giorni} gg · ${eur(c.prezzo) || 'senza prezzo'} · ${esc(c.ubic)}`)).join('')}</ul></div>
+      <div class="panel glass"><h3>Annunci sul sito</h3>${S.meta.annunci ? `<p>${N(S.meta.annunci.abbinati)} auto dello stock hanno un annuncio su valentinoautomobili.it, su ${N(S.meta.annunci.totali)} annunci pubblicati.</p><ul class="lst"><li class="cl" data-preset-go="noWeb"><span>Libere senza annuncio sul sito</span><b>${N(countPreset('noWeb'))}</b></li><li class="cl" data-preset-go="priceDiff"><span>Prezzo sul sito diverso dal gestionale</span><b>${N(countPreset('priceDiff'))}</b></li></ul><p class="hint">Annunci letti il ${dIt(S.meta.annunci.aggiornato.slice(0, 10))} alle ${new Date(S.meta.annunci.aggiornato).toTimeString().slice(0, 5)}.</p>` : '<p class="hint">Annunci non ancora disponibili.</p>'}</div>`;
+  }
+  // tooltip dei grafici: col mouse segue il puntatore, col dito appare al tocco
+  addEventListener('pointerover', e => { const t = e.target.closest && e.target.closest('[data-tip]'); const tip = $('tip'); if (!t) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; posTip(e); });
+  addEventListener('pointermove', e => { if (!$('tip').hidden) posTip(e); });
+  function posTip(e) { const tip = $('tip'), w = tip.offsetWidth; tip.style.left = Math.min(innerWidth - w - 8, Math.max(8, e.clientX - w / 2)) + 'px'; tip.style.top = (e.clientY - tip.offsetHeight - 14) + 'px'; }
+  addEventListener('click', e => { const g = e.target.closest('[data-preset-go]'); if (g) { setTab('auto'); usePreset(g.dataset.presetGo); scrollTo({ top: 0, behavior: 'smooth' }); } });
+  let rT; addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { if (!$('stats').hidden) renderStats(); }, 250); });
+
   /* ---------- caricamento PDF ---------- */
   const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('script')); document.head.appendChild(s); });
   async function loadBuffer(buf) {
@@ -311,7 +476,7 @@
       }
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js';
       let doc;
-      try { doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise; }
+      try { doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise; }
       catch (e) { throw new Error('Il file non è un PDF leggibile. Scegli la stampa dello stock usato.'); }
       const pages = [];
       for (let p = 1; p <= doc.numPages; p++) {
@@ -356,6 +521,39 @@
   $('btnFilters').onclick = () => { $('filters').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); sheetOpened(); };
   $('scrim').onclick = closeAll;
   addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('q').focus(); } });
+  async function scaricaExcel() {
+    try {
+      if (!window.XLSX) await loadScript(XLSXJS);
+      const righe = S.list.map(c => ({ Stato: stLabel(c), Targa: c.targa, Marca: c.brand, Modello: c.family, Allestimento: c.modello, Immatricolazione: immIt(c), Km: c.km, CV: c.cv || null, Alimentazione: c.fuel, Cambio: c.cambio, Colore: c.colore, 'Prezzo totale': c.prezzo || null, 'Prezzo veicolo': c.prezzoV || null, Ubicazione: c.ubic, 'Data ingresso': dIt(c.ingr), 'Giorni in stock': c.giorni, AutoScout: c.as ? 'Sì' : 'No', 'Annuncio sito': c.web ? c.web.url : '', Acquirente: c.acq, Venditore: c.vend, Note: c.note }));
+      const ws = XLSX.utils.json_to_sheet(righe), wb = XLSX.utils.book_new();
+      ws['!cols'] = Object.keys(righe[0] || {}).map(k => ({ wch: Math.min(40, Math.max(k.length + 2, ...righe.slice(0, 200).map(r => String(r[k] ?? '').length))) }));
+      XLSX.utils.book_append_sheet(wb, ws, 'Stock');
+      XLSX.writeFile(wb, `stock-usato-${S.meta.day || 'oggi'}.xlsx`);
+      toast(`Excel con ${N(righe.length)} veicoli scaricato`);
+    } catch (e) { toast('Excel non creato: controlla la connessione e riprova', true); }
+  }
+  if (!inFrame) { $('btnExcel').hidden = false; $('btnCopy').hidden = true; }
+  $('btnExcel').onclick = scaricaExcel;
+  let promptInstall = null;
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); promptInstall = e; $('btnInstall').hidden = false; });
+  $('btnInstall').onclick = async () => { if (!promptInstall) return; promptInstall.prompt(); try { await promptInstall.userChoice; } catch (e) {} promptInstall = null; $('btnInstall').hidden = true; };
+  function setTab(t) {
+    const stat = t === 'stat';
+    document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === t)));
+    $('layout').hidden = stat; $('stats').hidden = !stat;
+    if (stat) renderStats();
+    try { history.replaceState(history.state, '', stat ? '#statistiche' : location.pathname + location.search); } catch (e) {}
+  }
+  let linkFatto = false;
+  function apriDaLink() {
+    if (linkFatto || S.meta.demo) return;
+    linkFatto = true;
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (h === 'statistiche') return setTab('stat');
+    if (h) { const c = S.cars.find(x => x.targa === h.toUpperCase()); if (c) openDrawer(c); }
+  }
+  // link incollato nella stessa scheda del browser: stessa logica dell'apertura
+  addEventListener('hashchange', () => { linkFatto = false; apriDaLink(); });
   $('btnCopy').onclick = () => {
     const head = ['Stato', 'Targa', 'Marca', 'Modello', 'Allestimento', 'Immatricolazione', 'Km', 'CV', 'Alimentazione', 'Cambio', 'Colore', 'Prezzo', 'Ubicazione', 'Ingresso', 'Giorni in stock', 'AutoScout', 'Acquirente', 'Venditore', 'Note'];
     const rows = S.list.map(c => [c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato, c.targa, c.brand, c.family, c.modello, immIt(c), c.km, c.cv || '', c.fuel, c.cambio, c.colore, c.prezzo || '', c.ubic, dIt(c.ingr), c.giorni ?? '', c.as ? 'Sì' : 'No', c.acq, c.vend, c.note].join('\t'));
@@ -363,8 +561,10 @@
   };
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose,#fClose2');
+    const t = e.target.closest('[data-tab],[data-open],th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose,#fClose2');
     if (!t) return;
+    if (t.dataset.tab) return setTab(t.dataset.tab);
+    if (t.dataset.open) { const c = S.cars.find(x => x.targa === t.dataset.open); if (c) openDrawer(c); return; }
     if (t.dataset.col != null) { const i = +t.dataset.col; S.col = S.col && S.col.i === i ? { i, dir: -S.col.dir } : { i, dir: 1 }; $('sort').value = 'col'; return apply(); }
     if (t.id === 'fClose' || t.id === 'fClose2') return closeAll();
     if (t.id === 'fReset') { resetF(); activePreset = 'all'; renderFilters(); return apply(); }
@@ -399,6 +599,7 @@
 
   /* ---------- avvio ---------- */
   try { const v = localStorage.getItem('su.view'); if (v === 'table') { S.view = 'table'; $('vCards').setAttribute('aria-pressed', 'false'); $('vTable').setAttribute('aria-pressed', 'true'); } } catch (e) {}
+  try { const q0 = new URLSearchParams(location.search).get('q'); if (q0) { $('q').value = q0; $('qClear').hidden = false; } } catch (e) {}
   const cur = store.get('su.cur');
   if (cur && cur.cars && cur.cars.length) setData(cur, store.get('su.prev')); else setData(demoData(), null);
   // stock condiviso: pubblicato ogni mattina accanto alla pagina, vince se e' piu' recente di quello caricato a mano
@@ -407,7 +608,7 @@
       const get = async f => { const r = await fetch(f + '?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? r.json() : null; };
       const shared = await get('data/stock.json');
       if (!shared || !shared.cars || !shared.cars.length) return;
-      if (S.meta.printDate && !S.meta.demo && S.meta.printDate >= shared.meta.printDate) return;
+      if (S.meta.printDate && !S.meta.demo && S.meta.printDate > shared.meta.printDate) return;
       let prev = null;
       try { prev = await get('data/prev.json'); } catch (e) {}
       setData(shared, prev);
