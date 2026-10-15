@@ -4,7 +4,8 @@
 #  3. aggiorna foto e annunci dal sito ogni 6 ore
 #  4. dalle 13, se la stampa di oggi non e' arrivata, ti avvisa una volta
 # Uso:  powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 [-NonPubblicare] [-NonInviare]
-param([switch]$NonPubblicare, [switch]$NonInviare)
+# -Riepilogo rimanda subito il riepilogo dell'ultima stampa pubblicata
+param([switch]$NonPubblicare, [switch]$NonInviare, [switch]$Riepilogo)
 
 $ErrorActionPreference = 'Stop'
 $Mittenti  = @('Muschitiello', 'Quartieri')      # la stampa deve arrivare da una di queste persone
@@ -20,6 +21,11 @@ New-Item -ItemType Directory -Force $arrivi | Out-Null
 Set-Location $repo
 $env:GIT_TERMINAL_PROMPT = '0'
 $oggi = (Get-Date).ToString('yyyy-MM-dd')
+
+# un solo agente alla volta: se ne sta gia' girando uno (programmato o lanciato a mano) esco subito
+$blocco = New-Object System.Threading.Mutex($false, 'Local\GestoreStockAgente')
+try { $preso = $blocco.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $preso = $true }
+if (-not $preso) { exit 0 }
 
 function Scrivi($msg) { $riga = "{0}  {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm'), $msg; Add-Content -Path $log -Value $riga -Encoding utf8; Write-Host $riga }
 # node e git scrivono anche sul canale degli errori: passo da cmd perche' PowerShell non li scambi per un guasto
@@ -80,6 +86,12 @@ try {
                 if ($att.FileName -like $Allegato) { $trovato = @{ Quando = $mail.ReceivedTime; Allegato = $att; Mittente = $mail.SenderName }; break }
             }
         }
+    }
+
+    if ($Riepilogo) {
+        $p = Esegui 'node agente\posta.js riepilogo'
+        if ($p.Codice -ne 0) { throw $p.Testo }
+        InviaPosta; exit 0
     }
 
     # 1. richieste di avviso dei colleghi
