@@ -59,6 +59,7 @@ function parseQuery(raw, vocab) {
   kw(/\bprezzo speciale\b/g, () => { Q.spec = true; });
   kw(/\bcheck ?list\b/g, () => { Q.check = true; });
   kw(/\bneopatentat\w*/g, () => { Q.neo = true; });
+  kw(/\b4x4\b|\b4 ?x ?4\b|\btrazione integrale\b|\bintegrale\b|\b4 ?motion\b|\bawd\b|\b4wd\b|\bquattro ruote motrici\b/g, () => { Q.awd = true; });
   kw(/\bcon foto\b|\bsul sito\b/g, () => { Q.web = true; });
   kw(/\bsenza foto\b|\bnon sul sito\b|\bsenza annuncio\b/g, () => { Q.web = false; });
   kw(/\bnon in vendita\b/g, () => Q.st.add(4));
@@ -106,6 +107,7 @@ function parseQuery(raw, vocab) {
   if (Q.spec) Q.chips.push('Prezzo speciale');
   if (Q.check) Q.chips.push('Check list fatta');
   if (Q.neo) Q.chips.push('Per neopatentati');
+  if (Q.awd) Q.chips.push('Trazione integrale (4x4)');
   if (Q.web != null) Q.chips.push(Q.web ? 'Con annuncio sul sito' : 'Senza annuncio sul sito');
   for (const w of Q.terms) Q.chips.push('“' + w + '”');
   return Q;
@@ -134,6 +136,7 @@ function matchQuery(c, Q) {
   if (Q.spec && !c.spec) return false;
   if (Q.check && !c.check) return false;
   if (Q.neo && !(c.web && c.web.neopatentati)) return false;
+  if (Q.awd && c.trazione !== 'Integrale') return false;
   if (Q.web != null && !!c.web !== Q.web) return false;
   for (const w of Q.terms) if (!c._h.includes(w)) return false;
   return true;

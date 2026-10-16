@@ -580,7 +580,7 @@ const OTHER_FAM = [
   [/\b500X\b/, 'Fiat', '500X'], [/\b500L\b/, 'Fiat', '500L'], [/\b500\b/, 'Fiat', '500'], [/\bPAND(A|INA)\b/, 'Fiat', 'Panda'], [/\b600\b/, 'Fiat', '600'], [/\bTIPO\b/, 'Fiat', 'Tipo'],
   [/YPSILON/, 'Lancia', 'Ypsilon'], [/AVENGER/, 'Jeep', 'Avenger'], [/RENEGADE/, 'Jeep', 'Renegade'], [/\bCOMPASS\b/, 'Jeep', 'Compass'],
   [/FORMENTOR/, 'Cupra', 'Formentor'], [/\bBORN\b/, 'Cupra', 'Born'], [/\bLEON\b/, 'Cupra', 'Leon'], [/\bATECA\b/, 'Seat', 'Ateca'], [/\bIBIZA\b/, 'Seat', 'Ibiza'], [/\bARONA\b/, 'Seat', 'Arona'],
-  [/\bA1\b/, 'Audi', 'A1'], [/\bA3\b/, 'Audi', 'A3'], [/\bA4\b/, 'Audi', 'A4'], [/\bQ2\b/, 'Audi', 'Q2'], [/\bQ3\b/, 'Audi', 'Q3'], [/\bQ5\b/, 'Audi', 'Q5'],
+  [/\bA1\b/, 'Audi', 'A1'], [/\bA3\b/, 'Audi', 'A3'], [/\bA4\b/, 'Audi', 'A4'], [/\bQ2\b/, 'Audi', 'Q2'], [/\bQ3\b/, 'Audi', 'Q3'], [/\bQ4\b/, 'Audi', 'Q4 e-tron'], [/\bQ5\b/, 'Audi', 'Q5'],
   [/CLASSE A\b/, 'Mercedes', 'Classe A'], [/CLASSE B\b/, 'Mercedes', 'Classe B'], [/CLASSE C\b/, 'Mercedes', 'Classe C'], [/\bGLA\b/, 'Mercedes', 'GLA'],
   [/\bFIESTA\b/, 'Ford', 'Fiesta'], [/\bPUMA\b/, 'Ford', 'Puma'], [/\bFOCUS\b/, 'Ford', 'Focus'], [/\bKUGA\b/, 'Ford', 'Kuga'],
   [/\bI10\b/, 'Hyundai', 'i10'], [/\bI20\b/, 'Hyundai', 'i20'], [/\bTUCSON\b/, 'Hyundai', 'Tucson'], [/\bKONA\b/, 'Hyundai', 'Kona'],
@@ -741,6 +741,7 @@ function parseQuery(raw, vocab) {
   kw(/\bprezzo speciale\b/g, () => { Q.spec = true; });
   kw(/\bcheck ?list\b/g, () => { Q.check = true; });
   kw(/\bneopatentat\w*/g, () => { Q.neo = true; });
+  kw(/\b4x4\b|\b4 ?x ?4\b|\btrazione integrale\b|\bintegrale\b|\b4 ?motion\b|\bawd\b|\b4wd\b|\bquattro ruote motrici\b/g, () => { Q.awd = true; });
   kw(/\bcon foto\b|\bsul sito\b/g, () => { Q.web = true; });
   kw(/\bsenza foto\b|\bnon sul sito\b|\bsenza annuncio\b/g, () => { Q.web = false; });
   kw(/\bnon in vendita\b/g, () => Q.st.add(4));
@@ -788,6 +789,7 @@ function parseQuery(raw, vocab) {
   if (Q.spec) Q.chips.push('Prezzo speciale');
   if (Q.check) Q.chips.push('Check list fatta');
   if (Q.neo) Q.chips.push('Per neopatentati');
+  if (Q.awd) Q.chips.push('Trazione integrale (4x4)');
   if (Q.web != null) Q.chips.push(Q.web ? 'Con annuncio sul sito' : 'Senza annuncio sul sito');
   for (const w of Q.terms) Q.chips.push('“' + w + '”');
   return Q;
@@ -816,6 +818,7 @@ function matchQuery(c, Q) {
   if (Q.spec && !c.spec) return false;
   if (Q.check && !c.check) return false;
   if (Q.neo && !(c.web && c.web.neopatentati)) return false;
+  if (Q.awd && c.trazione !== 'Integrale') return false;
   if (Q.web != null && !!c.web !== Q.web) return false;
   for (const w of Q.terms) if (!c._h.includes(w)) return false;
   return true;
@@ -867,10 +870,12 @@ function matchQuery(c, Q) {
     { k: 'cv', label: 'Potenza (CV)', step: 5, open: true },
     { k: 'giorni', label: 'Anzianità in stock (giorni)', step: 10, open: true, quick: [[null, 30, 'fino a 30'], [31, 60, '31–60'], [61, 90, '61–90'], [91, null, 'oltre 90'], [181, null, 'oltre 180']] }
   ];
+  const RE_4X4 = /4\s?MOTION|QUATTRO|4X4|\bAWD\b|\b4WD\b|ALLGRIP|\b4XE\b|XDRIVE|4MATIC/i;
+  const trazioneDi = c => (RE_4X4.test(c.modello) || (c.web && /integr/i.test(c.web.trazione)) ? 'Integrale' : c.web && c.web.trazione ? c.web.trazione : '');
   const TRIS = [
     { k: 'as', label: 'Su AutoScout' }, { k: 'hasPrice', label: 'Con prezzo', get: c => c.prezzo > 0 }, { k: 'check', label: 'Check list fatta' },
     { k: 'spec', label: 'Prezzo speciale' }, { k: 'iva', label: 'IVA esposta' }, { k: 'mini', label: 'Mini PP' }, { k: 'fv', label: 'Foglio verde' },
-    { k: 'web', label: 'Annuncio sul sito', get: c => !!c.web }, { k: 'neo', label: 'Per neopatentati', get: c => !!(c.web && c.web.neopatentati) }
+    { k: 'web', label: 'Annuncio sul sito', get: c => !!c.web }, { k: 'neo', label: 'Per neopatentati', get: c => !!(c.web && c.web.neopatentati) }, { k: 'awd', label: 'Trazione integrale (4x4)', get: c => c.trazione === 'Integrale' }
   ];
   const ZERO_OK = { km: 1, giorni: 1 };
 
@@ -883,6 +888,7 @@ function matchQuery(c, Q) {
   /* ---------- dati ---------- */
   function setData(data, prev) {
     S.cars = data.cars; S.meta = data.meta; S.prev = prev || null;
+    S.cars.forEach(c => { c.trazione = trazioneDi(c); });
     S.cars.forEach(c => { c._h = deacc([c.targa, c.brand, c.family, c.modello, c.colore, c.ubic, c.vend, c.acq, c.note, c.section, c.stato, c.antic, c.web && c.web.carrozzeria].join(' ').toLowerCase()); });
     S.vocab = buildVocab(S.cars);
     S.prevMap = null; S.gone = []; S.delta = null;
@@ -1230,12 +1236,13 @@ function matchQuery(c, Q) {
       if (D.cambio.size && c.cambio !== 'n.d.' && !D.cambio.has(c.cambio)) return false;
       if (D.family.size && !D.family.has(c.family)) return false;
       if (D.brand.size && !D.brand.has(c.brand) && !(D.family.size && D.family.has(c.family))) return false;
+      if (D.awd && c.trazione !== 'Integrale') return false;
       return true;
     });
-    if (l.length < 12) l = base;   // vincoli troppo stretti o capiti male: Gemini sceglie su tutte le disponibili
+    if (l.length < 12 && !(D.awd && l.length)) l = base;   // vincoli troppo stretti o capiti male: Gemini sceglie su tutte le disponibili
     return l.sort(SORTS.cons).slice(0, 400);
   }
-  const rigaAI = c => [c.targa, `${c.brand} ${c.modello}`.slice(0, 60), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, (c.giorni ?? '?') + ' gg', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
+  const rigaAI = c => [c.targa, `${c.brand} ${c.modello}`.slice(0, 60), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, (c.giorni ?? '?') + ' gg', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.trazione === 'Integrale' ? 'trazione integrale 4x4' : c.trazione && 'trazione ' + c.trazione.toLowerCase(), c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
   function mostraAI(st) {
     S.aiUltimo = st;
     const auto = (st.auto || []).map(a => ({ a, c: S.cars.find(x => x.targa === String(a.targa).toUpperCase().replace(/\s+/g, '')) })).filter(x => x.c);
@@ -1264,7 +1271,7 @@ function matchQuery(c, Q) {
     mostraAI({ ...base, attesa: true });
     const ctl = new AbortController(), t0 = setTimeout(() => ctl.abort(), 60000);
     try {
-      const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: AI_TOKEN, domanda, elenco: lista.map(rigaAI).join('\n') }), signal: ctl.signal });
+      const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: AI_TOKEN, temperatura: 0, seed: 7, domanda, elenco: lista.map(rigaAI).join('\n') }), signal: ctl.signal });
       const j = await r.json();
       if (S.aiUltimo && S.aiUltimo.domanda === domanda) mostraAI({ ...base, ...j });
     } catch (e) {

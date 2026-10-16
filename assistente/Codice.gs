@@ -24,6 +24,7 @@ const ISTRUZIONI = [
   "- Usa SOLO le auto dell'elenco. Non inventare auto, prezzi, chilometri o dotazioni che non ci sono.",
   "- Proponi da 1 a 6 auto, la piu' adatta per prima. Per ciascuna scrivi in 'perche' una frase breve e concreta legata alla richiesta (budget, uso, famiglia, consumi, cambio, chilometri, eta').",
   "- La 'targa' deve essere copiata identica dall'elenco.",
+  "- Usa solo le caratteristiche scritte nell'elenco (per esempio 'trazione integrale 4x4', 'neopatentati', porte, carrozzeria). Se la richiesta chiede una caratteristica che nell'elenco non risulta per nessuna auto, dillo chiaramente invece di indovinare.",
   "- In 'risposta' scrivi al massimo 3 frasi in italiano, dirette, da collega a collega. Se nulla corrisponde bene dillo chiaramente e proponi le alternative piu' vicine spiegando cosa cambia.",
   "- I prezzi sono in euro e comprendono il passaggio di proprieta'. 'gg' sono i giorni in stock: a parita' di adattamento preferisci le auto ferme da piu' tempo.",
   "- Se la domanda non riguarda le auto in stock, rispondi che puoi aiutare solo a scegliere tra le auto disponibili e lascia 'auto' vuoto."
@@ -47,7 +48,8 @@ function doPost(e) {
     const elenco = String(req.elenco || '').slice(0, MAX_ELENCO);
     if (!domanda) return json_({ errore: 'Scrivi una domanda.' });
     if (!elenco) return json_({ errore: 'Elenco auto vuoto.' });
-    return json_(chiedi_(domanda, elenco));
+    const opz = { temperatura: typeof req.temperatura === 'number' ? Math.max(0, Math.min(1, req.temperatura)) : 0, seed: typeof req.seed === 'number' ? req.seed : 7 };
+    return json_(chiedi_(domanda, elenco, opz));
   } catch (err) {
     return json_({ errore: 'Errore del servizio: ' + err.message });
   }
@@ -60,7 +62,8 @@ function doGet() {
   return json_({ ok: true, chiave: !!p.getProperty('GEMINI_KEY'), modello: p.getProperty('MODELLO') || MODELLO_PREDEFINITO, questoMese: mese });
 }
 
-function chiedi_(domanda, elenco) {
+function chiedi_(domanda, elenco, opz) {
+  opz = opz || { temperatura: 0, seed: 7 };
   const p = PropertiesService.getScriptProperties();
   // tolgo spazi, a capo e virgolette finite per sbaglio nel valore incollato
   const chiave = String(p.getProperty('GEMINI_KEY') || '').trim().replace(/^["']+|["']+$/g, '');
@@ -69,7 +72,7 @@ function chiedi_(domanda, elenco) {
   const corpo = {
     systemInstruction: { parts: [{ text: ISTRUZIONI }] },
     contents: [{ role: 'user', parts: [{ text: 'Auto disponibili oggi (targa | modello | immatricolazione | km | alimentazione | cambio | potenza | prezzo | colore | ubicazione | giorni in stock | note):\n' + elenco + '\n\nDomanda del venditore: ' + domanda }] }],
-    generationConfig: { temperature: 0.3, maxOutputTokens: 1500, responseMimeType: 'application/json', responseSchema: SCHEMA }
+    generationConfig: { temperature: opz.temperatura, seed: opz.seed, maxOutputTokens: 1500, responseMimeType: 'application/json', responseSchema: SCHEMA }
   };
   const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modello) + ':generateContent', {
     method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': chiave },

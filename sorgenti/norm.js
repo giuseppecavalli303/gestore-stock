@@ -9,7 +9,7 @@ const OTHER_FAM = [
   [/\b500X\b/, 'Fiat', '500X'], [/\b500L\b/, 'Fiat', '500L'], [/\b500\b/, 'Fiat', '500'], [/\bPAND(A|INA)\b/, 'Fiat', 'Panda'], [/\b600\b/, 'Fiat', '600'], [/\bTIPO\b/, 'Fiat', 'Tipo'],
   [/YPSILON/, 'Lancia', 'Ypsilon'], [/AVENGER/, 'Jeep', 'Avenger'], [/RENEGADE/, 'Jeep', 'Renegade'], [/\bCOMPASS\b/, 'Jeep', 'Compass'],
   [/FORMENTOR/, 'Cupra', 'Formentor'], [/\bBORN\b/, 'Cupra', 'Born'], [/\bLEON\b/, 'Cupra', 'Leon'], [/\bATECA\b/, 'Seat', 'Ateca'], [/\bIBIZA\b/, 'Seat', 'Ibiza'], [/\bARONA\b/, 'Seat', 'Arona'],
-  [/\bA1\b/, 'Audi', 'A1'], [/\bA3\b/, 'Audi', 'A3'], [/\bA4\b/, 'Audi', 'A4'], [/\bQ2\b/, 'Audi', 'Q2'], [/\bQ3\b/, 'Audi', 'Q3'], [/\bQ5\b/, 'Audi', 'Q5'],
+  [/\bA1\b/, 'Audi', 'A1'], [/\bA3\b/, 'Audi', 'A3'], [/\bA4\b/, 'Audi', 'A4'], [/\bQ2\b/, 'Audi', 'Q2'], [/\bQ3\b/, 'Audi', 'Q3'], [/\bQ4\b/, 'Audi', 'Q4 e-tron'], [/\bQ5\b/, 'Audi', 'Q5'],
   [/CLASSE A\b/, 'Mercedes', 'Classe A'], [/CLASSE B\b/, 'Mercedes', 'Classe B'], [/CLASSE C\b/, 'Mercedes', 'Classe C'], [/\bGLA\b/, 'Mercedes', 'GLA'],
   [/\bFIESTA\b/, 'Ford', 'Fiesta'], [/\bPUMA\b/, 'Ford', 'Puma'], [/\bFOCUS\b/, 'Ford', 'Focus'], [/\bKUGA\b/, 'Ford', 'Kuga'],
   [/\bI10\b/, 'Hyundai', 'i10'], [/\bI20\b/, 'Hyundai', 'i20'], [/\bTUCSON\b/, 'Hyundai', 'Tucson'], [/\bKONA\b/, 'Hyundai', 'Kona'],
