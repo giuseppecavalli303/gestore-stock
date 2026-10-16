@@ -57,7 +57,7 @@
   /* ---------- dati ---------- */
   function setData(data, prev) {
     S.cars = data.cars; S.meta = data.meta; S.prev = prev || null;
-    S.cars.forEach(c => { c._h = deacc([c.targa, c.brand, c.family, c.modello, c.colore, c.ubic, c.vend, c.acq, c.note, c.section, c.stato, c.antic].join(' ').toLowerCase()); });
+    S.cars.forEach(c => { c._h = deacc([c.targa, c.brand, c.family, c.modello, c.colore, c.ubic, c.vend, c.acq, c.note, c.section, c.stato, c.antic, c.web && c.web.carrozzeria].join(' ').toLowerCase()); });
     S.vocab = buildVocab(S.cars);
     S.prevMap = null; S.gone = []; S.delta = null;
     if (prev && prev.cars && prev.meta.day !== data.meta.day) {
