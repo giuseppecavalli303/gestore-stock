@@ -149,8 +149,10 @@ function telecamera_(req) {
   });
   if (!parti.length) return { errore: 'Foto non scaricabili.' };
   parti.push({ text: 'Auto: ' + String(req.auto || '').slice(0, 120) + '. Ha la telecamera posteriore?' });
+  // le istruzioni possono arrivare dall'agente del PC, cosi' si migliorano senza rifare il deployment
+  const istruzioni = typeof req.istruzioni === 'string' && req.istruzioni.length > 50 ? req.istruzioni.slice(0, 4000) : ISTRUZIONI_CAM;
   const corpo = {
-    systemInstruction: { parts: [{ text: ISTRUZIONI_CAM }] },
+    systemInstruction: { parts: [{ text: istruzioni }] },
     contents: [{ role: 'user', parts: parti }],
     generationConfig: { temperature: 0, seed: 7, maxOutputTokens: 300, responseMimeType: 'application/json', responseSchema: SCHEMA_CAM }
   };

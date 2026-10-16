@@ -877,7 +877,7 @@ function matchQuery(c, Q) {
   const trazioneDi = c => (RE_4X4.test(c.modello) || (c.web && /integr/i.test(c.web.trazione)) ? 'Integrale' : c.web && c.web.trazione ? c.web.trazione : '');
   // telecamera: vale solo se l'elenco dotazioni la nomina E le foto la confermano
   const camOk = c => !!(c.web && c.web.cam && c.web.cam.esito === 'si');
-  const camTesto = w => (!w.camLista ? '' : !w.cam ? "Nelle dotazioni c'è scritta: controllo delle foto in attesa" : w.cam.esito === 'si' ? `Sì, confermata dalle foto${w.cam.foto ? ` (foto ${w.cam.foto})` : ''}` : w.cam.esito === 'no' ? "Nelle dotazioni c'è scritta, ma nelle foto non si vede" : "Nelle dotazioni c'è scritta, dalle foto non si capisce");
+  const camTesto = w => (!w.camLista ? '' : !w.cam ? "Nelle dotazioni c'è scritta: controllo delle foto in attesa" : w.cam.esito === 'si' ? `Sì, confermata dalle foto${w.cam.foto ? ` (foto ${w.cam.foto})` : ''}` : w.cam.esito === 'no' ? "Nelle dotazioni c'è scritta, ma nelle foto non c'è" : "Nelle dotazioni c'è scritta; dalle foto non si può verificare (spesso è nascosta nel logo o coperta dal cartello targa)");
   const TRIS = [
     { k: 'as', label: 'Su AutoScout' }, { k: 'hasPrice', label: 'Con prezzo', get: c => c.prezzo > 0 }, { k: 'check', label: 'Check list fatta' },
     { k: 'spec', label: 'Prezzo speciale' }, { k: 'iva', label: 'IVA esposta' }, { k: 'mini', label: 'Mini PP' }, { k: 'fv', label: 'Foglio verde' },
