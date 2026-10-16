@@ -10,12 +10,12 @@
  *   MODELLO     facoltativa, per cambiare modello senza toccare il codice
  */
 
-const MODELLO_PREDEFINITO = 'gemini-2.5-flash-lite';
+const MODELLO_PREDEFINITO = 'gemini-3.5-flash-lite';   // il 2.5 non e' piu' disponibile per i nuovi utenti
 const TOKEN = 'FTcdlNGgGU7WXN-L';          // lo stesso scritto nel sito: ferma le chiamate a caso
 const MAX_DOMANDE_ORA = 120;               // per tutto il sito, contro gli abusi
 const MAX_ELENCO = 200000;                 // caratteri dell'elenco auto accettati
 // prezzi in dollari per milione di token (ingresso, uscita), per stimare la spesa del mese
-const PREZZI = { 'gemini-2.5-flash-lite': [0.10, 0.40], 'gemini-2.5-flash': [0.30, 2.50] };
+const PREZZI = { 'gemini-3.5-flash-lite': [0.30, 2.50], 'gemini-3.1-flash-lite': [0.25, 1.50], 'gemini-2.5-flash-lite': [0.10, 0.40], 'gemini-2.5-flash': [0.30, 2.50] };
 
 const ISTRUZIONI = [
   "Sei l'assistente dei venditori dell'usato di Valentino Automobili Roma.",
@@ -62,7 +62,8 @@ function doGet() {
 
 function chiedi_(domanda, elenco) {
   const p = PropertiesService.getScriptProperties();
-  const chiave = p.getProperty('GEMINI_KEY');
+  // tolgo spazi, a capo e virgolette finite per sbaglio nel valore incollato
+  const chiave = String(p.getProperty('GEMINI_KEY') || '').trim().replace(/^["']+|["']+$/g, '');
   if (!chiave) return { errore: 'Manca la chiave: aggiungi GEMINI_KEY nelle proprieta\' dello script.' };
   const modello = p.getProperty('MODELLO') || MODELLO_PREDEFINITO;
   const corpo = {
@@ -80,6 +81,8 @@ function chiedi_(domanda, elenco) {
   if (codice !== 200) {
     const msg = (j.error && j.error.message) || ('codice ' + codice);
     if (codice === 402 || /prepay|billing|credit/i.test(msg)) return { errore: 'Credito Gemini esaurito o fatturazione non attiva. Controlla in AI Studio.' };
+    if (/api key not valid/i.test(msg)) return { errore: `Chiave non valida: GEMINI_KEY ha ${chiave.length} caratteri e inizia con "${chiave.slice(0, 4)}". Ricopiala da AI Studio con il pulsante Copia.` };
+    if (/no longer available|not found/i.test(msg)) return { errore: 'Modello non disponibile: ' + msg + ' Si puo\' cambiare con la proprieta\' MODELLO.' };
     return { errore: 'Gemini non ha risposto: ' + msg };
   }
   const parti = (((j.candidates || [])[0] || {}).content || {}).parts || [];

@@ -387,13 +387,29 @@
   /* ---------- assistente (Gemini, tramite il servizio Apps Script) ---------- */
   const ICONA_AI = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>';
   // le auto che l'assistente puo' proporre: quelle dei filtri laterali (non la ricerca scritta, che e' la domanda), non prenotate e vendibili
-  function candidatiAI() {
+  function candidatiAI(domanda) {
     const Q = S.Q; S.Q = parseQuery('', []);
-    let l = S.cars.filter(c => !c.booked && c.st !== 4 && pass(c));
+    const base = S.cars.filter(c => !c.booked && c.st !== 4 && pass(c));
     S.Q = Q;
-    return l.sort(SORTS.cons).slice(0, 700);
+    // dalla domanda tengo solo i vincoli chiari (budget, km, anno, potenza, alimentazione, cambio, modello) con un po' di margine:
+    // a Gemini arrivano decine di auto invece di centinaia, la risposta e' piu' veloce e costa meno
+    const D = capisci(domanda), r = D.r;
+    const entro = (v, lo, hi) => v != null && (lo == null || v >= lo) && (hi == null || v <= hi);
+    let l = base.filter(c => {
+      if (r.prezzo && !(c.prezzo && entro(c.prezzo, r.prezzo[0] != null ? r.prezzo[0] * 0.85 : null, r.prezzo[1] != null ? r.prezzo[1] * 1.12 : null))) return false;
+      if (r.km && r.km[1] != null && !entro(c.km, null, r.km[1] * 1.2)) return false;
+      if (r.anno && r.anno[0] != null && !entro(c.anno, r.anno[0] - 1, null)) return false;
+      if (r.cv && r.cv[0] != null && !(c.cv && entro(c.cv, r.cv[0] * 0.9, null))) return false;
+      if (D.fuel.size && !D.fuel.has(c.fuel)) return false;
+      if (D.cambio.size && c.cambio !== 'n.d.' && !D.cambio.has(c.cambio)) return false;
+      if (D.family.size && !D.family.has(c.family)) return false;
+      if (D.brand.size && !D.brand.has(c.brand) && !(D.family.size && D.family.has(c.family))) return false;
+      return true;
+    });
+    if (l.length < 12) l = base;   // vincoli troppo stretti o capiti male: Gemini sceglie su tutte le disponibili
+    return l.sort(SORTS.cons).slice(0, 400);
   }
-  const rigaAI = c => [c.targa, `${c.brand} ${c.family} ${c.modello}`.slice(0, 70), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, (c.giorni ?? '?') + ' gg', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
+  const rigaAI = c => [c.targa, `${c.brand} ${c.modello}`.slice(0, 60), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, (c.giorni ?? '?') + ' gg', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
   function mostraAI(st) {
     S.aiUltimo = st;
     const auto = (st.auto || []).map(a => ({ a, c: S.cars.find(x => x.targa === String(a.targa).toUpperCase().replace(/\s+/g, '')) })).filter(x => x.c);
@@ -415,7 +431,7 @@
   }
   async function chiediAI(domanda) {
     if (!aiAttivo() || !domanda) return;
-    const lista = candidatiAI();
+    const lista = candidatiAI(domanda);
     const filtri = lista.length < S.cars.filter(c => !c.booked && c.st !== 4).length;
     if (!lista.length) return toast('Con i filtri attivi non resta nessuna auto disponibile da proporre', true);
     const base = { domanda, n: lista.length, filtri };
