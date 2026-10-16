@@ -120,6 +120,8 @@ try {
             $c = Esegui "node agente\converti.js ""$pdf"""
             Scrivi $c.Testo
             if ($c.Codice -ne 0 -and $c.Codice -ne 3) { throw "Stampa non pubblicata. $($c.Testo)" }
+            $t = Esegui 'node agente\telecamera.js --max 60'
+            Scrivi $t.Testo
             $s = Esegui 'node agente\storico.js'
             Scrivi $s.Testo
             $nuova = Pubblica "Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"
@@ -142,6 +144,8 @@ try {
         if ($a.Codice -eq 0) {
             $b = Esegui 'node agente\abbina.js'
             if ($b.Codice -eq 0) { Scrivi $b.Testo }
+            $t = Esegui 'node agente\telecamera.js --max 60'
+            Scrivi $t.Testo
             Pubblica 'Foto e annunci del sito aggiornati' | Out-Null
         }
     }

@@ -43,6 +43,7 @@ function doPost(e) {
   try {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (req.token !== TOKEN) return json_({ errore: 'Richiesta non autorizzata.' });
+    if (req.azione === 'telecamera') return json_(telecamera_(req));
     if (!limite_()) return json_({ errore: "Troppe domande in quest'ora: riprova tra poco." });
     const domanda = String(req.domanda || '').trim().slice(0, 600);
     const elenco = String(req.elenco || '').slice(0, MAX_ELENCO);
@@ -112,6 +113,60 @@ function conta_(modello, tin, tout) {
     p.setProperty(k, JSON.stringify(m));
     return { domande: m.domande, spesa: Math.round(m.spesa * 100) / 100 };
   } finally { if (preso) lock.releaseLock(); }
+}
+
+/* Telecamera posteriore: l'elenco dotazioni del sito la nomina, ma a volte per errore.
+   L'agente del PC manda qui le foto dell'annuncio e Gemini dice se la telecamera si vede davvero. */
+const SCHEMA_CAM = {
+  type: 'OBJECT',
+  properties: {
+    telecamera: { type: 'STRING', enum: ['si', 'no', 'non visibile'] },
+    foto: { type: 'INTEGER' },
+    indizio: { type: 'STRING' }
+  },
+  required: ['telecamera', 'indizio']
+};
+const ISTRUZIONI_CAM = [
+  "Ricevi le foto numerate dell'annuncio di un'auto usata (esterni e interni). Devi dire solo se l'auto ha la telecamera posteriore per la retromarcia.",
+  "- 'si': vedi chiaramente l'obiettivo della telecamera sul retro (sul portellone, vicino alla maniglia, sopra la targa o dentro il logo, a volte nascosto nel logo che si apre) oppure sul display interno compare l'immagine della retrocamera con le linee guida.",
+  "- 'no': almeno una foto mostra bene e da vicino la parte posteriore (portellone, zona targa e logo) e non c'e' nessuna telecamera.",
+  "- 'non visibile': le foto non permettono di deciderlo con sicurezza.",
+  "Non indovinare: se hai dubbi rispondi 'non visibile'. In 'foto' metti il numero della foto decisiva (1 = la prima), in 'indizio' cosa hai visto, al massimo 15 parole."
+].join('\n');
+
+function telecamera_(req) {
+  const urls = (req.foto || []).filter(function (u) { return /^https:\/\/cdn\.dealerk\.it\//.test(String(u)); }).slice(0, 12);
+  if (!urls.length) return { errore: 'Nessuna foto.' };
+  const p = PropertiesService.getScriptProperties();
+  const chiave = String(p.getProperty('GEMINI_KEY') || '').trim().replace(/^["']+|["']+$/g, '');
+  const modello = p.getProperty('MODELLO') || MODELLO_PREDEFINITO;
+  const scaricate = UrlFetchApp.fetchAll(urls.map(function (u) { return { url: u, muteHttpExceptions: true }; }));
+  const parti = [];
+  scaricate.forEach(function (r, i) {
+    if (r.getResponseCode() !== 200) return;
+    parti.push({ text: 'Foto ' + (i + 1) + ':' });
+    parti.push({ inlineData: { mimeType: 'image/jpeg', data: Utilities.base64Encode(r.getBlob().getBytes()) } });
+  });
+  if (!parti.length) return { errore: 'Foto non scaricabili.' };
+  parti.push({ text: 'Auto: ' + String(req.auto || '').slice(0, 120) + '. Ha la telecamera posteriore?' });
+  const corpo = {
+    systemInstruction: { parts: [{ text: ISTRUZIONI_CAM }] },
+    contents: [{ role: 'user', parts: parti }],
+    generationConfig: { temperature: 0, seed: 7, maxOutputTokens: 300, responseMimeType: 'application/json', responseSchema: SCHEMA_CAM }
+  };
+  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modello) + ':generateContent', {
+    method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': chiave }, payload: JSON.stringify(corpo), muteHttpExceptions: true
+  });
+  let j = {};
+  try { j = JSON.parse(r.getContentText()); } catch (e) {}
+  if (r.getResponseCode() !== 200) return { errore: 'Gemini non ha risposto: ' + ((j.error && j.error.message) || r.getResponseCode()) };
+  const testo = ((((j.candidates || [])[0] || {}).content || {}).parts || []).map(function (x) { return x.text || ''; }).join('');
+  let out;
+  try { out = JSON.parse(testo); } catch (e) { return { errore: 'Risposta non leggibile.' }; }
+  const uso = j.usageMetadata || {};
+  const tin = uso.promptTokenCount || 0, tout = (uso.candidatesTokenCount || 0) + (uso.thoughtsTokenCount || 0);
+  out.uso = { ingresso: tin, uscita: tout, mese: conta_(modello, tin, tout) };
+  return out;
 }
 
 function limite_() {

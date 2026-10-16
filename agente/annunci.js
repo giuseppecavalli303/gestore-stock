@@ -73,20 +73,34 @@ function fotoDaPagina(html) {
   for (const m of pezzo.matchAll(/images\\?\/800\\?\/(\d+)\\?\/([A-Za-z0-9_-]+\.(?:jpe?g|png|webp))/g)) { const u = `https://cdn.dealerk.it/dealer/datafiles/vehicle/images/800/${m[1]}/${m[2]}`; if (!out.includes(u)) out.push(u); }
   return out;
 }
+// telecamera: se l'elenco dotazioni del sito la nomina, conservo la frase; la conferma arriva poi dalle foto (agente/telecamera.js)
+const RE_CAM = /telecamer|retrocamer|rear ?view/i;
+function elenco(html, chiave) {
+  const i = html.indexOf(`"${chiave}":[`);
+  if (i < 0) return [];
+  let j = i + chiave.length + 3, prof = 0;
+  for (; j < html.length; j++) { const ch = html[j]; if (ch === '[') prof++; else if (ch === ']' && --prof === 0) break; }
+  try { return JSON.parse(html.slice(i + chiave.length + 3, j + 1)).map(x => (typeof x === 'string' ? x : JSON.stringify(x))); } catch (e) { return []; }
+}
+function telecameraDaPagina(html) {
+  const righe = elenco(html, 'equipmentStandardList').concat(elenco(html, 'equipmentList'), elenco(html, 'equipmentOptionalList'));
+  return righe.filter(x => RE_CAM.test(x)).map(x => x.replace(/&amp;/g, '&')).join(' · ');
+}
 async function galleriaCompleta(annunci) {
   let cache = {};
   try { cache = JSON.parse(fs.readFileSync(CACHE, 'utf8')); } catch (e) {}
   let lette = 0, errori = 0;
   for (const a of annunci) {
     const c = cache[a.id];
-    if (c && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; continue; }
+    if (c && c.cam != null && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; continue; }
     try {
       await pausa(400);
       const r = await fetch(a.url, { headers: { 'User-Agent': 'Mozilla/5.0 (Gestore stock Valentino)' } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      const foto = fotoDaPagina(await r.text());
-      cache[a.id] = { t: Date.now(), foto };
+      const html = await r.text(), foto = fotoDaPagina(html), cam = telecameraDaPagina(html);
+      cache[a.id] = { t: Date.now(), foto, cam };
       if (foto.length > a.foto.length) a.foto = foto;
+      a.camLista = cam;
       lette++;
       if (lette % 50 === 0) fs.writeFileSync(CACHE, JSON.stringify(cache));   // salvo strada facendo
     } catch (e) { errori++; }
