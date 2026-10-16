@@ -13,7 +13,7 @@
   // indirizzo per le richieste di avviso, composto qui per non lasciarlo in chiaro nella pagina
   const IO = ['giuseppe.cavalli', 'valentinoautomobili.it'].join('@');
   // assistente: servizio Google Apps Script che custodisce la chiave di Gemini (vedi assistente/Codice.gs)
-  const AI_URL = '';
+  const AI_URL = 'https://script.google.com/macros/s/AKfycbx7mAczjExjEujVll1qUqvrevVpYbWPuqd85MGt_LjQxGI2y4_TUEWWcExqr2KpxcHa/exec';
   const AI_TOKEN = 'FTcdlNGgGU7WXN-L';
   const aiAttivo = () => !!AI_URL && !inFrame && !S.meta.demo;
   const store = {
