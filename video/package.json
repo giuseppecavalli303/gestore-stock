@@ -1,0 +1,8 @@
+{
+  "name": "video-tutorial",
+  "private": true,
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "puppeteer-core": "^23.11.1"
+  }
+}

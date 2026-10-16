@@ -7,7 +7,8 @@
   const immIt = c => (c.imm ? c.imm.slice(5, 7) + '/' + c.imm.slice(0, 4) : 'n.d.');
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   const XLSXJS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  // "in un riquadro" conta solo se il riquadro e' di un altro sito (come claude.ai): li' mail, download e servizi esterni non funzionano
+  const inFrame = (() => { try { return window.self !== window.top && !window.top.location.href; } catch (e) { return true; } })();
   const fotoBase = () => (S.meta.annunci && S.meta.annunci.fotoBase) || 'https://cdn.dealerk.it/dealer/datafiles/vehicle/images/';
   const foto = (c, size, i = 0) => (c.web && c.web.foto && c.web.foto[i] ? fotoBase() + size + '/' + c.web.foto[i] : '');
   // indirizzo per le richieste di avviso, composto qui per non lasciarlo in chiaro nella pagina
@@ -416,7 +417,7 @@
     const corpo = st.attesa ? `<div class="ai-wait"><span class="spin"></span>Gemini sta valutando ${N(st.n)} auto disponibili…</div>`
       : st.errore ? `<p class="ai-err">${esc(st.errore)}</p>`
       : `<div class="ai-ans">${esc(st.risposta || '')}</div>
-         <ul class="ai-list">${auto.map(({ a, c }) => `<li data-open="${esc(c.targa)}"><div class="th">${foto(c, 200) ? `<img src="${foto(c, 200)}" alt="" loading="lazy">` : ''}</div><div class="tx"><b>${esc(c.brand)} ${esc(c.family)}</b> ${plate(c.targa)}<span>${immIt(c)} · ${N(c.km)} km · ${esc(c.fuel)} · ${esc(c.cambio)} · <b>${eur(c.prezzo) || 'prezzo n.d.'}</b></span><em>${esc(a.perche)}</em></div></li>`).join('')}</ul>
+         <ul class="ai-list">${auto.map(({ a, c }) => `<li data-open="${esc(c.targa)}"><div class="th">${foto(c, 200) ? `<img src="${foto(c, 200)}" alt="" loading="lazy">` : ''}</div><div class="tx"><span class="nm"><b>${esc(c.brand)} ${esc(c.family)}</b> ${plate(c.targa)}</span><span>${immIt(c)} · ${N(c.km)} km · ${esc(c.fuel)} · ${esc(c.cambio)} · <b>${eur(c.prezzo) || 'prezzo n.d.'}</b></span><em>${esc(a.perche)}</em></div></li>`).join('')}</ul>
          ${(st.auto || []).length > auto.length ? '<p class="hint">Alcune auto proposte non sono state trovate nello stock e le ho tolte.</p>' : ''}
          <p class="hint">Risposta generata da Gemini su ${N(st.n)} auto disponibili${st.filtri ? ' con i filtri attivi' : ''}. Controlla sempre i dati nella scheda prima di proporla al cliente.${st.uso && st.uso.mese ? ` Questo mese: ${N(st.uso.mese.domande)} ${st.uso.mese.domande === 1 ? 'domanda' : 'domande'}, circa ${st.uso.mese.spesa.toLocaleString('it-IT', { minimumFractionDigits: 2 })} $ di credito usati.` : ''}</p>`;
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
