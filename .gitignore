@@ -11,3 +11,4 @@ agente/richieste.json
 agente/destinatari.txt
 agente/stato.json
 agente/posta-da-inviare.json
+agente/foto-cache.json

@@ -40,7 +40,7 @@ function annuncio(v) {
     porte: +get('doors') > 0 ? +get('doors') : 0, posti: +get('seats') > 0 ? +get('seats') : 0, trazione: get('tractionType') || '',
     colore: [get('colorExt'), get('colorType')].filter(Boolean).join(' '), interni: [get('colorInt'), get('tapestry')].filter(Boolean).join(' '),
     neopatentati: !!get('novice'), garanzia: +get('warrantyMonth') > 0 ? +get('warrantyMonth') : 0, certificato: get('seal_name') || '',
-    giro360: get('image360LinkClosedDoors') || '', video: get('video') || '', url, foto: foto.slice(0, 12)
+    giro360: get('image360LinkClosedDoors') || '', video: get('video') || '', url, foto: foto.slice(0, 20)
   };
 }
 
@@ -55,7 +55,46 @@ async function scarica() {
   }
   const visti = new Set();
   const unici = tutti.filter(a => !visti.has(a.id) && visti.add(a.id));
+  await galleriaCompleta(unici);
   return { aggiornato: new Date().toISOString(), dichiarati: prima.totalResults, annunci: unici };
+}
+
+/* L'elenco del sito da' solo le prime 3 foto: la galleria completa (interni compresi) e' nella pagina dell'annuncio.
+   La leggo una volta per auto e la ricordo in agente/foto-cache.json, rinfrescandola ogni 7 giorni. */
+const CACHE = path.join(__dirname, 'foto-cache.json');
+const SETTE_GIORNI = 7 * 864e5;
+function fotoDaPagina(html) {
+  const i = html.indexOf('"imageList":[');
+  if (i < 0) return [];
+  let j = i + 12, prof = 0;
+  for (; j < html.length; j++) { const ch = html[j]; if (ch === '[') prof++; else if (ch === ']' && --prof === 0) break; }
+  const pezzo = html.slice(i + 12, j + 1);
+  const out = [];
+  for (const m of pezzo.matchAll(/images\\?\/800\\?\/(\d+)\\?\/([A-Za-z0-9_-]+\.(?:jpe?g|png|webp))/g)) { const u = `https://cdn.dealerk.it/dealer/datafiles/vehicle/images/800/${m[1]}/${m[2]}`; if (!out.includes(u)) out.push(u); }
+  return out;
+}
+async function galleriaCompleta(annunci) {
+  let cache = {};
+  try { cache = JSON.parse(fs.readFileSync(CACHE, 'utf8')); } catch (e) {}
+  let lette = 0, errori = 0;
+  for (const a of annunci) {
+    const c = cache[a.id];
+    if (c && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; continue; }
+    try {
+      await pausa(400);
+      const r = await fetch(a.url, { headers: { 'User-Agent': 'Mozilla/5.0 (Gestore stock Valentino)' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const foto = fotoDaPagina(await r.text());
+      cache[a.id] = { t: Date.now(), foto };
+      if (foto.length > a.foto.length) a.foto = foto;
+      lette++;
+      if (lette % 50 === 0) fs.writeFileSync(CACHE, JSON.stringify(cache));   // salvo strada facendo
+    } catch (e) { errori++; }
+  }
+  const attivi = new Set(annunci.map(a => a.id));
+  for (const k of Object.keys(cache)) if (!attivi.has(k)) delete cache[k];   // via le auto non piu' pubblicate
+  fs.writeFileSync(CACHE, JSON.stringify(cache));
+  if (lette || errori) console.log(`Gallerie lette: ${lette}${errori ? `, non lette: ${errori}` : ''}.`);
 }
 
 module.exports = { scarica };
