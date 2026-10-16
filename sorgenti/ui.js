@@ -402,7 +402,7 @@
       : `<div class="ai-ans">${esc(st.risposta || '')}</div>
          <ul class="ai-list">${auto.map(({ a, c }) => `<li data-open="${esc(c.targa)}"><div class="th">${foto(c, 200) ? `<img src="${foto(c, 200)}" alt="" loading="lazy">` : ''}</div><div class="tx"><b>${esc(c.brand)} ${esc(c.family)}</b> ${plate(c.targa)}<span>${immIt(c)} · ${N(c.km)} km · ${esc(c.fuel)} · ${esc(c.cambio)} · <b>${eur(c.prezzo) || 'prezzo n.d.'}</b></span><em>${esc(a.perche)}</em></div></li>`).join('')}</ul>
          ${(st.auto || []).length > auto.length ? '<p class="hint">Alcune auto proposte non sono state trovate nello stock e le ho tolte.</p>' : ''}
-         <p class="hint">Risposta generata da Gemini su ${N(st.n)} auto disponibili${st.filtri ? ' con i filtri attivi' : ''}. Controlla sempre i dati nella scheda prima di proporla al cliente.</p>`;
+         <p class="hint">Risposta generata da Gemini su ${N(st.n)} auto disponibili${st.filtri ? ' con i filtri attivi' : ''}. Controlla sempre i dati nella scheda prima di proporla al cliente.${st.uso && st.uso.mese ? ` Questo mese: ${N(st.uso.mese.domande)} ${st.uso.mese.domande === 1 ? 'domanda' : 'domande'}, circa ${st.uso.mese.spesa.toLocaleString('it-IT', { minimumFractionDigits: 2 })} $ di credito usati.` : ''}</p>`;
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <header><span class="ai-badge">${ICONA_AI}Assistente</span><h2 class="ai-q">${esc(st.domanda)}</h2></header>
       <div class="scroll ai">${corpo}</div>`;

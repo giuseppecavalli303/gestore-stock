@@ -14,6 +14,8 @@ const MODELLO_PREDEFINITO = 'gemini-2.5-flash-lite';
 const TOKEN = 'FTcdlNGgGU7WXN-L';          // lo stesso scritto nel sito: ferma le chiamate a caso
 const MAX_DOMANDE_ORA = 120;               // per tutto il sito, contro gli abusi
 const MAX_ELENCO = 200000;                 // caratteri dell'elenco auto accettati
+// prezzi in dollari per milione di token (ingresso, uscita), per stimare la spesa del mese
+const PREZZI = { 'gemini-2.5-flash-lite': [0.10, 0.40], 'gemini-2.5-flash': [0.30, 2.50] };
 
 const ISTRUZIONI = [
   "Sei l'assistente dei venditori dell'usato di Valentino Automobili Roma.",
@@ -54,7 +56,8 @@ function doPost(e) {
 // controllo veloce dal browser: apri l'indirizzo /exec e deve rispondere ok
 function doGet() {
   const p = PropertiesService.getScriptProperties();
-  return json_({ ok: true, chiave: !!p.getProperty('GEMINI_KEY'), modello: p.getProperty('MODELLO') || MODELLO_PREDEFINITO });
+  const mese = JSON.parse(p.getProperty('MESE_' + Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyyMM')) || '{"domande":0,"spesa":0}');
+  return json_({ ok: true, chiave: !!p.getProperty('GEMINI_KEY'), modello: p.getProperty('MODELLO') || MODELLO_PREDEFINITO, questoMese: mese });
 }
 
 function chiedi_(domanda, elenco) {
@@ -84,8 +87,25 @@ function chiedi_(domanda, elenco) {
   let out;
   try { out = JSON.parse(testo); } catch (e) { return { errore: 'Risposta di Gemini non leggibile, riprova.' }; }
   const uso = j.usageMetadata || {};
-  out.uso = { ingresso: uso.promptTokenCount || 0, uscita: uso.candidatesTokenCount || 0, modello: modello };
+  const tin = uso.promptTokenCount || 0, tout = (uso.candidatesTokenCount || 0) + (uso.thoughtsTokenCount || 0);
+  out.uso = { ingresso: tin, uscita: tout, modello: modello, mese: conta_(modello, tin, tout) };
   return out;
+}
+
+// tiene il conto delle domande e della spesa stimata del mese corrente
+function conta_(modello, tin, tout) {
+  const p = PropertiesService.getScriptProperties();
+  const k = 'MESE_' + Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyyMM');
+  const lock = LockService.getScriptLock();
+  const preso = lock.tryLock(3000);
+  try {
+    const m = JSON.parse(p.getProperty(k) || '{"domande":0,"spesa":0}');
+    const prezzo = PREZZI[modello] || PREZZI[MODELLO_PREDEFINITO];
+    m.domande += 1;
+    m.spesa += (tin * prezzo[0] + tout * prezzo[1]) / 1e6;
+    p.setProperty(k, JSON.stringify(m));
+    return { domande: m.domande, spesa: Math.round(m.spesa * 100) / 100 };
+  } finally { if (preso) lock.releaseLock(); }
 }
 
 function limite_() {
