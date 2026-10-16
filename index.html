@@ -308,6 +308,8 @@ table.vel{white-space:nowrap}
 .ai-list .tx>em{font-style:normal;color:var(--ink)}
 .ai-list .nm{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .ai-list .plate{font-size:11px}
+/* fascia piena sotto orologio e batteria quando l'app e' installata a tutto schermo: il contenuto ci scorre sotto senza restare a meta' */
+.barra-stato{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:45;pointer-events:none;box-shadow:0 6px 14px -6px var(--bg)}
 .m-short,.fdone{display:none}
 html.locked,html.locked body{overflow:hidden}
 @media (hover:none){
@@ -387,6 +389,7 @@ html.locked,html.locked body{overflow:hidden}
 </style>
 
 <div class="sky" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+<div class="barra-stato" aria-hidden="true"></div>
 
 <div class="app" id="app">
   <header class="top glass">
