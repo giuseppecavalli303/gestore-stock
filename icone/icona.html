@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>Icona Stock Usato</title>
+<style>html,body{margin:0;background:transparent}svg{display:block}</style></head>
+<body>
+<!-- Icona dell'app, disegnata a 1024 px: si esporta in PNG con icone/esporta.js -->
+<svg id="ico" width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a7bff"/><stop offset=".48" stop-color="#4a3fe0"/><stop offset="1" stop-color="#1a0f5c"/>
+    </linearGradient>
+    <radialGradient id="luce" cx=".22" cy=".12" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bagliore" cx=".5" cy="1.05" r=".6"><stop offset="0" stop-color="#3ef0d0" stop-opacity=".55"/><stop offset="1" stop-color="#3ef0d0" stop-opacity="0"/></radialGradient>
+    <linearGradient id="carro" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6e2ff"/></linearGradient>
+    <linearGradient id="vetro" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fb2ff"/><stop offset="1" stop-color="#3a52d8"/></linearGradient>
+    <linearGradient id="fari" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bff7ff"/><stop offset="1" stop-color="#2f8cff"/></linearGradient>
+    <linearGradient id="scintilla" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff6b8"/><stop offset=".55" stop-color="#ffd84a"/><stop offset="1" stop-color="#ff9f3a"/></linearGradient>
+    <filter id="ombra" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="26" stdDeviation="26" flood-color="#0b0640" flood-opacity=".55"/></filter>
+    <clipPath id="tondo"><rect width="1024" height="1024" rx="230"/></clipPath>
+  </defs>
+  <g clip-path="url(#tondo)" id="sfondo">
+    <rect width="1024" height="1024" fill="url(#fondo)"/>
+    <rect width="1024" height="1024" fill="url(#bagliore)"/>
+    <rect width="1024" height="1024" fill="url(#luce)"/>
+    <!-- strada che corre verso l'orizzonte -->
+    <path d="M430 1024 L492 760 H532 L594 1024 Z" fill="#fff" opacity=".08"/>
+  </g>
+  <!-- auto vista di fronte -->
+  <g filter="url(#ombra)">
+    <path d="M378 318 Q388 286 420 286 H604 Q636 286 646 318 L700 458 H324 Z" fill="url(#carro)"/>
+    <path d="M410 338 Q416 322 434 322 H590 Q608 322 614 338 L652 444 H372 Z" fill="url(#vetro)"/>
+    <path d="M424 334 H520 L470 440 H384 Z" fill="#fff" opacity=".28"/>
+    <rect x="252" y="440" width="520" height="236" rx="78" fill="url(#carro)"/>
+    <rect x="286" y="640" width="96" height="120" rx="34" fill="#e3ebff"/>
+    <rect x="642" y="640" width="96" height="120" rx="34" fill="#e3ebff"/>
+    <rect x="252" y="440" width="520" height="236" rx="78" fill="url(#carro)"/>
+    <circle cx="350" cy="548" r="44" fill="url(#fari)"/>
+    <circle cx="674" cy="548" r="44" fill="url(#fari)"/>
+    <circle cx="338" cy="536" r="13" fill="#fff" opacity=".9"/>
+    <circle cx="662" cy="536" r="13" fill="#fff" opacity=".9"/>
+    <rect x="428" y="596" width="168" height="34" rx="17" fill="#3a52d8" opacity=".85"/>
+    <rect x="404" y="520" width="216" height="22" rx="11" fill="#c7d5ff"/>
+  </g>
+  <!-- scintilla dell'assistente -->
+  <path d="M800 196 C812 262 826 276 892 288 C826 300 812 314 800 380 C788 314 774 300 708 288 C774 276 788 262 800 196 Z" fill="url(#scintilla)"/>
+  <path d="M884 392 C889 418 895 424 921 429 C895 434 889 440 884 466 C879 440 873 434 847 429 C873 424 879 418 884 392 Z" fill="#fff" opacity=".9"/>
+</svg>
+</body></html>

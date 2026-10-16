@@ -20,5 +20,7 @@ const testa = [
   '<link rel="apple-touch-icon" href="icone/apple-touch-icon.png">'
 ].join('');
 const registra = `<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>`;
-fs.writeFileSync(path.join(root, 'index.html'), '<!doctype html><html lang="it"><head>' + testa + '</head><body>' + page + registra + '</body></html>');
+// sul telefono il nome sotto l'icona viene dal titolo: corto, cosi' non si taglia
+const pagina = page.replace('<title>Stock Usato Valentino</title>', '<title>Stock Usato</title>');
+fs.writeFileSync(path.join(root, 'index.html'), '<!doctype html><html lang="it"><head>' + testa + '</head><body>' + pagina + registra + '</body></html>');
 console.log('ok', page.length);

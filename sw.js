@@ -1,7 +1,7 @@
 // Fa funzionare l'app installata anche senza rete, con l'ultimo stock visto.
 // Pagina e dati: prima la rete (sempre il piu' aggiornato), la copia salvata solo se la rete manca.
 // Caratteri e icone: prima la copia salvata, cambiano di rado.
-const VERSIONE = 'stock-v1';
+const VERSIONE = 'stock-v2';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icone/icona-192.png', 'icone/icona-512.png'];
 
 self.addEventListener('install', e => {

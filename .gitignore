@@ -15,3 +15,5 @@ agente/foto-cache.json
 video/node_modules/
 video/out/
 *.mp4
+agente/telecamera-cache.json
+icone/grande-*.png
