@@ -38,7 +38,8 @@ function InviaPosta {
     $f = Join-Path $PSScriptRoot 'posta-da-inviare.json'
     if (-not (Test-Path $f)) { return }
     $lista = @()
-    try { $lista = @(Get-Content $f -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { Scrivi "Coda mail illeggibile, la scarto." }
+    # in PowerShell 5.1 ConvertFrom-Json in una pipeline consegna l'elenco intero come un solo oggetto: lo converto a parte e poi lo scorro
+    try { $dati = ConvertFrom-Json (Get-Content $f -Raw -Encoding UTF8); foreach ($x in $dati) { $lista += $x } } catch { Scrivi "Coda mail illeggibile, la scarto." }
     Remove-Item $f -Force
     foreach ($m in $lista) {
         if (-not $m -or -not $m.to) { continue }                     # coda vuota o mail senza destinatario: niente da spedire
