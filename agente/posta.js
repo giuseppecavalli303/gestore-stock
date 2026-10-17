@@ -63,34 +63,29 @@ function caricaStock() {
 
 /* ---------- riepilogo del giorno ---------- */
 function riepilogo() {
-  const { cur, prev, pm, sto } = caricaStock();
+  const { cur, prev, pm } = caricaStock();
   const day = cur.meta.day, cs = cur.cars;
-  const nuovi = pm ? cs.filter(c => !pm.has(c.targa)) : [];
-  const cur_t = new Set(cs.map(c => c.targa));
-  const usciti = prev ? prev.cars.filter(c => !cur_t.has(c.targa)) : [];
-  const prezzi = [], inseriti = [], prenotate = [];
-  for (const c of cs) {
-    const p = pm && pm.get(c.targa);
-    if (!p) continue;
-    if (p.prezzo && c.prezzo && p.prezzo !== c.prezzo) prezzi.push([c, p.prezzo]);
-    else if (!p.prezzo && c.prezzo) inseriti.push(c);
-    if (c.booked && !p.booked) prenotate.push(c);
-  }
-  prezzi.sort((a, b) => (a[0].prezzo - a[1]) - (b[0].prezzo - b[1]));
+  // le tre sezioni chieste da Giuseppe per i venditori
+  // pronta da vendere = libera, con prezzo e pubblicata (annuncio sul sito o AutoScout)
+  const pronta = c => c && c.free && c.prezzo > 0 && (!!c.web || !!c.as);
+  // 1. nuovi arrivi: diventate pronte da vendere dall'ultima stampa (anche se entrate prima ma prezzate/pubblicate solo ora)
+  const nuovi = cs.filter(c => pronta(c) && !(pm && pronta(pm.get(c.targa)))).sort((a, b) => (a.giorni ?? 0) - (b.giorni ?? 0));
+  // 2. abbassamenti di prezzo sulle auto libere
+  const ribassi = pm ? cs.filter(c => { const p = pm.get(c.targa); return c.free && p && p.prezzo > 0 && c.prezzo > 0 && c.prezzo < p.prezzo; }).map(c => [c, pm.get(c.targa).prezzo]).sort((a, b) => (a[0].prezzo - a[1]) - (b[0].prezzo - b[1])) : [];
+  // 3. stock anziano: libere con prezzo ferme da almeno 90 giorni, le piu' vecchie prima
+  const anziane = cs.filter(c => c.free && c.prezzo > 0 && (c.giorni ?? 0) >= 90).sort((a, b) => b.giorni - a.giorni);
+  const MOSTRA = 15;
   const ora = cur.meta.printDate ? cur.meta.printDate.slice(11) : '';
   const box = (v, l) => `<td style="padding:10px 12px;background:#ffffff;border-radius:10px;text-align:left"><div style="font-size:20px;font-weight:700">${v}</div><div style="font-size:12px;color:#5b6b80">${l}</div></td>`;
   let corpo = `<p style="margin:0 0 12px;color:#44556a">Stampa del ${dIt(day)} ore ${ora}${prev ? `, confronto con quella del ${dIt(prev.meta.day)}` : ''}.</p>
-<table role="presentation" cellpadding="0" cellspacing="6" style="width:100%"><tr>${box(N(cs.length), 'veicoli')}${box(N(cs.filter(c => c.free).length), 'libere')}${box(N(cs.filter(c => c.booked).length), 'prenotate')}${box(N(cs.filter(c => c.st === 7).length), 'in arrivo')}</tr></table>`;
-  corpo += sezione(`Nuovi ingressi (${nuovi.length})`, nuovi.map(c => rigaAuto(c)));
-  corpo += sezione(`Prezzi cambiati (${prezzi.length})`, prezzi.map(([c, era]) => rigaAuto(c, `era ${eur(era)}, ${c.prezzo < era ? 'ribassata di' : 'aumentata di'} ${eur(Math.abs(c.prezzo - era))}`)));
-  corpo += sezione(`Prezzo inserito (${inseriti.length})`, inseriti.map(c => rigaAuto(c)));
-  corpo += sezione(`Prenotate dall'ultima stampa (${prenotate.length})`, prenotate.map(c => rigaAuto(c, c.vend ? 'venditore: ' + esc(c.vend) : '')));
-  if (usciti.length) {
-    const st = sto && sto.auto;
-    corpo += `<h2 style="font-size:15px;margin:20px 0 8px">Uscite dallo stock (${usciti.length})</h2><p style="margin:0;font-size:13px;color:#44556a">` +
-      usciti.map(c => `${esc(c.brand)} ${esc(c.family)} ${esc(c.targa)}${c.ingr ? `, ${Math.max(0, Math.round((Date.parse(day) - Date.parse(c.ingr)) / 864e5))} gg in stock` : ''}`).join(' · ') + '</p>';
-  }
-  const titolo = `Stock usato ${dIt(day).slice(0, 5)}: ${nuovi.length} nuovi, ${usciti.length} usciti, ${prezzi.length} prezzi cambiati`;
+<table role="presentation" cellpadding="0" cellspacing="6" style="width:100%"><tr>${box(N(nuovi.length), 'nuove pronte da vendere')}${box(N(ribassi.length), 'prezzi abbassati')}${box(N(anziane.length), 'libere da 90+ giorni')}</tr></table>`;
+  corpo += sezione(`1. Nuovi arrivi pronti da vendere (${nuovi.length})`, nuovi.map(c => rigaAuto(c)));
+  if (!nuovi.length) corpo += `<p style="font-size:13px;color:#5b6b80">Nessuna auto nuova con prezzo e annuncio da ieri.</p>`;
+  corpo += sezione(`2. Prezzi abbassati (${ribassi.length})`, ribassi.map(([c, era]) => rigaAuto(c, `era ${eur(era)}, ribassata di ${eur(era - c.prezzo)}`)));
+  if (!ribassi.length) corpo += `<p style="font-size:13px;color:#5b6b80">Nessun ribasso da ieri.</p>`;
+  corpo += sezione(`3. Da spingere: libere in stock da più tempo (${anziane.length})`, anziane.slice(0, MOSTRA).map(c => rigaAuto(c, `${c.giorni} giorni in stock`)));
+  if (anziane.length > MOSTRA) corpo += `<p style="font-size:13px"><a href="${APP}?q=${encodeURIComponent('libere da più di 90 giorni')}" style="color:#0a5cf5">Vedi tutte le ${N(anziane.length)} nello stock</a></p>`;
+  const titolo = `Stock usato ${dIt(day).slice(0, 5)}: ${nuovi.length} nuove pronte, ${ribassi.length} ribassi, ${anziane.length} da spingere`;
   for (const to of destinatari()) accoda(to, titolo, corpo);
 }
 
