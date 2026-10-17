@@ -91,12 +91,13 @@ function riepilogo() {
   corpo += sezione(`3. Da spingere: libere in stock da più tempo (${anziane.length})`, anziane.slice(0, MOSTRA).map(c => rigaAuto(c, `${c.giorni} giorni in stock`)));
   corpo += tutte(anziane.length, 'libere da più di 90 giorni');
   corpo += sezione(`4. Prenotate dall'ultima stampa (${prenotate.length})`, prenotate.slice(0, MOSTRA).map(c => rigaAuto(c, c.vend ? 'venditore: ' + esc(c.vend) : '')));
-  corpo += sezione(`5. Ferme da 90+ giorni senza annuncio o foto sul sito (${nascoste.length})`, nascoste.slice(0, MOSTRA).map(c => rigaAuto(c, `${c.giorni} giorni in stock: nessuno la vede online`)));
-  corpo += tutte(nascoste.length, 'libere da più di 90 giorni senza annuncio');
-  corpo += sezione(`6. Nuove in arrivo (${arrivo.length})`, arrivo.slice(0, MOSTRA).map(c => rigaAuto(c, 'in arrivo: si può già proporre')));
+  corpo += sezione(`5. Nuove in arrivo (${arrivo.length})`, arrivo.slice(0, MOSTRA).map(c => rigaAuto(c, 'in arrivo: si può già proporre')));
   corpo += tutte(arrivo.length, 'in arrivo');
   const titolo = `Stock usato ${dIt(day).slice(0, 5)}: ${nuovi.length} nuove pronte, ${ribassi.length} ribassi, ${prenotate.length} prenotate, ${arrivo.length} in arrivo`;
-  for (const to of destinatari()) accoda(to, titolo, corpo);
+  // solo nella copia di Giuseppe: le auto ferme che online non vede nessuno
+  const soloIo = sezione(`Solo per te: ferme da 90+ giorni senza annuncio o foto sul sito (${nascoste.length})`, nascoste.slice(0, MOSTRA).map(c => rigaAuto(c, `${c.giorni} giorni in stock: nessuno la vede online`)))
+    + tutte(nascoste.length, 'libere da più di 90 giorni senza annuncio');
+  for (const to of destinatari()) accoda(to, titolo, to.toLowerCase() === IO ? corpo + soloIo : corpo);
 }
 
 /* ---------- ricerche salvate ---------- */
