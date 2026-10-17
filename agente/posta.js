@@ -74,7 +74,12 @@ function riepilogo() {
   const ribassi = pm ? cs.filter(c => { const p = pm.get(c.targa); return c.free && p && p.prezzo > 0 && c.prezzo > 0 && c.prezzo < p.prezzo; }).map(c => [c, pm.get(c.targa).prezzo]).sort((a, b) => (a[0].prezzo - a[1]) - (b[0].prezzo - b[1])) : [];
   // 3. stock anziano: libere con prezzo ferme da almeno 90 giorni, le piu' vecchie prima
   const anziane = cs.filter(c => c.free && c.prezzo > 0 && (c.giorni ?? 0) >= 90).sort((a, b) => b.giorni - a.giorni);
+  // 4. le proposte approvate da Giuseppe
+  const prenotate = pm ? cs.filter(c => c.booked && !(pm.get(c.targa) || {}).booked) : [];
+  const nascoste = cs.filter(c => c.free && (c.giorni ?? 0) >= 90 && !(c.web && c.web.foto && c.web.foto.length)).sort((a, b) => b.giorni - a.giorni);
+  const arrivo = cs.filter(c => c.st === 7 && !(pm && (pm.get(c.targa) || {}).st === 7));
   const MOSTRA = 15;
+  const tutte = (n, q) => (n > MOSTRA ? `<p style="font-size:13px"><a href="${APP}?q=${encodeURIComponent(q)}" style="color:#0a5cf5">Vedi tutte le ${N(n)} nello stock</a></p>` : '');
   const ora = cur.meta.printDate ? cur.meta.printDate.slice(11) : '';
   const box = (v, l) => `<td style="padding:10px 12px;background:#ffffff;border-radius:10px;text-align:left"><div style="font-size:20px;font-weight:700">${v}</div><div style="font-size:12px;color:#5b6b80">${l}</div></td>`;
   let corpo = `<p style="margin:0 0 12px;color:#44556a">Stampa del ${dIt(day)} ore ${ora}${prev ? `, confronto con quella del ${dIt(prev.meta.day)}` : ''}.</p>
@@ -84,8 +89,13 @@ function riepilogo() {
   corpo += sezione(`2. Prezzi abbassati (${ribassi.length})`, ribassi.map(([c, era]) => rigaAuto(c, `era ${eur(era)}, ribassata di ${eur(era - c.prezzo)}`)));
   if (!ribassi.length) corpo += `<p style="font-size:13px;color:#5b6b80">Nessun ribasso da ieri.</p>`;
   corpo += sezione(`3. Da spingere: libere in stock da più tempo (${anziane.length})`, anziane.slice(0, MOSTRA).map(c => rigaAuto(c, `${c.giorni} giorni in stock`)));
-  if (anziane.length > MOSTRA) corpo += `<p style="font-size:13px"><a href="${APP}?q=${encodeURIComponent('libere da più di 90 giorni')}" style="color:#0a5cf5">Vedi tutte le ${N(anziane.length)} nello stock</a></p>`;
-  const titolo = `Stock usato ${dIt(day).slice(0, 5)}: ${nuovi.length} nuove pronte, ${ribassi.length} ribassi, ${anziane.length} da spingere`;
+  corpo += tutte(anziane.length, 'libere da più di 90 giorni');
+  corpo += sezione(`4. Prenotate dall'ultima stampa (${prenotate.length})`, prenotate.slice(0, MOSTRA).map(c => rigaAuto(c, c.vend ? 'venditore: ' + esc(c.vend) : '')));
+  corpo += sezione(`5. Ferme da 90+ giorni senza annuncio o foto sul sito (${nascoste.length})`, nascoste.slice(0, MOSTRA).map(c => rigaAuto(c, `${c.giorni} giorni in stock: nessuno la vede online`)));
+  corpo += tutte(nascoste.length, 'libere da più di 90 giorni senza annuncio');
+  corpo += sezione(`6. Nuove in arrivo (${arrivo.length})`, arrivo.slice(0, MOSTRA).map(c => rigaAuto(c, 'in arrivo: si può già proporre')));
+  corpo += tutte(arrivo.length, 'in arrivo');
+  const titolo = `Stock usato ${dIt(day).slice(0, 5)}: ${nuovi.length} nuove pronte, ${ribassi.length} ribassi, ${prenotate.length} prenotate, ${arrivo.length} in arrivo`;
   for (const to of destinatari()) accoda(to, titolo, corpo);
 }
 
