@@ -13,7 +13,7 @@ const FOTO = 'https://cdn.dealerk.it/dealer/datafiles/vehicle/images/200/';
 const src = f => fs.readFileSync(path.join(root, 'sorgenti', f), 'utf8');
 const { buildVocab, parseQuery, matchQuery, deacc } = new Function(src('norm.js') + '\n' + src('query.js') + '\nreturn { buildVocab, parseQuery, matchQuery, deacc };')();
 
-const leggi = (f, def) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return def; } };
+const leggi = (f, def) => { try { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '')); } catch (e) { return def; } };
 const N = n => Math.round(n || 0).toLocaleString('it-IT', { useGrouping: 'always' });
 const eur = n => (n ? N(n) + ' €' : 'prezzo non inserito');
 const dIt = iso => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '');
@@ -22,7 +22,7 @@ const imm = c => (c.imm ? c.imm.slice(5, 7) + '/' + c.imm.slice(0, 4) : '');
 const etichetta = c => (c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato);
 
 const coda = leggi(qui('posta-da-inviare.json'), []);
-const accoda = (to, subject, corpo) => coda.push({ to, subject, html: pagina(subject, corpo) });
+const accoda = (to, subject, corpo) => { if (to && /@/.test(to)) coda.push({ to, subject, html: pagina(subject, corpo) }); };
 const salvaCoda = () => fs.writeFileSync(qui('posta-da-inviare.json'), JSON.stringify(coda, null, 1));
 
 /* ---------- impaginazione mail (stili in linea: i client di posta ignorano i fogli di stile) ---------- */
@@ -99,7 +99,7 @@ const registro = () => leggi(qui('ricerche.json'), { ricerche: [], gestite: [] }
 const salvaRegistro = r => fs.writeFileSync(qui('ricerche.json'), JSON.stringify(r, null, 1));
 
 function richieste() {
-  const req = leggi(qui('richieste.json'), []), reg = registro();
+  const letto = leggi(qui('richieste.json'), []), req = Array.isArray(letto) ? letto : [letto], reg = registro();
   const { cur } = caricaStock();
   const vocab = buildVocab(cur.cars);
   for (const r of req) {

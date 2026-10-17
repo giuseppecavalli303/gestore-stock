@@ -37,15 +37,19 @@ function GiaFatto($chiave) { $s = LeggiStato; return ($s.$chiave -eq $oggi) }
 function InviaPosta {
     $f = Join-Path $PSScriptRoot 'posta-da-inviare.json'
     if (-not (Test-Path $f)) { return }
-    $lista = @(Get-Content $f -Raw -Encoding UTF8 | ConvertFrom-Json)
-    foreach ($m in $lista) {
-        if ($NonInviare) { Scrivi "Prova, non inviata a $($m.to): $($m.subject)"; continue }
-        $it = $outlook.CreateItem(0)
-        $it.To = $m.to; $it.Subject = $m.subject; $it.HTMLBody = $m.html
-        $it.Send()
-        Scrivi "Mail inviata a $($m.to): $($m.subject)"
-    }
+    $lista = @()
+    try { $lista = @(Get-Content $f -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { Scrivi "Coda mail illeggibile, la scarto." }
     Remove-Item $f -Force
+    foreach ($m in $lista) {
+        if (-not $m -or -not $m.to) { continue }                     # coda vuota o mail senza destinatario: niente da spedire
+        if ($NonInviare) { Scrivi "Prova, non inviata a $($m.to): $($m.subject)"; continue }
+        try {
+            $it = $outlook.CreateItem(0)
+            $it.To = $m.to; $it.Subject = $m.subject; $it.HTMLBody = $m.html
+            $it.Send()
+            Scrivi "Mail inviata a $($m.to): $($m.subject)"
+        } catch { Scrivi "Mail non inviata a $($m.to): $($_.Exception.Message)" }
+    }
 }
 
 function Pubblica($messaggio) {
@@ -96,7 +100,7 @@ try {
 
     # 1. richieste di avviso dei colleghi
     if ($richieste.Count) {
-        $richieste | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $PSScriptRoot 'richieste.json') -Encoding UTF8
+        [IO.File]::WriteAllText((Join-Path $PSScriptRoot 'richieste.json'), (ConvertTo-Json -InputObject @($richieste) -Depth 3), (New-Object System.Text.UTF8Encoding($false)))
         $r = Esegui 'node agente\posta.js richieste'
         if ($r.Codice -ne 0) { Scrivi $r.Testo } else { InviaPosta }
     }
@@ -166,7 +170,8 @@ catch {
         try {
             $testo = ($msg -replace '"', "'")
             $p = Esegui "node agente\posta.js allarme errore ""$testo"""
-            if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'errore' $oggi }
+            SegnaStato 'errore' $oggi
+            if ($p.Codice -eq 0) { InviaPosta }
         } catch {}
     }
     exit 1
