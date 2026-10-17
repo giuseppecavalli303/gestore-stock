@@ -3,9 +3,10 @@
 #  2. se c'e' una stampa nuova: annunci del sito -> conversione -> storico -> pubblicazione -> riepilogo e avvisi via mail
 #  3. aggiorna foto e annunci dal sito ogni 6 ore
 #  4. dalle 13, se la stampa di oggi non e' arrivata, ti avvisa una volta
+#  5. con la stampa nuova prepara la presentazione per Giuseppe (il lunedi' anche il riepilogo settimanale)
 # Uso:  powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 [-NonPubblicare] [-NonInviare]
-# -Riepilogo rimanda subito il riepilogo dell'ultima stampa pubblicata
-param([switch]$NonPubblicare, [switch]$NonInviare, [switch]$Riepilogo)
+# -Riepilogo rimanda subito il riepilogo dell'ultima stampa pubblicata; -Rapporto rimanda subito la presentazione a Giuseppe
+param([switch]$NonPubblicare, [switch]$NonInviare, [switch]$Riepilogo, [switch]$Rapporto)
 
 $ErrorActionPreference = 'Stop'
 $Mittenti  = @('Muschitiello', 'Quartieri')      # la stampa deve arrivare da una di queste persone
@@ -47,10 +48,20 @@ function InviaPosta {
         try {
             $it = $outlook.CreateItem(0)
             $it.To = $m.to; $it.Subject = $m.subject; $it.HTMLBody = $m.html
+            foreach ($a in @($m.allegati)) { if ($a -and (Test-Path $a)) { [void]$it.Attachments.Add([string]$a) } }
             $it.Send()
             Scrivi "Mail inviata a $($m.to): $($m.subject)"
         } catch { Scrivi "Mail non inviata a $($m.to): $($_.Exception.Message)" }
     }
+}
+
+# presentazione per Giuseppe: prima rilegge AutoScout (se non risponde, usa i dati dell'ultima lettura)
+function PreparaRapporto {
+    $m = Esegui 'node agente\mercato.js'
+    Scrivi $m.Testo
+    $r = Esegui 'node agenteapporto.js'
+    Scrivi $r.Testo
+    return ($r.Codice -eq 0)
 }
 
 function Pubblica($messaggio) {
@@ -91,6 +102,11 @@ try {
                 if ($att.FileName -like $Allegato) { $trovato = @{ Quando = $mail.ReceivedTime; Allegato = $att; Mittente = $mail.SenderName }; break }
             }
         }
+    }
+
+    if ($Rapporto) {
+        if (PreparaRapporto) { InviaPosta }
+        exit 0
     }
 
     if ($Riepilogo) {
@@ -135,6 +151,10 @@ try {
             if ($nuova -and (LeggiStato).riepilogo -ne $giorno) {
                 $p = Esegui 'node agente\posta.js riepilogo avvisi'
                 if ($p.Codice -ne 0) { Scrivi $p.Testo } else { InviaPosta; SegnaStato 'riepilogo' $giorno }
+            }
+            if ($nuova -and (LeggiStato).rapporto -ne $giorno) {
+                SegnaStato 'rapporto' $giorno                            # una sola presentazione al giorno, anche se qualcosa va storto
+                if (PreparaRapporto) { InviaPosta }
             }
             Get-ChildItem $arrivi -Filter *.pdf | Sort-Object LastWriteTime -Descending | Select-Object -Skip 15 | Remove-Item -Force
         }
