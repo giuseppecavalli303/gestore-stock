@@ -5,8 +5,8 @@
 #  4. dalle 13, se la stampa di oggi non e' arrivata, ti avvisa una volta
 #  5. con la stampa nuova prepara la presentazione per Giuseppe (il lunedi' anche il riepilogo settimanale)
 # Uso:  powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 [-NonPubblicare] [-NonInviare]
-# -Riepilogo rimanda subito il riepilogo dell'ultima stampa pubblicata; -Rapporto rimanda subito la presentazione a Giuseppe
-param([switch]$NonPubblicare, [switch]$NonInviare, [switch]$Riepilogo, [switch]$Rapporto)
+# -Riepilogo rimanda subito il riepilogo dell'ultima stampa pubblicata; -Rapporto rimanda subito la presentazione a Giuseppe (-Settimana aggiunge il riepilogo settimanale)
+param([switch]$NonPubblicare, [switch]$NonInviare, [switch]$Riepilogo, [switch]$Rapporto, [switch]$Settimana)
 
 $ErrorActionPreference = 'Stop'
 $Mittenti  = @('Muschitiello', 'Quartieri')      # la stampa deve arrivare da una di queste persone
@@ -59,7 +59,7 @@ function InviaPosta {
 function PreparaRapporto {
     $m = Esegui 'node agente\mercato.js'
     Scrivi $m.Testo
-    $r = Esegui 'node agenteapporto.js'
+    $r = Esegui ('node agente\rapporto.js' + $(if ($Settimana) { ' --settimana' } else { '' }))
     Scrivi $r.Testo
     return ($r.Codice -eq 0)
 }
