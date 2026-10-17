@@ -5,15 +5,15 @@ const fs = require('fs'), path = require('path');
 
 const SITO = 'https://www.valentinoautomobili.it';
 const ELENCO = SITO + '/auto/usate/?type=KM0%7CUSED';
-const DATI = SITO + '/wp-json/wsr/v1/stock/listing/stock-listing-widget-1/update?type=KM0%7CUSED&page=';
+const DATI = (tipo, n) => SITO + '/wp-json/wsr/v1/stock/listing/stock-listing-widget-1/update?type=' + tipo + (n === '' ? '' : '&page=' + n);
 const PAUSA_MS = 700;                        // tra una pagina e l'altra, per non pesare sul sito
 
 const pausa = ms => new Promise(r => setTimeout(r, ms));
 
-async function pagina(n) {
+async function pagina(n, tipo = 'KM0%7CUSED') {
   for (let tentativo = 1; tentativo <= 3; tentativo++) {
     try {
-      const r = await fetch(DATI + n, { headers: { 'User-Agent': 'Mozilla/5.0 (Gestore stock Valentino)', Referer: ELENCO, Accept: 'application/json' } });
+      const r = await fetch(DATI(tipo, n), { headers: { 'User-Agent': 'Mozilla/5.0 (Gestore stock Valentino)', Referer: ELENCO, Accept: 'application/json' } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
       if (!j.original || !Array.isArray(j.original.vehicles)) throw new Error('risposta senza veicoli');
@@ -48,13 +48,14 @@ async function scarica() {
   const prima = await pagina(1);
   const perPagina = prima.resultsPerPage || prima.vehicles.length || 15;
   const pagine = Math.ceil((prima.totalResults || 0) / perPagina);
-  const tutti = prima.vehicles.map(annuncio);
-  for (let n = 2; n <= pagine; n++) {
-    await pausa(PAUSA_MS);
-    (await pagina(n)).vehicles.forEach(v => tutti.push(annuncio(v)));
-  }
-  const visti = new Set();
-  const unici = tutti.filter(a => !visti.has(a.id) && visti.add(a.id));
+  const perId = new Map();
+  const aggiungi = l => l.forEach(v => { const a = annuncio(v); if (!perId.has(a.id)) perId.set(a.id, a); });
+  aggiungi(prima.vehicles);
+  for (let n = 2; n <= pagine; n++) { await pausa(PAUSA_MS); aggiungi((await pagina(n)).vehicles); }
+  // il sito ha un difetto: la pagina 2 ripete la pagina 1 e 15 auto non escono mai nelle pagine numerate.
+  // Le restituisce solo la richiesta senza numero di pagina.
+  if (perId.size < (prima.totalResults || 0)) aggiungi((await pagina('')).vehicles);
+  const unici = [...perId.values()];
   await galleriaCompleta(unici);
   return { aggiornato: new Date().toISOString(), dichiarati: prima.totalResults, annunci: unici };
 }

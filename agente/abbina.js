@@ -25,9 +25,18 @@ function arricchisci(cars, annunci) {
     delete c.web;
     if (c._cambioPdf) { c.cambio = c._cambioPdf; delete c._cambioPdf; }
     let a = perTarga.get(c.targa), come = 'targa';
+    const stessaMarca = x => deacc(x.marca).slice(0, 4) === deacc(c.brand).slice(0, 4);
+    // due targhe vere e diverse sono due auto diverse, anche se i chilometri tornano
+    const targaVera = t => /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(t);
+    const compatibile = x => stessaMarca(x) && !(targaVera(c.targa) && targaVera(x.targa));
     if (!a && c.km >= 100) {
-      const l = (perKm.get(c.km + '|' + c.imm) || []).filter(x => deacc(x.marca).slice(0, 4) === deacc(c.brand).slice(0, 4));
+      const l = (perKm.get(c.km + '|' + c.imm) || []).filter(compatibile);
       if (l.length === 1) { a = l[0]; come = 'km'; }
+    }
+    // targhe interne tipo NW117634: sul sito compare solo la parte numerica (117634)
+    if (!a) {
+      const cifre = (c.targa.match(/\d{5,}/) || [])[0];
+      if (cifre) { const l = annunci.filter(x => /^\d{5,}$/.test(x.targa) && cifre.endsWith(x.targa) && stessaMarca(x)); if (l.length === 1) { a = l[0]; come = 'codice'; } }
     }
     if (!a) continue;
     come === 'targa' ? perT++ : perK++;
