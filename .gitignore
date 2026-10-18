@@ -19,3 +19,5 @@ agente/telecamera-cache.json
 icone/grande-*.png
 agente/autoscout.json
 agente/rapporti/
+video/materiale/
+video/out-log.txt
