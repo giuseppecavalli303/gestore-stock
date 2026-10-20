@@ -24,3 +24,6 @@ video/out-log.txt
 agente/listini-cache.json
 agente/chiave-codici.txt
 agente/chiave-codici-qr.png
+agente/config.json
+agente/stato-prova.json
+agente/prova-posta.json
