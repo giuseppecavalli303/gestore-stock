@@ -450,9 +450,12 @@
     if (!el) return;
     if (!c.prezzo) { el.innerHTML = '<p class="hint">Prezzo non inserito: niente simulazione della rata.</p>'; return; }
     const tipi = (isVW(c) ? ['pvv'] : []).concat(['multimake', 'classico']);
-    const st = FS[c.targa] || (FS[c.targa] = { tipo: tipi[0], ant: 0, dur: 36, km: FIN.kmAnnui, vfg: FIN.vfg.iniziale, mm: 0, man: true });
-    // come nel simulatore: plug-in, metano e up! hanno la tariffa dedicata, le altre 1 tagliando
-    const manMese = /Plug-in|Metano/.test(c.fuel) || /^up/i.test(c.family || '') ? FIN.manutenzione.plugin : FIN.manutenzione.tagliando1;
+    // manutenzione come nel simulatore: per metano, plug-in e up! la tariffa dedicata, per le altre 1 tagliando (si puo' cambiare)
+    const manIniz = /Plug-in|Metano/.test(c.fuel) || /^up/i.test(c.family || '') ? 'plugin' : 'tagliando1';
+    const st = FS[c.targa] || (FS[c.targa] = { tipo: tipi[0], ant: 0, dur: 36, km: FIN.kmAnnui, vfg: FIN.vfg.iniziale, mm: 0, man: true, manTipo: manIniz, furto: '', furtoAnni: 0, gap: false, ego: false, safe: false });
+    const SV = FIN.servizi, anniMax = Math.max(2, Math.ceil(st.dur / 12));
+    if (!st.furtoAnni || st.furtoAnni > anniMax) st.furtoAnni = anniMax;      // come nel simulatore: copertura pari alla durata
+    const opzAnni = (am, sel) => Array.from({ length: am - 1 }, (_, i) => i + 2).map(a => `<option value="${a}"${a === sel ? ' selected' : ''}>${a} anni</option>`).join('');
     if (!tipi.includes(st.tipo)) st.tipo = tipi[0];
     const P = FIN[st.tipo], palla = st.tipo !== 'classico';
     const suNuovo = !!(uso && uso.prezzo), base = suNuovo ? uso.prezzo : c.prezzo;
@@ -467,33 +470,63 @@
       <label class="fin-l"><span>Anticipo</span><b id="fAntV"></b><input type="range" id="fAnt" min="0" max="${maxAnt}" step="100" value="${st.ant}"></label>
       <div class="fin-l"><span>Durata</span>${palla ? `<div class="fin-chips">${P.durate.map(d => `<button class="chip" data-fin-dur="${d}" aria-pressed="${d === st.dur}">${d} mesi</button>`).join('')}</div>` : `<b id="fDurV"></b><input type="range" id="fDur" min="${P.durataMin}" max="${P.durataMax}" step="6" value="${st.dur}">`}</div>
       ${palla ? `<label class="fin-l"><span>Valore futuro garantito</span><b id="fVfgV"></b><input type="range" id="fVfg" min="${FIN.vfg.min}" max="${FIN.vfg.max}" step="1" value="${st.vfg}"><small>${suNuovo ? `in % del prezzo da nuovo (${eur(base)}, codice ${esc(uso.codice)})` : `in % del prezzo di vendita: ${isVW(c) ? 'quando c\'è il codice modello si usa il prezzo da nuovo' : 'per questa marca non c\'è listino'}`}</small></label>
-      <label class="fin-l fin-check"><input type="checkbox" id="fMan"${st.man ? ' checked' : ''}><span>Manutenzione inclusa (${manMese} €/mese)</span></label>
       <label class="fin-l"><span>Km all'anno</span><select id="fKm">${[10000, 15000, 20000, 25000, 30000, 40000].map(k => `<option value="${k}"${k === st.km ? ' selected' : ''}>${N(k)}</option>`).join('')}</select></label>` : ''}
+      <details class="fin-serv" id="fServ"${st.servAperti ? ' open' : ''}><summary><span>Servizi</span><b id="fServV"></b></summary>
+        ${palla ? `<div class="fin-gr"><label class="fin-check"><input type="checkbox" id="fMan"${st.man ? ' checked' : ''}><span>Manutenzione WeCare Easy</span></label>
+          <div class="fin-chips">${[['tagliando1', '1 tagliando'], ['tagliando2', '2 tagliandi'], ['plugin', 'Metano, plug-in o up!']].map(([k, l]) => `<button class="chip" data-fin-man="${k}" aria-pressed="${st.manTipo === k}">${l} · ${FIN.manutenzione[k]} €/mese</button>`).join('')}</div></div>` : ''}
+        <div class="fin-gr"><span class="fin-tit">Finanziati (fanno interessi)</span>
+          <label class="fin-check"><input type="checkbox" id="fFurto"${st.furto ? ' checked' : ''}><span>Furto e incendio</span></label>
+          ${st.furto ? `<div class="fin-chips">${[['first_trip', 'First Trip'], ['business_tour', 'Business Tour']].map(([k, l]) => `<button class="chip" data-fin-furto="${k}" aria-pressed="${st.furto === k}">${l} · ${SV.furtoPerMille[k]} €/1.000 € l'anno</button>`).join('')}</div>
+          <label class="fin-l"><span>Copertura</span><select id="fFurtoAnni">${opzAnni(anniMax, st.furtoAnni)}</select></label>` : ''}
+          <label class="fin-check"><input type="checkbox" id="fGap"${st.gap ? ' checked' : ''}><span>Garanzia GAP (valore a nuovo) · ${SV.gap} €/mese</span></label></div>
+        <div class="fin-gr"><span class="fin-tit">Ripartiti sulla rata (senza interessi)</span>
+          <label class="fin-check"><input type="checkbox" id="fEgo"${st.ego ? ' checked' : ''}><span>CPI Alter Ego (protezione del credito) · ${SV.alterEgo} €/mese</span></label>
+          <label class="fin-check"><input type="checkbox" id="fSafe"${st.safe ? ' checked' : ''}><span>Personal Safe · ${SV.personalSafe} €/mese</span></label></div>
+      </details>
       ${st.tipo === 'multimake' ? `<div class="fin-l"><span>Tasso</span><div class="fin-chips">${P.tassi.map((t, i) => `<button class="chip" data-fin-mm="${i}" aria-pressed="${i === st.mm}">${t.nome} ${pctIt(t.tan)}</button>`).join('')}</div></div>` : ''}
       <p class="fin-note" id="fNote"></p>
     </div>`;
     const aggiorna = () => {
       st.ant = +$('fAnt').value;
+      const durPrima = st.dur;
       if ($('fDur')) st.dur = +$('fDur').value;
+      // come nel simulatore: cambiando la durata la copertura furto e incendio torna pari alla durata
+      const am = Math.max(2, Math.ceil(st.dur / 12));
+      if (st.dur !== durPrima) st.furtoAnni = am; else if ($('fFurtoAnni')) st.furtoAnni = +$('fFurtoAnni').value;
+      if (!st.furtoAnni || st.furtoAnni > am) st.furtoAnni = am;
+      if ($('fFurtoAnni')) { if ($('fFurtoAnni').options.length !== am - 1) $('fFurtoAnni').innerHTML = opzAnni(am, st.furtoAnni); else $('fFurtoAnni').value = st.furtoAnni; }
       if ($('fVfg')) st.vfg = +$('fVfg').value;
       if ($('fKm')) st.km = +$('fKm').value;
       if ($('fMan')) st.man = $('fMan').checked;
+      st.gap = $('fGap').checked; st.ego = $('fEgo').checked; st.safe = $('fSafe').checked;
+      // stesse formule del simulatore: furto e incendio per mille del prezzo all'anno per gli anni di copertura, gli altri al mese per la durata
+      const man = palla && st.man ? FIN.manutenzione[st.manTipo] * st.dur : 0;
+      const furto = st.furto ? c.prezzo / 1000 * SV.furtoPerMille[st.furto] * st.furtoAnni : 0;
+      const gap = st.gap ? SV.gap * st.dur : 0;
+      const ripartiti = (st.ego ? SV.alterEgo * st.dur : 0) + (st.safe ? SV.personalSafe * st.dur : 0);
+      const attivi = [palla && st.man, st.furto, st.gap, st.ego, st.safe].filter(Boolean).length;
+      $('fServV').textContent = attivi ? `${attivi} ${attivi === 1 ? 'attivo' : 'attivi'}` : 'nessuno';
       const vfg = Math.round(base * st.vfg) / 100;
-      const r = finCalcola({ tipo: st.tipo, prezzo: c.prezzo, anticipo: st.ant, durata: st.dur, tan, vfg, servizi: palla && st.man ? manMese * st.dur : 0 });
+      const r = finCalcola({ tipo: st.tipo, prezzo: c.prezzo, anticipo: st.ant, durata: st.dur, tan, vfg, servizi: man + furto + gap, ripartiti });
       $('fAntV').textContent = `${st.ant ? eur(st.ant) : '0 €'} · ${Math.round(st.ant / c.prezzo * 100)}%`;
       if ($('fDurV')) $('fDurV').textContent = st.dur + ' mesi';
       if ($('fVfgV')) $('fVfgV').textContent = `${st.vfg}% · ${eur2(vfg)}`;
       if (r.errore) { $('fOut').innerHTML = `<p class="hint err">${esc(r.errore)}</p>`; $('fNote').textContent = ''; return; }
       $('fOut').innerHTML = `<div class="fin-rata"><b>${eur2(r.rata)}</b><span>al mese</span></div><div class="fin-sub">${palla ? `${r.nRate} rate e maxirata finale di <b>${eur2(r.vfg)}</b> · ${N(Math.round(st.km * st.dur / 12))} km inclusi` : `${r.nRate} rate`}</div>`;
-      $('fNote').textContent = `${P.titolo} · TAN ${pctIt(r.tan)} · TAEG ${r.taeg == null ? 'n.d.' : pctIt(r.taeg * 100)} · importo finanziato ${eur2(r.finanziato)} con ${eur2(r.istruttoria)} di spese di istruttoria${r.servizi ? ` e ${eur2(r.servizi)} di manutenzione` : ''} · prima rata ${eur2(r.primaRata)} con imposta di bollo e incasso, poi ${eur2(r.incasso)} di incasso a rata. Esempio indicativo, senza altri servizi: il preventivo ufficiale si fa sul portale VW FS.`;
+      $('fNote').textContent = `${P.titolo} · TAN ${pctIt(r.tan)} · TAEG ${r.taeg == null ? 'n.d.' : pctIt(r.taeg * 100)} · importo finanziato ${eur2(r.finanziato)} con ${eur2(r.istruttoria)} di spese di istruttoria${r.servizi ? ` e ${eur2(r.servizi)} di servizi finanziati` : ''}${r.ripartiti ? ` · servizi ripartiti ${eur2(r.ripartiti)}, ${eur2(r.rataServizi)} a rata già compresi` : ''} · prima rata ${eur2(r.primaRata)} con imposta di bollo e incasso, poi ${eur2(r.incasso)} di incasso a rata. Esempio indicativo: il preventivo ufficiale si fa sul portale VW FS.`;
     };
     el.querySelectorAll('input,select').forEach(i => i.addEventListener('input', aggiorna));
+    // spuntare o togliere furto e incendio mostra o nasconde le sue opzioni: ridisegno
+    $('fFurto').addEventListener('change', () => { st.furto = $('fFurto').checked ? 'first_trip' : ''; st.servAperti = true; rata(c, uso); });
+    $('fServ').addEventListener('toggle', () => { st.servAperti = $('fServ').open; });
     el.onclick = e => {
-      const b = e.target.closest('[data-fin-tipo],[data-fin-dur],[data-fin-mm]');
+      const b = e.target.closest('[data-fin-tipo],[data-fin-dur],[data-fin-mm],[data-fin-man],[data-fin-furto]');
       if (!b) return;
       if (b.dataset.finTipo) st.tipo = b.dataset.finTipo;
-      if (b.dataset.finDur) st.dur = +b.dataset.finDur;
+      if (b.dataset.finDur) { st.dur = +b.dataset.finDur; st.furtoAnni = 0; }
       if (b.dataset.finMm) st.mm = +b.dataset.finMm;
+      if (b.dataset.finMan) { st.manTipo = b.dataset.finMan; st.man = true; }
+      if (b.dataset.finFurto) st.furto = b.dataset.finFurto;
       rata(c, uso);
     };
     aggiorna();

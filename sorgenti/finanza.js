@@ -7,6 +7,8 @@ const FIN = {
   kmAnnui: 15000,
   // manutenzione finanziata (PVV e Multimake), in euro al mese: nel simulatore e' gia' spuntata con 1 tagliando
   manutenzione: { tagliando1: 5, tagliando2: 13, plugin: 13 },
+  // servizi assicurativi: furto e incendio e GAP sono finanziati (fanno interessi), Alter Ego e Personal Safe ripartiti sulla rata
+  servizi: { furtoPerMille: { first_trip: 11, business_tour: 18 }, gap: 19, alterEgo: 18, personalSafe: 16 },
   vfg: { min: 30, max: 70, iniziale: 45 },   // % del prezzo da nuovo (o del prezzo di vendita se il listino manca)
   pvv: { nome: 'PVV', titolo: 'Progetto Valore Volkswagen', tan: 8.99, codice: 'FMS BD 70', maxAnticipo: 35, durate: [24, 36, 48] },
   multimake: { nome: 'Multimake', titolo: 'Finanziamento Multimake', maxAnticipo: 30, durate: [24, 36, 48],
@@ -28,7 +30,8 @@ function finIRR(flussi) {
   return r;
 }
 
-// o = { tipo: 'pvv'|'multimake'|'classico', prezzo, anticipo, durata, tan, vfg (in euro, solo pvv/multimake), servizi (euro finanziati) }
+// o = { tipo: 'pvv'|'multimake'|'classico', prezzo, anticipo, durata, tan, vfg (in euro, solo pvv/multimake),
+//      servizi (euro finanziati: manutenzione, furto e incendio, GAP), ripartiti (euro spalmati sulle rate: Alter Ego, Personal Safe) }
 function finCalcola(o) {
   const r2 = v => Math.round(v * 100) / 100;
   const prezzo = +o.prezzo, anticipo = +o.anticipo || 0, durata = +o.durata, tan = +o.tan;
@@ -37,7 +40,7 @@ function finCalcola(o) {
   if (anticipo < 0) return { errore: "L'anticipo non può essere negativo." };
   if (anticipo >= prezzo) return { errore: "L'anticipo deve essere inferiore al prezzo." };
   if (palla && anticipo > prezzo * P.maxAnticipo / 100 + 0.005) return { errore: `Con ${P.nome} l'anticipo massimo è il ${P.maxAnticipo}% del prezzo.` };
-  const servizi = r2(+o.servizi || 0);
+  const servizi = r2(+o.servizi || 0), ripartiti = r2(+o.ripartiti || 0);
   const finanziato = r2(prezzo - anticipo + FIN.speseIstruttoria + servizi);
   const bollo = r2(finanziato * FIN.bolloPercent / 100);
   const im = tan / 100 / 12;
@@ -52,8 +55,10 @@ function finCalcola(o) {
     nRate = durata;
     rata = r2(finanziato * (im * Math.pow(1 + im, nRate)) / (Math.pow(1 + im, nRate) - 1));
   }
+  const rataServizi = r2(ripartiti / nRate);               // servizi ripartiti: si aggiungono alla rata senza interessi
+  rata = r2(rata + rataServizi);
   // TAEG sugli importi che paga il cliente: l'istruttoria e' un costo, quindi non e' nell'erogato
-  const flussi = [prezzo - anticipo + servizi];
+  const flussi = [prezzo - anticipo + servizi + ripartiti];
   for (let i = 1; i <= durata; i++) {
     let out = FIN.speseIncasso;
     if (i <= nRate) out += rata;
@@ -62,5 +67,5 @@ function finCalcola(o) {
     flussi.push(-out);
   }
   const irr = finIRR(flussi), taeg = isFinite(irr) ? Math.pow(1 + irr, 12) - 1 : null;
-  return { tipo: o.tipo, prezzo, anticipo, durata, tan, rata, nRate, vfg, servizi, finanziato, bollo, primaRata: r2(rata + bollo + FIN.speseIncasso), taeg, istruttoria: FIN.speseIstruttoria, incasso: FIN.speseIncasso };
+  return { tipo: o.tipo, prezzo, anticipo, durata, tan, rata, nRate, vfg, servizi, ripartiti, rataServizi, finanziato, bollo, primaRata: r2(rata + bollo + FIN.speseIncasso), taeg, istruttoria: FIN.speseIstruttoria, incasso: FIN.speseIncasso };
 }
