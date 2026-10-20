@@ -32,7 +32,9 @@ function adesso() {
   return { giorno: `${p.year}-${p.month}-${p.day}`, ora: +p.hour % 24, minuti: p.minute, domenica: p.weekday === 'Sun' };
 }
 const T = adesso();
+const FATTI = [];                                    // cosa ha fatto questo giro, per stato/ultimo-giro.json
 function scrivi(msg) {
+  if (msg) FATTI.push(msg.split(/\r?\n/)[0].slice(0, 200));
   const riga = `${T.giorno} ${String(T.ora).padStart(2, '0')}:${T.minuti}  ${PROVA ? '[prova] ' : ''}${msg}`;
   fs.appendFileSync(qui('agente.log'), riga + '\n');
   console.log(riga);
@@ -227,4 +229,9 @@ main().catch(async e => {
     try { if (!imap || !imap.usable) await apriPosta(); const p = esegui('agente/posta.js', 'allarme', 'errore', e.message.replace(/"/g, "'")); if (!p.codice) await inviaPosta(); } catch (x) {}
   }
   process.exitCode = 1;
-}).finally(async () => { await chiudiPosta(); if (ricercheVere) fs.writeFileSync(RICERCHE, ricercheVere); });
+}).finally(async () => {
+  await chiudiPosta();
+  if (ricercheVere) fs.writeFileSync(RICERCHE, ricercheVere);
+  // segno sempre l'ultimo giro: si vede che l'agente lavora anche quando non c'e' niente di nuovo
+  fs.writeFileSync(qui('ultimo-giro.json'), JSON.stringify({ quando: new Date().toISOString(), ora: `${T.giorno} ${String(T.ora).padStart(2, '0')}:${T.minuti}`, prova: PROVA, esito: process.exitCode ? 'errore' : 'ok', fatti: FATTI.length ? FATTI : ['nessuna novità'] }, null, 1));
+});
