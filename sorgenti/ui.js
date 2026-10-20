@@ -54,7 +54,9 @@
   ];
   const ZERO_OK = { km: 1, giorni: 1 };
 
-  const S = { cars: [], meta: {}, prev: null, vocab: [], Q: parseQuery('', []), view: 'cards', shown: 60, list: [], delta: null, prevMap: null, gone: [] };
+  const S = { cars: [], meta: {}, prev: null, vocab: [], Q: parseQuery('', []), view: 'cards', shown: 60, list: [], delta: null, prevMap: null, gone: [], cliente: false };
+  // modalita' cliente: si puo' girare il telefono al cliente, l'app nasconde da quanto tempo le auto sono in stock
+  const ggVisibili = () => !S.cliente;
   let F;
   const resetF = () => { F = { disp: 'all', sets: {}, r: {}, tri: {}, delta: null, preset: null }; FACETS.forEach(f => { F.sets[f.k] = new Set(); }); };
   resetF();
@@ -191,8 +193,8 @@
     const free = S.cars.filter(c => c.free), g = free.filter(c => c.giorni != null);
     const avg = g.length ? Math.round(g.reduce((a, c) => a + c.giorni, 0) / g.length) : 0;
     const val = free.reduce((a, c) => a + c.prezzo, 0);
-    const tiles = ['all', 'free', 'booked', 'arr', 'rip', 'old'].map(id => `<button class="kpi glass" data-preset="${id}" aria-pressed="false"><span class="v num">${N(countPreset(id))}</span><span class="l">${PRESETS[id].color ? `<i class="dot" style="background:${PRESETS[id].color}"></i>` : ''}${PRESETS[id].label}</span></button>`);
-    tiles.push(`<div class="kpi glass"><span class="v num">${avg}<small style="font-size:14px;font-weight:500"> gg</small></span><span class="l">Giacenza media delle libere</span></div>`);
+    const tiles = ['all', 'free', 'booked', 'arr', 'rip'].concat(ggVisibili() ? ['old'] : []).map(id => `<button class="kpi glass" data-preset="${id}" aria-pressed="false"><span class="v num">${N(countPreset(id))}</span><span class="l">${PRESETS[id].color ? `<i class="dot" style="background:${PRESETS[id].color}"></i>` : ''}${PRESETS[id].label}</span></button>`);
+    if (ggVisibili()) tiles.push(`<div class="kpi glass"><span class="v num">${avg}<small style="font-size:14px;font-weight:500"> gg</small></span><span class="l">Giacenza media delle libere</span></div>`);
     tiles.push(`<div class="kpi glass"><span class="v num">${val >= 1e6 ? (val / 1e6).toLocaleString('it-IT', { maximumFractionDigits: 2 }) + ' M€' : eur(val) || '0 €'}</span><span class="l">Valore a listino delle libere</span></div>`);
     $('kpis').innerHTML = tiles.join('');
   }
@@ -217,7 +219,7 @@
     h += `<div style="padding:4px 0 12px">${seg('disp', [['all', 'Tutte'], ['free', 'Libere'], ['booked', 'Prenotate']], F.disp)}</div>`;
     const facet = f => `<details class="fg" ${f.open ? 'open' : ''} data-fk="${f.k}"><summary><span>${f.label}<span class="cnt" hidden></span></span></summary><div class="body" id="f_${f.k}"></div></details>`;
     const range = r => { const v = F.r[r.k] || [null, null]; return `<details class="fg" ${r.open ? 'open' : ''}><summary><span>${r.label}</span></summary><div class="body"><div class="range"><label for="r_${r.k}_0">Da<input id="r_${r.k}_0" type="number" inputmode="numeric" min="0" step="${r.step}" data-r="${r.k}" data-i="0" value="${v[0] ?? ''}"></label><label for="r_${r.k}_1">A<input id="r_${r.k}_1" type="number" inputmode="numeric" min="0" step="${r.step}" data-r="${r.k}" data-i="1" value="${v[1] ?? ''}"></label></div>${(r.quick || []).map(q => `<button class="chip" data-q="${r.k}" data-lo="${q[0] ?? ''}" data-hi="${q[1] ?? ''}" aria-pressed="${v[0] === q[0] && v[1] === q[1]}">${q[2]}</button>`).join('')}</div></details>`; };
-    h += facet(FACETS[0]) + facet(FACETS[1]) + facet(FACETS[2]) + range(RANGES[0]) + range(RANGES[1]) + range(RANGES[2]) + range(RANGES[3]) + facet(FACETS[3]) + facet(FACETS[4]) + range(RANGES[4]) + FACETS.slice(5).map(facet).join('');
+    h += facet(FACETS[0]) + facet(FACETS[1]) + facet(FACETS[2]) + range(RANGES[0]) + range(RANGES[1]) + range(RANGES[2]) + range(RANGES[3]) + facet(FACETS[3]) + facet(FACETS[4]) + (ggVisibili() ? range(RANGES[4]) : '') + FACETS.slice(5).map(facet).join('');
     h += `<details class="fg" open><summary><span>Altro</span></summary><div class="body">${TRIS.map(t => `<div class="tri"><span>${t.label}</span>${seg('tri:' + t.k, [['', 'Tutte'], ['true', 'Sì'], ['false', 'No']], F.tri[t.k] == null ? '' : F.tri[t.k])}</div>`).join('')}</div></details>`;
     h += `<div class="fdone"><button class="btn btn-primary" id="fClose2">Mostra <span id="fCount" class="num"></span></button></div>`;
     pendingScroll = $('filters').scrollTop;
@@ -275,7 +277,7 @@
     const ph = foto(c, 400);
     return `<button class="card" data-i="${i}">
       <div class="ph">${ph ? `<img src="${ph}" alt="" loading="lazy" decoding="async">` : '<span>Nessuna foto sul sito</span>'}${c.web && c.web.foto.length > 1 ? `<i class="nfoto">${c.web.foto.length} foto</i>` : ''}</div>
-      <div class="r1">${stPill(c)}<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni === 0 ? 'entrata oggi' : c.giorni === 1 ? 'entrata ieri' : c.giorni + ' gg in stock'}</span></div>
+      <div class="r1">${stPill(c)}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni === 0 ? 'entrata oggi' : c.giorni === 1 ? 'entrata ieri' : c.giorni + ' gg in stock'}</span>` : ''}</div>
       <div><h3><span>${esc(c.brand)}</span> ${esc(c.family)}</h3><p class="mod">${esc(c.modello)}</p></div>
       <div class="specs"><div><b>${N(c.km)}</b><span>km</span></div><div><b>${immIt(c)}</b><span>immatr.</span></div><div><b>${c.cv ? c.cv + ' CV' : 'n.d.'}</b><span>potenza</span></div><div><b>${esc(c.fuel)}</b><span>alim.</span></div><div><b>${esc(c.cambio)}</b><span>cambio</span></div><div><b><i class="sw" style="background:${COLOR_HEX[c.colorG] || '#9aa3b2'}"></i>${esc(c.colorG)}</b><span>colore</span></div></div>
       <div class="r3">${plate(c.targa)}${tags}</div>
@@ -284,7 +286,7 @@
     </button>`;
   }
   function rowHtml(c, i) {
-    return `<tr data-i="${i}"><td>${stPill(c)}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r"><b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r"><span class="age ${ageCls(c.giorni)}">${c.giorni ?? ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(c.acq)}</td><td>${esc(c.vend)}</td></tr>`;
+    return `<tr data-i="${i}"><td>${stPill(c)}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r"><b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(c.acq)}</td><td>${esc(c.vend)}</td></tr>`;
   }
   function renderList() {
     const cards = S.view === 'cards', part = S.list.slice(0, S.shown);
@@ -295,7 +297,7 @@
       $('more').textContent = ''; return;
     }
     if (cards) $('grid').innerHTML = part.map(cardHtml).join('');
-    else { const sl = $('tablewrap').scrollLeft; $('tablewrap').innerHTML = `<table><thead><tr>${TCOLS.map((t, i) => `<th class="${t[2] ? 'r' : ''}" data-col="${i}"${S.col && S.col.i === i ? ` aria-sort="${S.col.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button title="Ordina per ${t[0]}">${t[0]}${S.col && S.col.i === i ? (S.col.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}</tr></thead><tbody>${part.map(rowHtml).join('')}</tbody></table>`; $('tablewrap').scrollLeft = sl; }
+    else { const sl = $('tablewrap').scrollLeft; $('tablewrap').innerHTML = `<table><thead><tr>${TCOLS.map((t, i) => `<th class="${t[2] ? 'r' : ''}${t[0] === 'Giorni' ? ' col-gg' : ''}" data-col="${i}"${S.col && S.col.i === i ? ` aria-sort="${S.col.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button title="Ordina per ${t[0]}">${t[0]}${S.col && S.col.i === i ? (S.col.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}</tr></thead><tbody>${part.map(rowHtml).join('')}</tbody></table>`; $('tablewrap').scrollLeft = sl; }
     $('more').textContent = S.shown < S.list.length ? `Mostrati ${N(part.length)} di ${N(S.list.length)} · scorri per vederne altri` : '';
   }
   new IntersectionObserver(es => { if (es[0].isIntersecting && S.shown < S.list.length) { S.shown += 60; renderList(); } }, { rootMargin: '600px' }).observe($('more'));
@@ -305,21 +307,23 @@
     const row = (k, v, wide) => (v === '' || v == null ? '' : `<div class="${wide ? 'wide' : ''}"><dt>${k}</dt><dd>${esc(v)}</dd></div>`);
     const yn = b => (b ? 'Sì' : 'No');
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <header>${daAI && S.aiUltimo ? '<button class="linkbtn" id="dBack">← Torna ai consigli</button>' : ''}<div class="r3">${stPill(c)}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span></div>
+      <header>${daAI && S.aiUltimo ? '<button class="linkbtn" id="dBack">← Torna ai consigli</button>' : ''}<div class="r3">${stPill(c)}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span>` : ''}</div>
       <h2>${esc(c.brand)} ${esc(c.family)}</h2><p style="color:var(--ink2)">${esc(c.modello)}</p>
       <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button></div></header>
       <div class="scroll">
         ${c.web && c.web.foto.length ? `<div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div>` : ''}
         ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
         <div class="bigprice"><div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
+        <div class="dcols">
         <section id="dFin"><h4>Finanziamento</h4><div id="dCodice">${isVW(c) ? '<p class="hint">Cerco il codice modello nei listini…</p>' : ''}</div><div class="links" id="dSimBtn"></div><div id="dRata"></div></section>
         <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${row('Categoria del listino', c.section, true)}</dl></section>
         ${camOk(c) && c.web.cam.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.cam.url)}" target="_blank" rel="noopener">Vedi la foto della retrocamera</a>` : ''}
         ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', eur(c.web.prezzo) + (prezzoDiverso(c) ? ` (gestionale ${eur(c.prezzoV)})` : ''), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
         <section id="dStoria" hidden><h4>Storia nelle stampe</h4><div class="timeline" id="dStoriaBody"></div></section>
-        <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${row('Data di ingresso', dIt(c.ingr))}${row('Anticipata', c.antic)}</dl></section>
+        <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${ggVisibili() ? row('Data di ingresso', dIt(c.ingr)) : ''}${row('Anticipata', c.antic)}</dl></section>
         ${c.acq || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', c.acq)}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
         <section><h4>Pubblicazione e pratiche</h4><dl class="dl">${row('AutoScout', c.as ? 'Sì' + (c.asDate ? ', dal ' + dIt(c.asDate) : '') : 'No')}${row('Check list', c.check ? 'Sì' + (c.checkDate ? ', il ' + dIt(c.checkDate) : '') : 'No')}${row('Prezzo speciale', yn(c.spec))}${row('IVA esposta', yn(c.iva))}${row('Mini PP', yn(c.mini))}${row('Foglio verde', yn(c.fv))}${row('Note', c.note, true)}</dl></section>
+        </div>
       </div>`;
     $('drawer').hidden = false;
     requestAnimationFrame(() => { $('drawer').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); });
@@ -506,8 +510,8 @@
     const sto = await storico(), a = sto && sto.auto[c.targa];
     if (!a || !$('dStoria')) return;
     const ev = [];
-    if (c.ingr) ev.push([c.ingr, `Entrata in stock (${c.giorni != null ? c.giorni + ' giorni fa' : ''})`]);
-    if (a.da > sto.dal) ev.push([a.da, 'Compare per la prima volta nelle stampe']);
+    if (c.ingr && ggVisibili()) ev.push([c.ingr, `Entrata in stock (${c.giorni != null ? c.giorni + ' giorni fa' : ''})`]);
+    if (a.da > sto.dal && ggVisibili()) ev.push([a.da, 'Compare per la prima volta nelle stampe']);
     a.p.forEach((p, k) => { if (k) { const prima = a.p[k - 1][1]; ev.push([p[0], !prima ? `Prezzo inserito: ${eur(p[1])}` : !p[1] ? 'Prezzo tolto' : `Prezzo ${p[1] < prima ? 'ribassato' : 'aumentato'}: ${eur(prima)} → ${eur(p[1])}`]); } });
     a.s.forEach((s, k) => { if (k) ev.push([s[0], `Stato: ${a.s[k - 1][1]} → ${s[1]}`]); });
     if (a.pren) ev.push([a.pren, 'Prenotata']);
@@ -532,6 +536,7 @@
   // le parole che non compaiono in nessuna auto ("figli", "vuole") non devono azzerare i risultati: le ignoro e lo dico
   function capisci(testo) {
     const Q = parseQuery(testo, S.vocab);
+    if (!ggVisibili() && Q.r && Q.r.giorni) { delete Q.r.giorni; Q.chips = Q.chips.filter(ch => !/gg in stock/.test(ch)); }
     Q.ignorate = Q.terms.filter(w => !S.cars.some(c => c._h.includes(w)));
     if (Q.ignorate.length) { Q.terms = Q.terms.filter(w => !Q.ignorate.includes(w)); Q.chips = Q.chips.filter(ch => !Q.ignorate.some(w => ch === '“' + w + '”')); }
     return Q;
@@ -563,7 +568,7 @@
     if (l.length < 12 && !(D.awd && l.length)) l = base;   // vincoli troppo stretti o capiti male: Gemini sceglie su tutte le disponibili
     return l.sort(SORTS.cons).slice(0, 400);
   }
-  const rigaAI = c => [c.targa, `${c.brand} ${c.modello}`.slice(0, 60), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, (c.giorni ?? '?') + ' gg', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.trazione === 'Integrale' ? 'trazione integrale 4x4' : c.trazione && 'trazione ' + c.trazione.toLowerCase(), camOk(c) && 'telecamera posteriore confermata', c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
+  const rigaAI = c => [c.targa, `${c.brand} ${c.modello}`.slice(0, 60), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, ggVisibili() ? (c.giorni ?? '?') + ' gg' : '', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.trazione === 'Integrale' ? 'trazione integrale 4x4' : c.trazione && 'trazione ' + c.trazione.toLowerCase(), camOk(c) && 'telecamera posteriore confermata', c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
   function mostraAI(st) {
     S.aiUltimo = st;
     const auto = (st.auto || []).map(a => ({ a, c: S.cars.find(x => x.targa === String(a.targa).toUpperCase().replace(/\s+/g, '')) })).filter(x => x.c);
@@ -759,6 +764,7 @@
     try {
       if (!window.XLSX) await loadScript(XLSXJS);
       const righe = S.list.map(c => ({ Stato: stLabel(c), Targa: c.targa, Marca: c.brand, Modello: c.family, Allestimento: c.modello, Immatricolazione: immIt(c), Km: c.km, CV: c.cv || null, Alimentazione: c.fuel, Cambio: c.cambio, Colore: c.colore, 'Prezzo totale': c.prezzo || null, 'Prezzo veicolo': c.prezzoV || null, Ubicazione: c.ubic, 'Data ingresso': dIt(c.ingr), 'Giorni in stock': c.giorni, AutoScout: c.as ? 'Sì' : 'No', 'Annuncio sito': c.web ? c.web.url : '', Acquirente: c.acq, Venditore: c.vend, Note: c.note }));
+      if (!ggVisibili()) righe.forEach(r => { delete r['Data ingresso']; delete r['Giorni in stock']; });
       const ws = XLSX.utils.json_to_sheet(righe), wb = XLSX.utils.book_new();
       ws['!cols'] = Object.keys(righe[0] || {}).map(k => ({ wch: Math.min(40, Math.max(k.length + 2, ...righe.slice(0, 200).map(r => String(r[k] ?? '').length))) }));
       XLSX.utils.book_append_sheet(wb, ws, 'Stock');
@@ -772,6 +778,7 @@
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); promptInstall = e; $('btnInstall').hidden = false; });
   $('btnInstall').onclick = async () => { if (!promptInstall) return; promptInstall.prompt(); try { await promptInstall.userChoice; } catch (e) {} promptInstall = null; $('btnInstall').hidden = true; };
   function setTab(t) {
+    if (S.cliente && t === 'stat') t = 'auto';
     const stat = t === 'stat';
     document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === t)));
     $('layout').hidden = stat; $('stats').hidden = !stat;
@@ -791,7 +798,9 @@
   $('btnCopy').onclick = () => {
     const head = ['Stato', 'Targa', 'Marca', 'Modello', 'Allestimento', 'Immatricolazione', 'Km', 'CV', 'Alimentazione', 'Cambio', 'Colore', 'Prezzo', 'Ubicazione', 'Ingresso', 'Giorni in stock', 'AutoScout', 'Acquirente', 'Venditore', 'Note'];
     const rows = S.list.map(c => [c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato, c.targa, c.brand, c.family, c.modello, immIt(c), c.km, c.cv || '', c.fuel, c.cambio, c.colore, c.prezzo || '', c.ubic, dIt(c.ingr), c.giorni ?? '', c.as ? 'Sì' : 'No', c.acq, c.vend, c.note].join('\t'));
-    copy([head.join('\t'), ...rows].join('\n'), `${N(S.list.length)} veicoli copiati: incollali in Excel`);
+    const via = ggVisibili() ? [] : [head.indexOf('Ingresso'), head.indexOf('Giorni in stock')];
+    const tieni = r => r.filter((x, i) => !via.includes(i));
+    copy([tieni(head).join('\t'), ...rows.map(r => tieni(r.split('\t')).join('\t'))].join('\n'), `${N(S.list.length)} veicoli copiati: incollali in Excel`);
   };
 
   document.addEventListener('click', e => {
@@ -832,7 +841,29 @@
   });
   $('grid').addEventListener('pointermove', e => { const c = e.target.closest('.card'); if (!c) return; const r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
 
+  /* ---------- modalita' cliente ---------- */
+  const ORD_GG = [...$('sort').options].filter(o => o.value === 'ingr' || o.value === 'old');
+  function setCliente(on) {
+    S.cliente = !!on;
+    store.set('su.cliente', S.cliente);
+    document.documentElement.classList.toggle('cliente', S.cliente);
+    $('btnCliente').setAttribute('aria-pressed', String(S.cliente));
+    $('btnCliente').title = S.cliente ? 'Modalità cliente attiva: tocca per tornare a vedere tutto' : 'Modalità cliente: nasconde da quanto tempo le auto sono in stock';
+    if (S.cliente) {
+      ORD_GG.forEach(o => o.remove());
+      if (!['cons', 'pa', 'pd', 'km', 'anno', 'cv', 'col'].includes($('sort').value)) $('sort').value = 'cons';
+      delete F.r.giorni;
+      if (activePreset === 'old') activePreset = 'all';
+      if (!$('stats').hidden) setTab('auto');
+    } else if (!ORD_GG[0].parentNode) ORD_GG.forEach((o, i) => $('sort').options.add(o, 1 + i));
+    if (S.Q && S.Q.r && S.Q.r.giorni) S.Q = capisci($('q').value.trim());
+    if (S.cars.length) { renderKpis(); renderFilters(true); apply(); }
+    if (S.aperta && $('drawer').classList.contains('on')) { const c = S.cars.find(x => x.targa === S.aperta); if (c) openDrawer(c); }
+  }
+  $('btnCliente').onclick = () => { setCliente(!S.cliente); toast(S.cliente ? 'Modalità cliente: anzianità in stock nascosta' : 'Modalità venditore: vedi di nuovo tutto'); };
+
   /* ---------- avvio ---------- */
+  if (store.get('su.cliente') === true) setCliente(true);
   try {
     const mk = location.hash.match(/^#chiave=([\w-]{12,})$/);
     if (mk) { localStorage.setItem('su.chiaveCodici', mk[1]); history.replaceState(null, '', location.pathname + location.search); setTimeout(() => toast('Da questo telefono puoi scegliere i codici modello'), 900); }
