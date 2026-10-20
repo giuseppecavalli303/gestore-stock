@@ -245,6 +245,18 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--hover)}
 .galwrap{position:relative;flex:none}
 .gfr{position:absolute;top:50%;z-index:3;width:44px;height:44px;margin-top:-22px;border-radius:50%;display:grid;place-items:center;background:rgba(6,11,19,.55);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px -6px rgba(0,0,0,.6);cursor:pointer}
 .gfr.sx{left:6px} .gfr.dx{right:6px} .gfr[hidden]{display:none}
+/* visore a tutto schermo */
+.visore{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.95);display:flex;align-items:center}
+.visore[hidden]{display:none}
+.vstrip{display:flex;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.vstrip::-webkit-scrollbar{display:none}
+.vstrip figure{flex:0 0 100%;height:100%;margin:0;display:grid;place-items:center;scroll-snap-align:center;scroll-snap-stop:always;padding:calc(env(safe-area-inset-top,0px) + 56px) 0 calc(env(safe-area-inset-bottom,0px) + 52px)}
+.vstrip img{max-width:100%;max-height:100%;object-fit:contain;display:block;user-select:none}
+.vx{position:absolute;z-index:3;top:calc(env(safe-area-inset-top,0px) + 12px);right:12px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.visore .gfr{width:52px;height:52px;margin-top:-26px} .visore .gfr.sx{left:14px} .visore .gfr.dx{right:14px}
+.vnum{position:absolute;z-index:3;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);color:#fff;font-weight:600;font-size:14px;background:rgba(255,255,255,.14);border-radius:999px;padding:5px 12px}
+@media (hover:none){ .visore .gfr{opacity:.85} }
+.gal a{cursor:zoom-in}
 .gnum{position:absolute;right:12px;bottom:10px;z-index:3;font-size:12px;font-weight:600;color:#fff;background:rgba(6,11,19,.55);border-radius:999px;padding:3px 9px;pointer-events:none}
 .links{display:flex;flex-wrap:wrap;gap:8px}
 .links .btn{text-decoration:none;color:var(--ink)}
@@ -549,6 +561,7 @@ html.locked,html.locked body{overflow:hidden}
 
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <div class="scrim" id="scrim"></div>
+<div class="visore" id="visore" role="dialog" aria-modal="true" aria-label="Foto" hidden><div class="vstrip" id="vStrip"></div><button class="vx" id="vChiudi" aria-label="Chiudi le foto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button class="gfr sx" id="vSx" aria-label="Foto precedente"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="gfr dx" id="vDx" aria-label="Foto successiva"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><span class="vnum" id="vNum"></span></div>
 <aside class="drawer glass" id="drawer" role="dialog" aria-modal="true" aria-label="Scheda veicolo" hidden></aside>
 <div class="overlay" id="overlay" hidden><div class="box glass"><h2 id="ovTitle">Leggo la stampa…</h2><div class="prog"><i id="ovBar"></i></div><p id="ovText" class="num"></p></div></div>
 <div class="drophint" id="drophint" hidden>Rilascia il PDF dello stock</div>

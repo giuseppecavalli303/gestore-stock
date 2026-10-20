@@ -340,6 +340,8 @@
     finanziamento(c);
     if (!S.cliente) giudizioAS(c);
     frecceGalleria($('drawer').querySelector('.galwrap'));
+    const ga = $('drawer').querySelector('.gal');
+    if (ga) ga.onclick = e => { const a = e.target.closest('a'); if (!a || e.ctrlKey || e.metaKey) return; e.preventDefault(); apriVisore(c, [...ga.children].indexOf(a)); };
     storiaAuto(c);
     try { history.replaceState(history.state, '', '#' + c.targa); } catch (e) {}
   }
@@ -652,6 +654,43 @@
     aggiorna();
   }
 
+  // visore a tutto schermo: le foto dell'auto grandi, da scorrere col dito, con le frecce o con i tasti
+  let visoreAperto = false, ignoraIndietro = false;
+  function apriVisore(c, k) {
+    const v = $('visore'), s = $('vStrip'), n = c.web.foto.length;
+    const sz = innerWidth * (devicePixelRatio || 1) > 1400 ? 1920 : 1280;
+    s.innerHTML = c.web.foto.map((x, i) => `<figure><img src="${fotoBase() + sz + '/' + x}" alt="Foto ${i + 1}" ${Math.abs(i - k) <= 1 ? '' : 'loading="lazy"'} decoding="async"></figure>`).join('');
+    v.hidden = false; visoreAperto = true;
+    s.scrollLeft = k * s.clientWidth;
+    const agg = () => {
+      const i = Math.round(s.scrollLeft / s.clientWidth);
+      $('vNum').textContent = `${i + 1} / ${n}`;
+      $('vSx').hidden = i <= 0; $('vDx').hidden = i >= n - 1;
+      // la foto prima e quella dopo si caricano subito, cosi' scorrendo non si vede il nero
+      for (const j of [i - 1, i + 1]) { const im = s.children[j] && s.children[j].querySelector('img'); if (im) im.loading = 'eager'; }
+    };
+    s.onscroll = agg; agg();
+    try { history.pushState({ visore: 1 }, ''); } catch (e) {}
+    $('vChiudi').focus();
+  }
+  function chiudiVisore(daIndietro) {
+    if (!visoreAperto) return;
+    visoreAperto = false; $('visore').hidden = true; $('vStrip').innerHTML = '';
+    // chiuso con la X: tolgo il passo aggiunto alla cronologia, senza che l'Indietro chiuda anche la scheda
+    if (!daIndietro) try { if (history.state && history.state.visore) { ignoraIndietro = true; history.back(); } } catch (e) {}
+  }
+  const scorriVisore = d => $('vStrip').scrollBy({ left: d * $('vStrip').clientWidth, behavior: 'smooth' });
+  $('vSx').onclick = () => scorriVisore(-1);
+  $('vDx').onclick = () => scorriVisore(1);
+  $('vChiudi').onclick = () => chiudiVisore();
+  addEventListener('keydown', e => {
+    if (!visoreAperto) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); scorriVisore(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); scorriVisore(-1); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); chiudiVisore(); }
+  }, true);
+  addEventListener('resize', () => { if (visoreAperto) { const s = $('vStrip'), i = Math.round(s.scrollLeft / s.clientWidth); requestAnimationFrame(() => { s.scrollLeft = i * s.clientWidth; }); } });
+
   /* ---------- storico: caricato solo quando serve ---------- */
   let STO = null;
   async function storico() {
@@ -676,7 +715,7 @@
   // sul telefono il tasto Indietro chiude scheda e filtri invece di uscire dall'app
   function sheetOpened() { try { if (!(history.state && history.state.sheet)) history.pushState({ sheet: 1 }, ''); } catch (e) {} }
   function closeAll() { closeView(); try { if (history.state && history.state.sheet) history.back(); } catch (e) {} }
-  addEventListener('popstate', () => closeView());
+  addEventListener('popstate', () => { if (ignoraIndietro) { ignoraIndietro = false; return; } if (visoreAperto) return chiudiVisore(true); closeView(); });
   function closeView() { document.documentElement.classList.remove('locked'); $('drawer').classList.remove('on'); $('filters').classList.remove('on'); $('scrim').classList.remove('on'); setTimeout(() => { if (!$('drawer').classList.contains('on')) $('drawer').hidden = true; }, 350); }
 
   let toastT;
