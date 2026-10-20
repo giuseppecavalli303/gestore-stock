@@ -1,7 +1,7 @@
 // Fa funzionare l'app installata anche senza rete, con l'ultimo stock visto.
 // Pagina e dati: prima la rete (sempre il piu' aggiornato), la copia salvata solo se la rete manca.
 // Caratteri e icone: prima la copia salvata, cambiano di rado.
-const VERSIONE = 'stock-v2';
+const VERSIONE = 'stock-v3';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icone/icona-192.png', 'icone/icona-512.png'];
 
 self.addEventListener('install', e => {
@@ -22,7 +22,9 @@ self.addEventListener('fetch', e => {
   if (stesso && (req.mode === 'navigate' || /\/data\/[^/]+\.json$/.test(url.pathname) || url.pathname.endsWith('/index.html'))) {
     // i dati si chiedono con ?t=... per saltare la cache del browser: li salvo senza parametri
     const chiave = new Request(url.origin + url.pathname);
-    e.respondWith(fetch(req).then(r => {
+    // sempre chiesto al sito (non alla memoria del browser): cosi' una versione nuova si vede subito
+    const daRete = req.mode === 'navigate' ? fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(req, { cache: 'no-cache' });
+    e.respondWith(daRete.then(r => {
       if (r.ok) { const copia = r.clone(); caches.open(VERSIONE).then(c => c.put(chiave, copia)); }
       return r;
     }).catch(() => caches.match(chiave).then(r => r || caches.match('index.html'))));
