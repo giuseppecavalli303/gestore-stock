@@ -312,7 +312,7 @@
       <h2>${esc(c.brand)} ${esc(c.family)}</h2><p style="color:var(--ink2)">${esc(c.modello)}</p>
       <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button><button class="btn btn-ghost btn-sm stella-btn" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}">${STELLA}<span>Lista</span></button></div></header>
       <div class="scroll">
-        ${c.web && c.web.foto.length ? `<div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div>` : ''}
+        ${c.web && c.web.foto.length ? `<div class="galwrap"><button class="gfr sx" aria-label="Foto precedente"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="gfr dx" aria-label="Foto successiva"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><span class="gnum"></span><div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div></div>` : ''}
         ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
         <div class="bigprice"><div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
         <div class="dcols">
@@ -339,6 +339,7 @@
     if ($('dVin')) $('dVin').onclick = () => copy(c.web.vin, 'Telaio copiato');
     finanziamento(c);
     if (!S.cliente) giudizioAS(c);
+    frecceGalleria($('drawer').querySelector('.galwrap'));
     storiaAuto(c);
     try { history.replaceState(history.state, '', '#' + c.targa); } catch (e) {}
   }
@@ -631,6 +632,24 @@
       f: { t: P.titolo, ant: r.anticipo, dur: r.durata, rata: r.rata, nr: r.nRate, vfg: r.vfg, km: st.tipo !== 'classico' ? st.km : 0, tan: r.tan, taeg: r.taeg, fin: r.finanziato, prima: r.primaRata, ist: r.istruttoria, inc: r.incasso, bol: r.bollo, serv: servizi }
     };
     return `${baseSito()}cliente.html#p=${codifica(p)}`;
+  }
+
+  // frecce e contatore sopra una galleria di foto che scorre di lato
+  function frecceGalleria(box) {
+    const g = box && box.querySelector('.gal'), sx = box && box.querySelector('.gfr.sx'), dx = box && box.querySelector('.gfr.dx'), n = box && box.querySelector('.gnum');
+    if (!g || !sx || !dx) return;
+    const passo = () => { const a = g.firstElementChild; return a ? a.getBoundingClientRect().width + 8 : g.clientWidth; };
+    const tot = g.children.length;
+    const aggiorna = () => {
+      sx.hidden = g.scrollLeft < 10;
+      dx.hidden = g.scrollLeft + g.clientWidth >= g.scrollWidth - 10;
+      if (n) n.textContent = `${dx.hidden ? tot : Math.min(tot, Math.round(g.scrollLeft / passo()) + 1)} / ${tot}`;   // in fondo: ultima foto
+    };
+    sx.onclick = () => g.scrollBy({ left: -passo(), behavior: 'smooth' });
+    dx.onclick = () => g.scrollBy({ left: passo(), behavior: 'smooth' });
+    g.addEventListener('scroll', aggiorna, { passive: true });
+    addEventListener('resize', aggiorna, { passive: true });
+    aggiorna();
   }
 
   /* ---------- storico: caricato solo quando serve ---------- */

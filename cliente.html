@@ -28,6 +28,11 @@ h1{font-size:30px} h2{font-size:21px}
 .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
 .gal{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:16px -16px 0;padding:0 16px;scrollbar-width:none}
 .gal img{flex:0 0 86%;max-width:620px;aspect-ratio:4/3;object-fit:cover;border-radius:16px;scroll-snap-align:center;background:#dde3ec}
+.galwrap{position:relative}
+.gfr{position:absolute;top:50%;z-index:3;width:44px;height:44px;margin-top:-14px;border-radius:50%;display:grid;place-items:center;background:rgba(6,11,19,.55);color:#fff;border:1px solid rgba(255,255,255,.2);cursor:pointer}
+.gfr.sx{left:6px} .gfr.dx{right:6px} .gfr[hidden]{display:none}
+.gnum{position:absolute;right:14px;bottom:8px;z-index:3;font-size:12px;font-weight:600;color:#fff;background:rgba(6,11,19,.55);border-radius:999px;padding:3px 9px}
+@media print{.gfr,.gnum{display:none}}
 .dati{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:14px}
 .dati div{background:var(--soft);border-radius:12px;padding:9px 12px}
 .dati dt{font-size:11.5px;color:var(--ink3)} .dati dd{margin:0;font-weight:600}
@@ -83,7 +88,7 @@ footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
     $('quando').textContent = 'Preventivo del ' + dIt(p.d);
     const palla = f.vfg > 0;
     $('pagina').innerHTML = `
-      ${(p.foto || []).length ? `<div class="gal">${p.foto.map(u => `<img src="${esc(u)}" alt="">`).join('')}</div>` : ''}
+      ${(p.foto || []).length ? `<div class="galwrap"><button class="gfr sx" aria-label="Foto precedente"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="gfr dx" aria-label="Foto successiva"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><span class="gnum"></span><div class="gal">${p.foto.map(u => `<img src="${esc(u)}" alt="">`).join('')}</div></div>` : ''}
       <div class="box"><h1>${esc(p.n)}</h1><p class="sub">${esc(p.m)}</p>
         <dl class="dati">${riga('Immatricolazione', p.imm)}${riga('Chilometri', N(p.km) + ' km')}${riga('Alimentazione', p.fu)}${riga('Cambio', p.ca !== 'n.d.' ? p.ca : '')}${riga('Potenza', p.cv ? `${p.cv} CV (${p.kw} kW)` : '')}${riga('Colore', p.co)}${riga('Garanzia', p.ga ? p.ga + ' mesi' : '')}</dl>
         <div class="prezzo">${eur(p.pr)}<small>prezzo di vendita</small></div></div>
@@ -106,6 +111,15 @@ footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
         <p class="nota">Esempio di finanziamento a scopo informativo, soggetto ad approvazione di Volkswagen Financial Services. Le condizioni definitive sono quelle indicate nel contratto e nel modulo informativo europeo (SECCI) che ti consegneremo. Prezzo e disponibilità dell'auto possono cambiare.</p>
         ${azioni(p.url)}</div>
       <footer>Valentino Automobili Roma</footer>`;
+    frecce(document.querySelector('.galwrap'));
+  }
+  function frecce(box) {
+    const g = box && box.querySelector('.gal'), sx = box && box.querySelector('.sx'), dx = box && box.querySelector('.dx'), n = box && box.querySelector('.gnum');
+    if (!g) return;
+    const passo = () => { const a = g.firstElementChild; return a ? a.getBoundingClientRect().width + 8 : g.clientWidth; }, tot = g.children.length;
+    const agg = () => { sx.hidden = g.scrollLeft < 10; dx.hidden = g.scrollLeft + g.clientWidth >= g.scrollWidth - 10; n.textContent = `${dx.hidden ? tot : Math.min(tot, Math.round(g.scrollLeft / passo()) + 1)} / ${tot}`; };
+    sx.onclick = () => g.scrollBy({ left: -passo(), behavior: 'smooth' }); dx.onclick = () => g.scrollBy({ left: passo(), behavior: 'smooth' });
+    g.addEventListener('scroll', agg, { passive: true }); addEventListener('resize', agg); setTimeout(agg, 300); agg();
   }
 
   async function lista(targhe) {

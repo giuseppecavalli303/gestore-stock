@@ -241,6 +241,11 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--hover)}
 .gal{flex:none;display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin-inline:-22px;padding-inline:22px;scrollbar-width:thin}
 .gal a{flex:0 0 86%;scroll-snap-align:center;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:var(--mute-soft)}
 .gal img{width:100%;height:100%;object-fit:cover;display:block}
+/* frecce sulle foto */
+.galwrap{position:relative;flex:none}
+.gfr{position:absolute;top:50%;z-index:3;width:44px;height:44px;margin-top:-22px;border-radius:50%;display:grid;place-items:center;background:rgba(6,11,19,.55);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px -6px rgba(0,0,0,.6);cursor:pointer}
+.gfr.sx{left:6px} .gfr.dx{right:6px} .gfr[hidden]{display:none}
+.gnum{position:absolute;right:12px;bottom:10px;z-index:3;font-size:12px;font-weight:600;color:#fff;background:rgba(6,11,19,.55);border-radius:999px;padding:3px 9px;pointer-events:none}
 .links{display:flex;flex-wrap:wrap;gap:8px}
 .links .btn{text-decoration:none;color:var(--ink)}
 .hint{color:var(--ink2);font-size:12.5px;margin:4px 0 0}
