@@ -4,7 +4,7 @@
 const fs = require('fs'), path = require('path');
 
 const FOTO_BASE = 'https://cdn.dealerk.it/dealer/datafiles/vehicle/images/';
-const FOTO_MAX = 12;
+const FOTO_MAX = 40;                         // tutte le foto dell'annuncio (oggi al massimo 24)
 const deacc = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 function cambioDa(a) {
