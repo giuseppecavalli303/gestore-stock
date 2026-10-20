@@ -9,6 +9,7 @@ const FIN = {
   manutenzione: { tagliando1: 5, tagliando2: 13, plugin: 13 },
   // servizi assicurativi: furto e incendio e GAP sono finanziati (fanno interessi), Alter Ego e Personal Safe ripartiti sulla rata
   servizi: { furtoPerMille: { first_trip: 11, business_tour: 18 }, gap: 19, alterEgo: 18, personalSafe: 16 },
+  mesiFurto: [12, 24, 36, 48, 60, 72, 84],      // durate possibili della copertura furto e incendio
   vfg: { min: 30, max: 70, iniziale: 45 },   // % del prezzo da nuovo (o del prezzo di vendita se il listino manca)
   pvv: { nome: 'PVV', titolo: 'Progetto Valore Volkswagen', tan: 8.99, codice: 'FMS BD 70', maxAnticipo: 35, durate: [24, 36, 48] },
   multimake: { nome: 'Multimake', titolo: 'Finanziamento Multimake', maxAnticipo: 30, durate: [24, 36, 48],

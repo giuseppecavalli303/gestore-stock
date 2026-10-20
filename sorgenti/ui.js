@@ -452,10 +452,11 @@
     const tipi = (isVW(c) ? ['pvv'] : []).concat(['multimake', 'classico']);
     // manutenzione come nel simulatore: per metano, plug-in e up! la tariffa dedicata, per le altre 1 tagliando (si puo' cambiare)
     const manIniz = /Plug-in|Metano/.test(c.fuel) || /^up/i.test(c.family || '') ? 'plugin' : 'tagliando1';
-    const st = FS[c.targa] || (FS[c.targa] = { tipo: tipi[0], ant: 0, dur: 36, km: FIN.kmAnnui, vfg: FIN.vfg.iniziale, mm: 0, man: true, manTipo: manIniz, furto: '', furtoAnni: 0, gap: false, ego: false, safe: false });
-    const SV = FIN.servizi, anniMax = Math.max(2, Math.ceil(st.dur / 12));
-    if (!st.furtoAnni || st.furtoAnni > anniMax) st.furtoAnni = anniMax;      // come nel simulatore: copertura pari alla durata
-    const opzAnni = (am, sel) => Array.from({ length: am - 1 }, (_, i) => i + 2).map(a => `<option value="${a}"${a === sel ? ' selected' : ''}>${a} anni</option>`).join('');
+    const st = FS[c.targa] || (FS[c.targa] = { tipo: tipi[0], ant: 0, dur: 36, km: FIN.kmAnnui, vfg: FIN.vfg.iniziale, mm: 0, man: true, manTipo: manIniz, furto: '', furtoMesi: 0, gap: false, ego: false, safe: false });
+    // furto e incendio: copertura da 12 a 84 mesi, qualunque sia la durata del finanziamento; si parte dalla durata, arrotondata all'anno
+    const SV = FIN.servizi, mesiFi = d => Math.min(84, Math.max(12, Math.ceil(d / 12) * 12));
+    if (!FIN.mesiFurto.includes(st.furtoMesi)) st.furtoMesi = mesiFi(st.dur);
+    const opzMesi = sel => FIN.mesiFurto.map(m => `<option value="${m}"${m === sel ? ' selected' : ''}>${m} mesi</option>`).join('');
     if (!tipi.includes(st.tipo)) st.tipo = tipi[0];
     const P = FIN[st.tipo], palla = st.tipo !== 'classico';
     const suNuovo = !!(uso && uso.prezzo), base = suNuovo ? uso.prezzo : c.prezzo;
@@ -477,7 +478,7 @@
         <div class="fin-gr"><span class="fin-tit">Finanziati (fanno interessi)</span>
           <label class="fin-check"><input type="checkbox" id="fFurto"${st.furto ? ' checked' : ''}><span>Furto e incendio</span></label>
           ${st.furto ? `<div class="fin-chips">${[['first_trip', 'First Trip'], ['business_tour', 'Business Tour']].map(([k, l]) => `<button class="chip" data-fin-furto="${k}" aria-pressed="${st.furto === k}">${l} · ${SV.furtoPerMille[k]} €/1.000 € l'anno</button>`).join('')}</div>
-          <label class="fin-l"><span>Copertura</span><select id="fFurtoAnni">${opzAnni(anniMax, st.furtoAnni)}</select></label>` : ''}
+          <label class="fin-l"><span>Copertura</span><select id="fFurtoMesi">${opzMesi(st.furtoMesi)}</select></label>` : ''}
           <label class="fin-check"><input type="checkbox" id="fGap"${st.gap ? ' checked' : ''}><span>Garanzia GAP (valore a nuovo) · ${SV.gap} €/mese</span></label></div>
         <div class="fin-gr"><span class="fin-tit">Ripartiti sulla rata (senza interessi)</span>
           <label class="fin-check"><input type="checkbox" id="fEgo"${st.ego ? ' checked' : ''}><span>CPI Alter Ego (protezione del credito) · ${SV.alterEgo} €/mese</span></label>
@@ -491,17 +492,15 @@
       const durPrima = st.dur;
       if ($('fDur')) st.dur = +$('fDur').value;
       // come nel simulatore: cambiando la durata la copertura furto e incendio torna pari alla durata
-      const am = Math.max(2, Math.ceil(st.dur / 12));
-      if (st.dur !== durPrima) st.furtoAnni = am; else if ($('fFurtoAnni')) st.furtoAnni = +$('fFurtoAnni').value;
-      if (!st.furtoAnni || st.furtoAnni > am) st.furtoAnni = am;
-      if ($('fFurtoAnni')) { if ($('fFurtoAnni').options.length !== am - 1) $('fFurtoAnni').innerHTML = opzAnni(am, st.furtoAnni); else $('fFurtoAnni').value = st.furtoAnni; }
+      if (st.dur !== durPrima) { st.furtoMesi = mesiFi(st.dur); if ($('fFurtoMesi')) $('fFurtoMesi').value = st.furtoMesi; }
+      else if ($('fFurtoMesi')) st.furtoMesi = +$('fFurtoMesi').value;
       if ($('fVfg')) st.vfg = +$('fVfg').value;
       if ($('fKm')) st.km = +$('fKm').value;
       if ($('fMan')) st.man = $('fMan').checked;
       st.gap = $('fGap').checked; st.ego = $('fEgo').checked; st.safe = $('fSafe').checked;
       // stesse formule del simulatore: furto e incendio per mille del prezzo all'anno per gli anni di copertura, gli altri al mese per la durata
       const man = palla && st.man ? FIN.manutenzione[st.manTipo] * st.dur : 0;
-      const furto = st.furto ? c.prezzo / 1000 * SV.furtoPerMille[st.furto] * st.furtoAnni : 0;
+      const furto = st.furto ? c.prezzo / 1000 * SV.furtoPerMille[st.furto] * st.furtoMesi / 12 : 0;
       const gap = st.gap ? SV.gap * st.dur : 0;
       const ripartiti = (st.ego ? SV.alterEgo * st.dur : 0) + (st.safe ? SV.personalSafe * st.dur : 0);
       const attivi = [palla && st.man, st.furto, st.gap, st.ego, st.safe].filter(Boolean).length;
@@ -523,7 +522,7 @@
       const b = e.target.closest('[data-fin-tipo],[data-fin-dur],[data-fin-mm],[data-fin-man],[data-fin-furto]');
       if (!b) return;
       if (b.dataset.finTipo) st.tipo = b.dataset.finTipo;
-      if (b.dataset.finDur) { st.dur = +b.dataset.finDur; st.furtoAnni = 0; }
+      if (b.dataset.finDur) { st.dur = +b.dataset.finDur; st.furtoMesi = 0; }
       if (b.dataset.finMm) st.mm = +b.dataset.finMm;
       if (b.dataset.finMan) { st.manTipo = b.dataset.finMan; st.man = true; }
       if (b.dataset.finFurto) st.furto = b.dataset.finFurto;
