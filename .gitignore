@@ -21,3 +21,5 @@ agente/autoscout.json
 agente/rapporti/
 video/materiale/
 video/out-log.txt
+agente/listini-cache.json
+agente/chiave-codici.txt

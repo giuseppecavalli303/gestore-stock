@@ -312,6 +312,7 @@
         ${c.web && c.web.foto.length ? `<div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div>` : ''}
         ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
         <div class="bigprice"><div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
+        <section id="dFin"><h4>Finanziamento</h4><div id="dCodice">${isVW(c) ? '<p class="hint">Cerco il codice modello nei listini…</p>' : ''}</div><div class="links" id="dSimBtn"></div><div id="dRata"></div></section>
         <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${row('Categoria del listino', c.section, true)}</dl></section>
         ${camOk(c) && c.web.cam.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.cam.url)}" target="_blank" rel="noopener">Vedi la foto della retrocamera</a>` : ''}
         ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', eur(c.web.prezzo) + (prezzoDiverso(c) ? ` (gestionale ${eur(c.prezzoV)})` : ''), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
@@ -328,6 +329,8 @@
     $('dCopy').onclick = () => copy(c.targa, 'Targa copiata');
     $('dShare').onclick = () => condividi(c);
     if ($('dBack')) $('dBack').onclick = () => mostraAI(S.aiUltimo);
+    S.aperta = c.targa;
+    finanziamento(c);
     storiaAuto(c);
     try { history.replaceState(history.state, '', '#' + c.targa); } catch (e) {}
   }
@@ -348,6 +351,148 @@
     const text = testoCliente(c);
     if (navigator.share && !inFrame) navigator.share({ text }).catch(() => {});
     else copy(text, 'Testo per il cliente copiato: incollalo su WhatsApp o in una mail');
+  }
+
+  /* ---------- finanziamento: codice modello dai listini VW, rata con le formule del simulatore di Giuseppe ---------- */
+  let COD = null, SCELTE = null;
+  const FS = {};                                  // impostazioni della rata per auto, finche' la pagina resta aperta
+  const isVW = c => c.brand === 'Volkswagen';
+  const eur2 = n => (n || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', useGrouping: 'always' });
+  const pctIt = v => v.toFixed(2).replace('.', ',') + '%';
+  const chiaveCodici = () => { try { return localStorage.getItem('su.chiaveCodici') || ''; } catch (e) { return ''; } };
+  async function codici() {
+    if (COD !== null) return COD;
+    try { const r = await fetch('data/codici.json?t=' + Date.now(), { cache: 'no-store' }); COD = r.ok ? await r.json() : false; } catch (e) { COD = false; }
+    return COD;
+  }
+  // le scelte di Giuseppe stanno nel servizio Apps Script, cosi' le vedono tutti
+  async function scelteCodici() {
+    if (SCELTE) return SCELTE;
+    if (!aiAttivo()) return {};
+    try {
+      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: AI_TOKEN, azione: 'codici' }), signal: ctl.signal });
+      clearTimeout(to);
+      const j = await r.json();
+      if (j.scelte) SCELTE = j.scelte;
+      return j.scelte || {};
+    } catch (e) { return {}; }
+  }
+  function codiceInUso(c, info, sc) {
+    const s = sc[c.targa];
+    if (s && s.codice) return { codice: s.codice, versione: s.versione, prezzo: +s.prezzo || 0, scelto: true };
+    if (info && info.c && info.c.length === 1) { const k = info.c[0]; return { codice: k[0], versione: k[1], prezzo: k[2] }; }
+    return null;
+  }
+  function htmlCodice(c, info, uso, puoi) {
+    if (!isVW(c)) return `<p class="hint">Altre marche: niente listino. Con <b>Simulatore ufficiale</b> copi i dati dell'auto e scegli il modello nel portale.</p>`;
+    if (!info) return `<p class="hint">Codice modello non ancora calcolato per quest'auto.</p>`;
+    const lst = info.listino ? `listino ${esc(info.listino.nome)} del ${dIt(info.listino.validita)}` : '';
+    let h = '';
+    if (uso) h += `<div class="cod"><div class="cod-top"><b class="mono">${esc(uso.codice)}</b><span>${esc(uso.versione)}</span></div><div class="cod-sub">Prezzo da nuovo <b>${eur(uso.prezzo)}</b> chiavi in mano${lst ? ' · ' + lst : ''} <span class="tag${uso.scelto ? ' as' : ''}">${uso.scelto ? 'scelto da Giuseppe' : 'unico nel listino'}</span></div></div>`;
+    if (!info.c) return h + `<p class="hint">Codice modello non trovato. ${esc(info.motivo)}</p>`;
+    if (info.precedenti) h += `<p class="hint">Nel listino in vigore all'immatricolazione questa versione non c'è: i codici vengono dai listini precedenti.</p>`;
+    if (info.c.length > 1 && (!uso || puoi)) {
+      const base = info.c[0][2], top = info.c[0][4];
+      const riga = (k, i) => {
+        const mio = uso && uso.codice === k[0];
+        return `<li${!uso && k[4] < top ? ' class="meno"' : ''}><span class="mono">${esc(k[0])}</span><span class="v">${esc(k[1])}</span><span class="p">${eur(k[2])}${k[2] !== base ? `<small>${k[2] > base ? '+' : '−'}${eur(Math.abs(k[2] - base))}</small>` : ''}</span>${puoi ? `<button class="chip" data-scegli="${i}" aria-pressed="${mio}">${mio ? 'Scelto' : 'Scegli'}</button>` : ''}</li>`;
+      };
+      h += `<p class="hint">${uso ? 'Gli altri codici possibili' : `<b>${info.c.length}${info.altri ? ' (e altri ' + info.altri + ')' : ''} codici possibili</b>`} nel ${lst}, versioni ${esc(info.filtri)}. In alto le più simili alla descrizione; la differenza di prezzo è rispetto alla prima. ${puoi ? 'Tocca quello giusto: lo vedranno tutti.' : 'Il codice giusto lo sceglie Giuseppe.'}</p><ul class="cand">${info.c.map(riga).join('')}</ul>`;
+    }
+    return h;
+  }
+  function datiPortale(c, uso) {
+    return [uso ? `Codice modello: ${uso.codice} (${uso.versione})` : isVW(c) ? 'Codice modello: da scegliere nel portale' : '',
+      `Vettura: ${c.brand} ${c.family} ${c.modello}`.replace(/\s+/g, ' '), `Immatricolazione: ${immIt(c)}`, `Chilometri: ${N(c.km)}`,
+      c.prezzo ? `Prezzo di vendita: ${eur(c.prezzo)}` : '', uso && uso.prezzo ? `Prezzo da nuovo: ${eur(uso.prezzo)}` : ''].filter(Boolean).join('\n');
+  }
+  // copia subito, dentro il tocco: il portale si apre in un'altra scheda e dopo la copia non riuscirebbe piu'
+  function copiaSubito(text, ok) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+    let fatto = false; try { fatto = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+    if (fatto) toast(ok); else copy(text, ok);
+  }
+  async function finanziamento(c) {
+    const [cod, sc] = await Promise.all([isVW(c) ? codici() : null, scelteCodici()]);
+    if (S.aperta !== c.targa || !$('dCodice')) return;
+    const info = cod && cod.auto ? cod.auto[c.targa] : null, uso = codiceInUso(c, info, sc || {}), puoi = !!chiaveCodici() && aiAttivo();
+    $('dCodice').innerHTML = htmlCodice(c, info, uso, puoi);
+    $('dCodice').onclick = e => { const b = e.target.closest('[data-scegli]'); if (b && info && info.c) scegliCodice(c, info.c[+b.dataset.scegli]); };
+    const q = new URLSearchParams({ modello: `${c.brand} ${c.family} ${c.modello}`.replace(/\s+/g, ' ').trim(), prezzo: c.prezzo || '', tipo: isVW(c) ? 'pvv' : 'multimake' });
+    if (uso && uso.prezzo) q.set('nuovo', uso.prezzo);
+    $('dSimBtn').innerHTML = `<a class="btn btn-ghost btn-sm" id="dSimUff" href="${FIN.portale}" target="_blank" rel="noopener">Simulatore ufficiale</a><a class="btn btn-ghost btn-sm" href="simulatore.html?${esc(q.toString())}" target="_blank" rel="noopener">Mio simulatore</a>`;
+    $('dSimUff').onclick = () => copiaSubito(datiPortale(c, uso), 'Dati copiati: incollali nel portale VW FS');
+    rata(c, uso);
+  }
+  async function scegliCodice(c, k) {
+    const chiave = chiaveCodici();
+    if (!chiave || !k) return;
+    toast('Salvo il codice…');
+    try {
+      const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: AI_TOKEN, azione: 'scegli', chiave, targa: c.targa, codice: k[0], versione: k[1], prezzo: k[2] }) });
+      const j = await r.json();
+      if (j.errore) return toast(j.errore, true);
+      SCELTE = j.scelte || Object.assign(SCELTE || {}, { [c.targa]: { codice: k[0], versione: k[1], prezzo: k[2] } });
+      toast(`Codice ${k[0]} salvato per ${c.targa}`);
+      if (S.aperta === c.targa) finanziamento(c);
+    } catch (e) { toast('Codice non salvato: controlla la connessione e riprova', true); }
+  }
+  // calcolatore della rata nella scheda, come quello delle finanziarie sui portali
+  function rata(c, uso) {
+    const el = $('dRata');
+    if (!el) return;
+    if (!c.prezzo) { el.innerHTML = '<p class="hint">Prezzo non inserito: niente simulazione della rata.</p>'; return; }
+    const tipi = (isVW(c) ? ['pvv'] : []).concat(['multimake', 'classico']);
+    const st = FS[c.targa] || (FS[c.targa] = { tipo: tipi[0], ant: 0, dur: 36, km: FIN.kmAnnui, vfg: FIN.vfg.iniziale, mm: 0, man: true });
+    // come nel simulatore: plug-in, metano e up! hanno la tariffa dedicata, le altre 1 tagliando
+    const manMese = /Plug-in|Metano/.test(c.fuel) || /^up/i.test(c.family || '') ? FIN.manutenzione.plugin : FIN.manutenzione.tagliando1;
+    if (!tipi.includes(st.tipo)) st.tipo = tipi[0];
+    const P = FIN[st.tipo], palla = st.tipo !== 'classico';
+    const suNuovo = !!(uso && uso.prezzo), base = suNuovo ? uso.prezzo : c.prezzo;
+    const maxAnt = Math.floor(c.prezzo * Math.min(P.maxAnticipo, 60) / 100 / 100) * 100;
+    st.ant = Math.min(st.ant, maxAnt);
+    if (palla && !P.durate.includes(st.dur)) st.dur = 36;
+    if (!palla) st.dur = Math.max(P.durataMin, Math.min(P.durataMax, st.dur));
+    const tan = st.tipo === 'multimake' ? P.tassi[st.mm].tan : P.tan;
+    el.innerHTML = `<div class="fin">
+      <div class="seg" role="group" aria-label="Tipo di finanziamento">${tipi.map(t => `<button data-fin-tipo="${t}" aria-pressed="${t === st.tipo}">${FIN[t].nome}</button>`).join('')}</div>
+      <div id="fOut" aria-live="polite"></div>
+      <label class="fin-l"><span>Anticipo</span><b id="fAntV"></b><input type="range" id="fAnt" min="0" max="${maxAnt}" step="100" value="${st.ant}"></label>
+      <div class="fin-l"><span>Durata</span>${palla ? `<div class="fin-chips">${P.durate.map(d => `<button class="chip" data-fin-dur="${d}" aria-pressed="${d === st.dur}">${d} mesi</button>`).join('')}</div>` : `<b id="fDurV"></b><input type="range" id="fDur" min="${P.durataMin}" max="${P.durataMax}" step="6" value="${st.dur}">`}</div>
+      ${palla ? `<label class="fin-l"><span>Valore futuro garantito</span><b id="fVfgV"></b><input type="range" id="fVfg" min="${FIN.vfg.min}" max="${FIN.vfg.max}" step="1" value="${st.vfg}"><small>${suNuovo ? `in % del prezzo da nuovo (${eur(base)}, codice ${esc(uso.codice)})` : `in % del prezzo di vendita: ${isVW(c) ? 'quando c\'è il codice modello si usa il prezzo da nuovo' : 'per questa marca non c\'è listino'}`}</small></label>
+      <label class="fin-l fin-check"><input type="checkbox" id="fMan"${st.man ? ' checked' : ''}><span>Manutenzione inclusa (${manMese} €/mese)</span></label>
+      <label class="fin-l"><span>Km all'anno</span><select id="fKm">${[10000, 15000, 20000, 25000, 30000, 40000].map(k => `<option value="${k}"${k === st.km ? ' selected' : ''}>${N(k)}</option>`).join('')}</select></label>` : ''}
+      ${st.tipo === 'multimake' ? `<div class="fin-l"><span>Tasso</span><div class="fin-chips">${P.tassi.map((t, i) => `<button class="chip" data-fin-mm="${i}" aria-pressed="${i === st.mm}">${t.nome} ${pctIt(t.tan)}</button>`).join('')}</div></div>` : ''}
+      <p class="fin-note" id="fNote"></p>
+    </div>`;
+    const aggiorna = () => {
+      st.ant = +$('fAnt').value;
+      if ($('fDur')) st.dur = +$('fDur').value;
+      if ($('fVfg')) st.vfg = +$('fVfg').value;
+      if ($('fKm')) st.km = +$('fKm').value;
+      if ($('fMan')) st.man = $('fMan').checked;
+      const vfg = Math.round(base * st.vfg) / 100;
+      const r = finCalcola({ tipo: st.tipo, prezzo: c.prezzo, anticipo: st.ant, durata: st.dur, tan, vfg, servizi: palla && st.man ? manMese * st.dur : 0 });
+      $('fAntV').textContent = `${st.ant ? eur(st.ant) : '0 €'} · ${Math.round(st.ant / c.prezzo * 100)}%`;
+      if ($('fDurV')) $('fDurV').textContent = st.dur + ' mesi';
+      if ($('fVfgV')) $('fVfgV').textContent = `${st.vfg}% · ${eur2(vfg)}`;
+      if (r.errore) { $('fOut').innerHTML = `<p class="hint err">${esc(r.errore)}</p>`; $('fNote').textContent = ''; return; }
+      $('fOut').innerHTML = `<div class="fin-rata"><b>${eur2(r.rata)}</b><span>al mese</span></div><div class="fin-sub">${palla ? `${r.nRate} rate e maxirata finale di <b>${eur2(r.vfg)}</b> · ${N(Math.round(st.km * st.dur / 12))} km inclusi` : `${r.nRate} rate`}</div>`;
+      $('fNote').textContent = `${P.titolo} · TAN ${pctIt(r.tan)} · TAEG ${r.taeg == null ? 'n.d.' : pctIt(r.taeg * 100)} · importo finanziato ${eur2(r.finanziato)} con ${eur2(r.istruttoria)} di spese di istruttoria${r.servizi ? ` e ${eur2(r.servizi)} di manutenzione` : ''} · prima rata ${eur2(r.primaRata)} con imposta di bollo e incasso, poi ${eur2(r.incasso)} di incasso a rata. Esempio indicativo, senza altri servizi: il preventivo ufficiale si fa sul portale VW FS.`;
+    };
+    el.querySelectorAll('input,select').forEach(i => i.addEventListener('input', aggiorna));
+    el.onclick = e => {
+      const b = e.target.closest('[data-fin-tipo],[data-fin-dur],[data-fin-mm]');
+      if (!b) return;
+      if (b.dataset.finTipo) st.tipo = b.dataset.finTipo;
+      if (b.dataset.finDur) st.dur = +b.dataset.finDur;
+      if (b.dataset.finMm) st.mm = +b.dataset.finMm;
+      rata(c, uso);
+    };
+    aggiorna();
   }
 
   /* ---------- storico: caricato solo quando serve ---------- */
@@ -688,6 +833,10 @@
   $('grid').addEventListener('pointermove', e => { const c = e.target.closest('.card'); if (!c) return; const r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
 
   /* ---------- avvio ---------- */
+  try {
+    const mk = location.hash.match(/^#chiave=([\w-]{12,})$/);
+    if (mk) { localStorage.setItem('su.chiaveCodici', mk[1]); history.replaceState(null, '', location.pathname + location.search); setTimeout(() => toast('Da questo telefono puoi scegliere i codici modello'), 900); }
+  } catch (e) {}
   try { const v = localStorage.getItem('su.view'); if (v === 'table') { S.view = 'table'; $('vCards').setAttribute('aria-pressed', 'false'); $('vTable').setAttribute('aria-pressed', 'true'); } } catch (e) {}
   try { const q0 = new URLSearchParams(location.search).get('q'); if (q0) { $('q').value = q0; $('qClear').hidden = false; } } catch (e) {}
   const cur = store.get('su.cur');

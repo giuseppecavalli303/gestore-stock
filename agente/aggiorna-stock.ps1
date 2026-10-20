@@ -4,6 +4,7 @@
 #  3. aggiorna foto e annunci dal sito ogni 6 ore
 #  4. dalle 13, se la stampa di oggi non e' arrivata, ti avvisa una volta
 #  5. con la stampa nuova prepara la presentazione per Giuseppe (il lunedi' anche il riepilogo settimanale)
+#  6. con la stampa nuova e ogni 6 ore rilegge i listini VW del Desktop e aggiorna i codici modello delle auto
 # Uso:  powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 [-NonPubblicare] [-NonInviare]
 # -Riepilogo rimanda subito il riepilogo dell'ultima stampa pubblicata; -Rapporto rimanda subito la presentazione a Giuseppe (-Settimana aggiunge il riepilogo settimanale)
 param([switch]$NonPubblicare, [switch]$NonInviare, [switch]$Riepilogo, [switch]$Rapporto, [switch]$Settimana)
@@ -143,6 +144,8 @@ try {
             if ($c.Codice -ne 0 -and $c.Codice -ne 3) { throw "Stampa non pubblicata. $($c.Testo)" }
             $t = Esegui 'node agente\telecamera.js --max 60'
             Scrivi $t.Testo
+            $l = Esegui 'node agente\listini.js'                     # codici modello VW dai listini del Desktop
+            Scrivi $l.Testo
             $s = Esegui 'node agente\storico.js'
             Scrivi $s.Testo
             $nuova = Pubblica "Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"
@@ -171,6 +174,8 @@ try {
             if ($b.Codice -eq 0) { Scrivi $b.Testo }
             $t = Esegui 'node agente\telecamera.js --max 60'
             Scrivi $t.Testo
+            $l = Esegui 'node agente\listini.js'
+            Scrivi $l.Testo
             Pubblica 'Foto e annunci del sito aggiornati' | Out-Null
         }
     }

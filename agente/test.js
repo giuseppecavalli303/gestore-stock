@@ -45,6 +45,19 @@ async function leggi(file) {
     prova('t-roc tiburtina 2 dal 2023 meno di 40.000 km', ['T-Roc', 'da 2023']);
     prova('elettriche in arrivo', ['Elettrica', 'In arrivo']);
   }
+  // rata: valori calcolati con il simulatore di Giuseppe (Documents\simulatore vw), manutenzione 1 tagliando nei PVV
+  const { FIN, finCalcola } = new Function(src('finanza.js') + '\nreturn { FIN, finCalcola };')();
+  const pvv = finCalcola({ tipo: 'pvv', prezzo: 20000, anticipo: 3000, durata: 36, tan: FIN.pvv.tan, vfg: 9000, servizi: 5 * 36 });
+  ok(pvv.rata === 348.05 && Math.abs(pvv.taeg * 100 - 11.02) < 0.01, `rata PVV come il simulatore: ${pvv.rata} € (attesa 348,05)`);
+  const cl = finCalcola({ tipo: 'classico', prezzo: 14450, anticipo: 2000, durata: 60, tan: FIN.classico.tan });
+  ok(cl.rata === 278.89, `rata Credito Classico come il simulatore: ${cl.rata} € (attesa 278,89)`);
+  ok(!!finCalcola({ tipo: 'pvv', prezzo: 20000, anticipo: 9000, durata: 36, tan: FIN.pvv.tan, vfg: 9000 }).errore, 'PVV: anticipo oltre il 35% rifiutato');
+  // codice modello: allestimento e carrozzeria dal nome del listino
+  const { punteggio, famigliaListino } = require('./listini.js');
+  ok(punteggio('1.0 TSI Edition Plus DSG', 'NUOVO T-ROC EDITION PLUS 1.0 TSI DSG') === 2 && punteggio('1.0 TSI R-Line', 'T-ROC R-LINE 1.0 TSI') === 1, 'listini: allestimento riconosciuto');
+  const fam = [{ nome: 'Golf', k: 'golf' }, { nome: 'up!', k: 'up' }, { nome: 'T-Roc', k: 'troc' }];
+  const g = famigliaListino('Nuova Golf Variant', fam), u = famigliaListino('e-up!', fam), t = famigliaListino('Nuovo T-Roc Cabriolet', fam);
+  ok(g && g.famiglia === 'Golf' && g.corpo === 'Variant' && u && u.famiglia === 'up!' && t && t.corpo === 'Cabrio', 'listini: modello e carrozzeria dal nome');
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
   process.exit(errori ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

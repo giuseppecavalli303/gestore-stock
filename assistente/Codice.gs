@@ -8,6 +8,7 @@
  * Proprieta' dello script (Impostazioni progetto > Proprieta' script):
  *   GEMINI_KEY  la chiave API del progetto con fatturazione (obbligatoria)
  *   MODELLO     facoltativa, per cambiare modello senza toccare il codice
+ *   CHIAVE_SCELTE la chiave del telefono di Giuseppe: solo con questa si sceglie il codice modello di un'auto
  */
 
 const MODELLO_PREDEFINITO = 'gemini-3.5-flash-lite';   // il 2.5 non e' piu' disponibile per i nuovi utenti
@@ -44,6 +45,8 @@ function doPost(e) {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (req.token !== TOKEN) return json_({ errore: 'Richiesta non autorizzata.' });
     if (req.azione === 'telecamera') return json_(telecamera_(req));
+    if (req.azione === 'codici') return json_({ scelte: scelte_() });
+    if (req.azione === 'scegli') return json_(scegli_(req));
     if (!limite_()) return json_({ errore: "Troppe domande in quest'ora: riprova tra poco." });
     const domanda = String(req.domanda || '').trim().slice(0, 600);
     const elenco = String(req.elenco || '').slice(0, MAX_ELENCO);
@@ -169,6 +172,29 @@ function telecamera_(req) {
   const tin = uso.promptTokenCount || 0, tout = (uso.candidatesTokenCount || 0) + (uso.thoughtsTokenCount || 0);
   out.uso = { ingresso: tin, uscita: tout, mese: conta_(modello, tin, tout) };
   return out;
+}
+
+/* Codice modello VW scelto da Giuseppe quando il listino ne propone piu' d'uno.
+   Una proprieta' per auto (COD_targa): cosi' non si supera il limite di grandezza di una singola proprieta'. */
+function scelte_() {
+  const tutte = PropertiesService.getScriptProperties().getProperties(), out = {};
+  Object.keys(tutte).forEach(function (k) { if (k.indexOf('COD_') === 0) { try { out[k.slice(4)] = JSON.parse(tutte[k]); } catch (e) {} } });
+  return out;
+}
+
+function scegli_(req) {
+  const p = PropertiesService.getScriptProperties();
+  const chiave = String(p.getProperty('CHIAVE_SCELTE') || '').trim();
+  if (!chiave || String(req.chiave || '') !== chiave) return { errore: "Questo telefono non e' abilitato a scegliere i codici modello." };
+  const targa = String(req.targa || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+  if (!targa) return { errore: 'Targa mancante.' };
+  if (req.codice) {
+    p.setProperty('COD_' + targa, JSON.stringify({
+      codice: String(req.codice).slice(0, 30), versione: String(req.versione || '').slice(0, 80),
+      prezzo: Number(req.prezzo) || 0, quando: Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyy-MM-dd')
+    }));
+  } else p.deleteProperty('COD_' + targa);
+  return { ok: true, scelte: scelte_() };
 }
 
 function limite_() {

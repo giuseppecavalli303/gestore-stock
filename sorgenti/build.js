@@ -1,7 +1,7 @@
 // Ricompone l'app dai sorgenti: node sorgenti/build.js
 const fs = require('fs'), path = require('path');
 const src = f => fs.readFileSync(path.join(__dirname, f), 'utf8');
-const core = ['parser.js', 'norm.js', 'query.js'].map(src).join('\n');
+const core = ['parser.js', 'norm.js', 'query.js', 'finanza.js'].map(src).join('\n');
 const page = src('page.html').replace('/*__CORE__*/', () => core).replace('/*__UI__*/', () => src('ui.js'));
 const root = path.join(__dirname, '..');
 // versione per l'Artifact di claude.ai (senza scheletro HTML)
@@ -23,4 +23,6 @@ const registra = `<script>if ('serviceWorker' in navigator && location.protocol 
 // sul telefono il nome sotto l'icona viene dal titolo: corto, cosi' non si taglia
 const pagina = page.replace('<title>Stock Usato Valentino</title>', '<title>Stock Usato</title>');
 fs.writeFileSync(path.join(root, 'index.html'), '<!doctype html><html lang="it"><head>' + testa + '</head><body>' + pagina + registra + '</body></html>');
+// il simulatore di Giuseppe, senza provvigioni, per il tasto "Mio simulatore" della scheda
+console.log(require('./simulatore.js').prepara(path.join(root, 'simulatore.html')));
 console.log('ok', page.length);
