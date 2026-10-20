@@ -455,17 +455,17 @@
             anticipoPercentSelect.value = closestOption.value;
         };
 
-        // Copertura Furto/Incendio: opzioni in anni fino alla durata del finanziamento, allineata alla durata
+        // Copertura Furto/Incendio: da 12 a 84 mesi, qualunque sia la durata del finanziamento; parte allineata alla durata
         const syncDurataServizi = () => {
-            const anni = Math.ceil(getDurata() / 12);
+            const mesi = Math.min(84, Math.max(12, Math.ceil(getDurata() / 12) * 12));
             serviziDurataSelect.innerHTML = '';
-            for (let a = 2; a <= Math.max(anni, 2); a++) {
+            for (let m = 12; m <= 84; m += 12) {
                 const option = document.createElement('option');
-                option.value = a * 12;
-                option.textContent = `${a} Anni`;
+                option.value = m;
+                option.textContent = `${m} mesi`;
                 serviziDurataSelect.appendChild(option);
             }
-            serviziDurataSelect.value = Math.max(anni, 2) * 12;
+            serviziDurataSelect.value = mesi;
         };
 
         const switchMode = (mode) => {
