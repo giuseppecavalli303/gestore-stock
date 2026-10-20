@@ -553,7 +553,7 @@ function mail(A, titolo, file, extra) {
 <ol style="padding-left:20px;margin:16px 0">${messaggi(A).map(m => `<li style="margin-bottom:8px">${m}</li>`).join('')}</ol>
 ${extra || ''}
 <p style="margin-top:16px">In allegato la presentazione completa${file.length > 1 ? ' e il riepilogo della settimana' : ''}, pronta da mostrare.</p>
-<p style="margin-top:22px;font-size:12px;color:${GRIGIO}">Preparato dall'agente dello stock${kp ? ` · confronto con la stampa del ${dIt(kp.day)}` : ''}. <a href="${APP}" style="color:${BLU}">Apri lo stock</a></p>
+<p style="margin-top:22px;font-size:12px;color:${GRIGIO}">Preparato dall'agente dello stock${kp ? ` · confronto con la stampa del ${dIt(kp.day)}` : ''}. <a href="${APP}?vista=venditore" style="color:${BLU}">Apri lo stock</a></p>
 </div></body></html>`;
   const f = path.join(__dirname, 'posta-da-inviare.json'), coda = leggi(f, []);
   coda.push({ to: IO, subject: titolo, html: corpo, allegati: file });

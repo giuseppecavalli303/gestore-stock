@@ -1837,7 +1837,6 @@ function finCalcola(o) {
   const ORD_GG = [...$('sort').options].filter(o => o.value === 'ingr' || o.value === 'old');
   function setCliente(on) {
     S.cliente = !!on;
-    store.set('su.cliente', S.cliente);
     document.documentElement.classList.toggle('cliente', S.cliente);
     $('btnCliente').setAttribute('aria-pressed', String(S.cliente));
     $('btnCliente').title = S.cliente ? 'Modalità cliente attiva: tocca per tornare a vedere tutto' : 'Modalità cliente: nasconde da quanto tempo le auto sono in stock';
@@ -1855,7 +1854,13 @@ function finCalcola(o) {
   $('btnCliente').onclick = () => { setCliente(!S.cliente); toast(S.cliente ? 'Modalità cliente: anzianità in stock nascosta' : 'Modalità venditore: vedi di nuovo tutto'); };
 
   /* ---------- avvio ---------- */
-  if (store.get('su.cliente') === true) setCliente(true);
+  // si parte sempre in modalita' cliente: solo i link delle mail interne (?vista=venditore) aprono la vista completa.
+  // Spenta col tasto Cliente, resta spenta finche' la pagina e' aperta.
+  try {
+    const qs = new URLSearchParams(location.search), venditore = qs.get('vista') === 'venditore';
+    if (qs.has('vista')) { qs.delete('vista'); history.replaceState(history.state, '', location.pathname + (qs.toString() ? '?' + qs : '') + location.hash); }
+    setCliente(!venditore);
+  } catch (e) { setCliente(true); }
   try {
     const mk = location.hash.match(/^#chiave=([\w-]{12,})$/);
     if (mk) { localStorage.setItem('su.chiaveCodici', mk[1]); history.replaceState(null, '', location.pathname + location.search); setTimeout(() => toast('Da questo telefono puoi scegliere i codici modello'), 900); }

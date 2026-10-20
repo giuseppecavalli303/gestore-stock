@@ -6,6 +6,8 @@ const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
 const qui = f => path.join(__dirname, f), dati = f => path.join(root, 'data', f);
 const APP = 'https://giuseppecavalli303.github.io/gestore-stock/';
+// le mail sono per i venditori: i link aprono l'app nella vista completa, non in modalita' cliente
+const APPV = APP + '?vista=venditore';
 const IO = 'giuseppe.cavalli@valentinoautomobili.it';
 const DOMINIO = '@valentinoautomobili.it';
 const FOTO = 'https://cdn.dealerk.it/dealer/datafiles/vehicle/images/200/';
@@ -31,7 +33,7 @@ function pagina(titolo, corpo) {
 <div style="max-width:640px;margin:0 auto;padding:18px 14px;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#0c1a2b;font-size:14px;line-height:1.45">
 <div style="font-size:12px;color:#5b6b80;margin-bottom:6px">Gestore stock usato · Valentino Automobili</div>
 <h1 style="font-size:20px;margin:0 0 14px">${esc(titolo)}</h1>${corpo}
-<p style="margin-top:22px;font-size:12px;color:#5b6b80">Messaggio automatico preparato dall'agente dello stock. <a href="${APP}" style="color:#0a5cf5">Apri lo stock</a></p>
+<p style="margin-top:22px;font-size:12px;color:#5b6b80">Messaggio automatico preparato dall'agente dello stock. <a href="${APPV}" style="color:#0a5cf5">Apri lo stock</a></p>
 </div></body></html>`;
 }
 const sezione = (titolo, righe) => (righe.length ? `<h2 style="font-size:15px;margin:20px 0 8px">${esc(titolo)}</h2><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">${righe.join('')}</table>` : '');
@@ -43,7 +45,7 @@ function rigaAuto(c, extra) {
 <span style="color:#44556a;font-size:13px">${esc(c.modello)}</span><br>
 <span style="font-size:13px">${esc(imm(c))} · ${N(c.km)} km · ${esc(c.fuel)} · ${esc(c.cambio)} · <b>${eur(c.prezzo)}</b> · ${esc(etichetta(c))} · ${esc(c.ubic)}</span>
 ${extra ? `<br><span style="font-size:13px;color:#a85f00">${extra}</span>` : ''}<br>
-<a href="${APP}#${encodeURIComponent(c.targa)}" style="color:#0a5cf5;font-size:13px">apri nello stock</a>${link}</td></tr>`;
+<a href="${APPV}#${encodeURIComponent(c.targa)}" style="color:#0a5cf5;font-size:13px">apri nello stock</a>${link}</td></tr>`;
 }
 
 function destinatari() {
@@ -79,7 +81,7 @@ function riepilogo() {
   const nascoste = cs.filter(c => c.free && (c.giorni ?? 0) >= 90 && !(c.web && c.web.foto && c.web.foto.length)).sort((a, b) => b.giorni - a.giorni);
   const arrivo = cs.filter(c => c.st === 7 && !(pm && (pm.get(c.targa) || {}).st === 7));
   const MOSTRA = 15;
-  const tutte = (n, q) => (n > MOSTRA ? `<p style="font-size:13px"><a href="${APP}?q=${encodeURIComponent(q)}" style="color:#0a5cf5">Vedi tutte le ${N(n)} nello stock</a></p>` : '');
+  const tutte = (n, q) => (n > MOSTRA ? `<p style="font-size:13px"><a href="${APPV}&q=${encodeURIComponent(q)}" style="color:#0a5cf5">Vedi tutte le ${N(n)} nello stock</a></p>` : '');
   const ora = cur.meta.printDate ? cur.meta.printDate.slice(11) : '';
   const box = (v, l) => `<td style="padding:10px 12px;background:#ffffff;border-radius:10px;text-align:left"><div style="font-size:20px;font-weight:700">${v}</div><div style="font-size:12px;color:#5b6b80">${l}</div></td>`;
   let corpo = `<p style="margin:0 0 12px;color:#44556a">Stampa del ${dIt(day)} ore ${ora}${prev ? `, confronto con quella del ${dIt(prev.meta.day)}` : ''}.</p>
@@ -133,7 +135,7 @@ function richieste() {
     if (!reg.ricerche.some(x => x.email === email && deacc(x.query) === deacc(testo))) reg.ricerche.push({ email, nome: r.nome || '', query: testo, dal: new Date().toISOString().slice(0, 10) });
     const oggi = cur.cars.filter(c => !c.booked && matchQuery(c, Q));
     accoda(email, `Avviso stock attivo: ${testo}`, `<p>Ti scrivo quando entra in stock un'auto che corrisponde a:</p><p><b>${Q.chips.map(esc).join(' · ')}</b></p>
-<p>Oggi ce ne sono già ${oggi.length} non prenotate: <a href="${APP}?q=${encodeURIComponent(testo)}" style="color:#0a5cf5">vedile nello stock</a>.</p>
+<p>Oggi ce ne sono già ${oggi.length} non prenotate: <a href="${APPV}&q=${encodeURIComponent(testo)}" style="color:#0a5cf5">vedile nello stock</a>.</p>
 <p style="color:#5b6b80;font-size:13px">Per fermare l'avviso scrivi a ${IO} con oggetto <b>STOP AVVISO</b>.</p>`);
   }
   salvaRegistro(reg);
