@@ -40,7 +40,8 @@ function annuncio(v) {
     porte: +get('doors') > 0 ? +get('doors') : 0, posti: +get('seats') > 0 ? +get('seats') : 0, trazione: get('tractionType') || '',
     colore: [get('colorExt'), get('colorType')].filter(Boolean).join(' '), interni: [get('colorInt'), get('tapestry')].filter(Boolean).join(' '),
     neopatentati: !!get('novice'), garanzia: +get('warrantyMonth') > 0 ? +get('warrantyMonth') : 0, certificato: get('seal_name') || '',
-    giro360: get('image360LinkClosedDoors') || '', video: get('video') || '', url, foto: foto.slice(0, 20)
+    giro360: get('image360LinkClosedDoors') || '', video: get('video') || '', url, foto: foto.slice(0, 20),
+    vin: /^[A-HJ-NPR-Z0-9]{17}$/.test(String(get('vin') || '').toUpperCase()) ? String(get('vin')).toUpperCase() : ''   // telaio, quando il sito lo pubblica
   };
 }
 

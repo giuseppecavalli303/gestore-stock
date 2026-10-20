@@ -25,4 +25,6 @@ const pagina = page.replace('<title>Stock Usato Valentino</title>', '<title>Stoc
 fs.writeFileSync(path.join(root, 'index.html'), '<!doctype html><html lang="it"><head>' + testa + '</head><body>' + pagina + registra + '</body></html>');
 // il simulatore di Giuseppe, senza provvigioni, per il tasto "Mio simulatore" della scheda
 console.log(require('./simulatore.js').prepara(path.join(root, 'simulatore.html')));
+// pagina per il cliente (preventivo e lista di auto): statica, la copio accanto all'app
+fs.copyFileSync(path.join(__dirname, 'cliente.html'), path.join(root, 'cliente.html'));
 console.log('ok', page.length);

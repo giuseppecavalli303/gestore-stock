@@ -103,18 +103,7 @@ function eventi(snap) {
 function autoscout(cs, annunci) {
   const as = leggi(path.join(__dirname, 'autoscout.json'), null);
   if (!as || !as.annunci) return null;
-  const sito = new Map((annunci || []).map(a => [a.url, a]));
-  const k = new Map();
-  as.annunci.forEach(a => { const key = m4(a.marca) + '|' + a.km + '|' + a.imm; k.set(key, (k.get(key) || []).concat(a)); });
-  const per = new Map();
-  for (const c of cs) {
-    if (!online(c)) continue;
-    const s = (c.web && sito.get(c.web.url)) || {};
-    let l = k.get(m4(c.brand) + '|' + c.km + '|' + c.imm) || [];
-    if (l.length !== 1) { const l2 = k.get(m4(c.brand) + '|' + s.km + '|' + s.imm) || []; if (l2.length) l = l2; }
-    if (l.length > 1) { const p = l.filter(a => a.prezzo === c.prezzo || a.prezzo === c.prezzoV); if (p.length) l = p; }
-    if (l.length && l.every(a => a.giudizio === l[0].giudizio && a.contatti === l[0].contatti)) per.set(c.targa, l[0]);
-  }
+  const per = require('./mercato.js').abbinaAutoscout(cs, annunci, as);
   return { aggiornato: as.aggiornato, totale: as.annunci.length, tutti: as.annunci, per };
 }
 

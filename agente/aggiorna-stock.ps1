@@ -176,6 +176,8 @@ try {
             Scrivi $t.Testo
             $l = Esegui 'node agente\listini.js'
             Scrivi $l.Testo
+            $m = Esegui 'node agente\mercato.js'                      # giudizio di AutoScout sul prezzo, per la scheda
+            Scrivi $m.Testo
             Pubblica 'Foto e annunci del sito aggiornati' | Out-Null
         }
     }

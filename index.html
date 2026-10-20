@@ -296,6 +296,38 @@ html.cliente .tabs{display:none}
 .fin-l select option{background:var(--menu);color:var(--ink)}
 .fin-chips{display:flex;gap:6px;flex-wrap:wrap}
 .fin-note{font-size:11.5px;color:var(--ink3);margin:0;line-height:1.45}
+/* lista per il cliente e confronto */
+.stella{position:absolute;top:10px;left:10px;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(6,11,19,.42);color:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);cursor:pointer}
+.stella svg{fill:none}
+.stella[aria-pressed="true"],.stella-btn[aria-pressed="true"]{color:#ffc53d}
+.stella[aria-pressed="true"] svg,.stella-btn[aria-pressed="true"] svg{fill:currentColor}
+.stella-btn svg{fill:none}
+.lista-bar{position:fixed;z-index:50;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:flex;align-items:center;gap:8px;height:48px;padding:0 18px;border-radius:999px;font-weight:600;color:var(--ink)}
+.lista-bar svg{color:#ffc53d;fill:currentColor}
+.lista-bar b{min-width:24px;height:24px;border-radius:999px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:13px;padding:0 6px}
+.lista{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.lista li{display:flex;gap:8px;align-items:center}
+.lista .la{flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-align:left;background:var(--mute-soft);border-radius:var(--r-md);padding:8px}
+.lista .la img,.lista .la i{width:92px;height:64px;border-radius:10px;object-fit:cover;flex:none;background:var(--field)}
+.lista .la span{display:grid;gap:2px;min-width:0}
+.lista .la small{color:var(--ink2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lista .la .p{margin-left:auto;white-space:nowrap}
+.conf{overflow-x:auto;margin-inline:-22px;padding-inline:22px}
+.conf table{border-collapse:separate;border-spacing:0;width:auto;min-width:100%;font-size:13px;white-space:normal}
+.conf th,.conf td{padding:9px 10px;border-bottom:1px solid var(--hair);text-align:left;vertical-align:top;width:170px;min-width:150px;max-width:220px;letter-spacing:0;text-transform:none}
+.conf tbody th{color:var(--ink3);font-weight:600;font-size:11.5px;width:104px;min-width:104px;position:sticky;left:0;z-index:1;background:var(--solid)}
+.conf thead th{vertical-align:bottom;font-size:13px;color:var(--ink);font-weight:600}
+.conf tbody tr{cursor:default} .conf tbody tr:hover{background:none}
+.conf-auto{display:grid;gap:4px;text-align:left}
+.conf-auto img{width:100%;aspect-ratio:4/3;max-height:130px;object-fit:cover;border-radius:12px}
+.conf-auto b{font-size:14px}
+.conf-auto span{color:var(--ink2);font-size:12px;font-weight:500}
+.conf td small{display:block;color:var(--ink3);font-size:11px}
+.conf td.best{color:var(--ok);font-weight:700}
+.gas{font-weight:700} .gas.ok{color:var(--ok)} .gas.warn{color:var(--warn)} .gas.bad{color:var(--bad)}
+#dAS:empty{display:none}
+/* con la lista in basso a destra, i messaggi salgono sopra la barra invece di coprirla */
+body:has(#listaBar:not([hidden])) .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 82px)}
 .timeline{display:flex;flex-direction:column;gap:6px}
 .timeline>div{display:grid;grid-template-columns:86px minmax(0,1fr);gap:10px;font-size:13px}
 .timeline time{color:var(--ink3);font-variant-numeric:tabular-nums}
@@ -407,6 +439,8 @@ html.locked,html.locked body{overflow:hidden}
   .drawer .scroll{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}
   .drawer .close{width:44px;height:44px}
   .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 86px)}
+  .lista-bar{bottom:calc(env(safe-area-inset-bottom,0px) + 86px);right:12px}
+  body:has(#listaBar:not([hidden])) .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 146px)}
   .grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 }
 
@@ -513,6 +547,7 @@ html.locked,html.locked body{overflow:hidden}
 <aside class="drawer glass" id="drawer" role="dialog" aria-modal="true" aria-label="Scheda veicolo" hidden></aside>
 <div class="overlay" id="overlay" hidden><div class="box glass"><h2 id="ovTitle">Leggo la stampa…</h2><div class="prog"><i id="ovBar"></i></div><p id="ovText" class="num"></p></div></div>
 <div class="drophint" id="drophint" hidden>Rilascia il PDF dello stock</div>
+<button class="lista-bar glass" id="listaBar" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 5.9L12 16.8l-5.3 2.8 1.1-5.9-4.4-4.2 6-.8z"/></svg><span>Lista per il cliente</span><b id="listaN">0</b></button>
 <div class="toast glass" id="toast" role="status"></div>
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
 
@@ -1039,7 +1074,7 @@ function finCalcola(o) {
     }
     resetF();
     S.Q = capisci($('q').value);
-    renderMeta(); renderKpis(); renderDelta(); renderViews(); renderFilters(true); apply();
+    renderMeta(); renderKpis(); renderDelta(); renderViews(); renderFilters(true); apply(); renderListaBar();
     if (!$('stats').hidden) renderStats();
     apriDaLink();
   }
@@ -1236,7 +1271,7 @@ function finCalcola(o) {
     const tags = (c._d === 'new' ? '<span class="tag new">Nuovo ingresso</span>' : '') + (c.as ? '<span class="tag as">AutoScout</span>' : '') + (c.spec ? '<span class="tag">Prezzo speciale</span>' : '') + (c.iva ? '<span class="tag">IVA esposta</span>' : '') + (c.booked && c.st !== 1 && c.st !== 0 ? '<span class="tag">Prenotata</span>' : '') + (c.web && c.web.neopatentati ? '<span class="tag">Neopatentati</span>' : '') + (camOk(c) ? '<span class="tag as">Telecamera</span>' : '');
     const ph = foto(c, 400);
     return `<button class="card" data-i="${i}">
-      <div class="ph">${ph ? `<img src="${ph}" alt="" loading="lazy" decoding="async">` : '<span>Nessuna foto sul sito</span>'}${c.web && c.web.foto.length > 1 ? `<i class="nfoto">${c.web.foto.length} foto</i>` : ''}</div>
+      <div class="ph"><span class="stella" role="button" tabindex="0" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}" aria-label="Lista per il cliente">${STELLA}</span>${ph ? `<img src="${ph}" alt="" loading="lazy" decoding="async">` : '<span>Nessuna foto sul sito</span>'}${c.web && c.web.foto.length > 1 ? `<i class="nfoto">${c.web.foto.length} foto</i>` : ''}</div>
       <div class="r1">${stPill(c)}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni === 0 ? 'entrata oggi' : c.giorni === 1 ? 'entrata ieri' : c.giorni + ' gg in stock'}</span>` : ''}</div>
       <div><h3><span>${esc(c.brand)}</span> ${esc(c.family)}</h3><p class="mod">${esc(c.modello)}</p></div>
       <div class="specs"><div><b>${N(c.km)}</b><span>km</span></div><div><b>${immIt(c)}</b><span>immatr.</span></div><div><b>${c.cv ? c.cv + ' CV' : 'n.d.'}</b><span>potenza</span></div><div><b>${esc(c.fuel)}</b><span>alim.</span></div><div><b>${esc(c.cambio)}</b><span>cambio</span></div><div><b><i class="sw" style="background:${COLOR_HEX[c.colorG] || '#9aa3b2'}"></i>${esc(c.colorG)}</b><span>colore</span></div></div>
@@ -1264,25 +1299,26 @@ function finCalcola(o) {
 
   /* ---------- scheda dettaglio ---------- */
   function openDrawer(c, daAI) {
+    const daLista = !!S.vistaLista;
     const row = (k, v, wide) => (v === '' || v == null ? '' : `<div class="${wide ? 'wide' : ''}"><dt>${k}</dt><dd>${esc(v)}</dd></div>`);
     const yn = b => (b ? 'Sì' : 'No');
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <header>${daAI && S.aiUltimo ? '<button class="linkbtn" id="dBack">← Torna ai consigli</button>' : ''}<div class="r3">${stPill(c)}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span>` : ''}</div>
+      <header>${daAI && S.aiUltimo ? '<button class="linkbtn" id="dBack">← Torna ai consigli</button>' : daLista ? '<button class="linkbtn" id="dBackL">← Torna alla lista</button>' : ''}<div class="r3">${stPill(c)}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span>` : ''}</div>
       <h2>${esc(c.brand)} ${esc(c.family)}</h2><p style="color:var(--ink2)">${esc(c.modello)}</p>
-      <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button></div></header>
+      <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button><button class="btn btn-ghost btn-sm stella-btn" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}">${STELLA}<span>Lista</span></button></div></header>
       <div class="scroll">
         ${c.web && c.web.foto.length ? `<div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div>` : ''}
         ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
         <div class="bigprice"><div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
         <div class="dcols">
         <section id="dFin"><h4>Finanziamento</h4><div id="dCodice">${isVW(c) ? '<p class="hint">Cerco il codice modello nei listini…</p>' : ''}</div><div class="links" id="dSimBtn"></div><div id="dRata"></div></section>
-        <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${row('Categoria del listino', c.section, true)}</dl></section>
+        <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${c.web && c.web.vin ? `<div class="wide"><dt>Telaio</dt><dd><span class="mono">${esc(c.web.vin)}</span> <button class="linkbtn" id="dVin">Copia</button></dd></div>` : ''}${row('Categoria del listino', c.section, true)}</dl></section>
         ${camOk(c) && c.web.cam.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.cam.url)}" target="_blank" rel="noopener">Vedi la foto della retrocamera</a>` : ''}
         ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', eur(c.web.prezzo) + (prezzoDiverso(c) ? ` (gestionale ${eur(c.prezzoV)})` : ''), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
         <section id="dStoria" hidden><h4>Storia nelle stampe</h4><div class="timeline" id="dStoriaBody"></div></section>
         <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${ggVisibili() ? row('Data di ingresso', dIt(c.ingr)) : ''}${row('Anticipata', c.antic)}</dl></section>
         ${c.acq || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', c.acq)}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
-        <section><h4>Pubblicazione e pratiche</h4><dl class="dl">${row('AutoScout', c.as ? 'Sì' + (c.asDate ? ', dal ' + dIt(c.asDate) : '') : 'No')}${row('Check list', c.check ? 'Sì' + (c.checkDate ? ', il ' + dIt(c.checkDate) : '') : 'No')}${row('Prezzo speciale', yn(c.spec))}${row('IVA esposta', yn(c.iva))}${row('Mini PP', yn(c.mini))}${row('Foglio verde', yn(c.fv))}${row('Note', c.note, true)}</dl></section>
+        <section><h4>Pubblicazione e pratiche</h4><dl class="dl">${row('AutoScout', c.as ? 'Sì' + (c.asDate ? ', dal ' + dIt(c.asDate) : '') : 'No')}${row('Check list', c.check ? 'Sì' + (c.checkDate ? ', il ' + dIt(c.checkDate) : '') : 'No')}${row('Prezzo speciale', yn(c.spec))}${row('IVA esposta', yn(c.iva))}${row('Mini PP', yn(c.mini))}${row('Foglio verde', yn(c.fv))}${row('Note', c.note, true)}${S.cliente ? '' : '<div class="wide" id="dAS"></div>'}</dl></section>
         </div>
       </div>`;
     $('drawer').hidden = false;
@@ -1293,8 +1329,11 @@ function finCalcola(o) {
     $('dCopy').onclick = () => copy(c.targa, 'Targa copiata');
     $('dShare').onclick = () => condividi(c);
     if ($('dBack')) $('dBack').onclick = () => mostraAI(S.aiUltimo);
-    S.aperta = c.targa;
+    if ($('dBackL')) $('dBackL').onclick = () => apriLista();
+    S.aperta = c.targa; S.vistaLista = false;
+    if ($('dVin')) $('dVin').onclick = () => copy(c.web.vin, 'Telaio copiato');
     finanziamento(c);
+    if (!S.cliente) giudizioAS(c);
     storiaAuto(c);
     try { history.replaceState(history.state, '', '#' + c.targa); } catch (e) {}
   }
@@ -1368,7 +1407,7 @@ function finCalcola(o) {
   }
   function datiPortale(c, uso) {
     return [uso ? `Codice modello: ${uso.codice} (${uso.versione})` : isVW(c) ? 'Codice modello: da scegliere nel portale' : '',
-      `Vettura: ${c.brand} ${c.family} ${c.modello}`.replace(/\s+/g, ' '), `Immatricolazione: ${immIt(c)}`, `Chilometri: ${N(c.km)}`,
+      `Vettura: ${c.brand} ${c.family} ${c.modello}`.replace(/\s+/g, ' '), c.web && c.web.vin ? `Telaio: ${c.web.vin}` : '', `Immatricolazione: ${immIt(c)}`, `Chilometri: ${N(c.km)}`,
       c.prezzo ? `Prezzo di vendita: ${eur(c.prezzo)}` : '', uso && uso.prezzo ? `Prezzo da nuovo: ${eur(uso.prezzo)}` : ''].filter(Boolean).join('\n');
   }
   // copia subito, dentro il tocco: il portale si apre in un'altra scheda e dopo la copia non riuscirebbe piu'
@@ -1446,6 +1485,7 @@ function finCalcola(o) {
       </details>
       ${st.tipo === 'multimake' ? `<div class="fin-l"><span>Tasso</span><div class="fin-chips">${P.tassi.map((t, i) => `<button class="chip" data-fin-mm="${i}" aria-pressed="${i === st.mm}">${t.nome} ${pctIt(t.tan)}</button>`).join('')}</div></div>` : ''}
       <p class="fin-note" id="fNote"></p>
+      <div class="links"><button class="btn btn-primary btn-sm" id="fPrev">Invia preventivo al cliente</button><a class="btn btn-ghost btn-sm" id="fPrevVedi" href="#" target="_blank" rel="noopener">Anteprima</a></div>
     </div>`;
     const aggiorna = () => {
       st.ant = +$('fAnt').value;
@@ -1464,13 +1504,19 @@ function finCalcola(o) {
       const gap = st.gap ? SV.gap * st.dur : 0;
       const ripartiti = (st.ego ? SV.alterEgo * st.dur : 0) + (st.safe ? SV.personalSafe * st.dur : 0);
       const attivi = [palla && st.man, st.furto, st.gap, st.ego, st.safe].filter(Boolean).length;
+      const nomiServizi = [palla && st.man && `Manutenzione WeCare Easy (${{ tagliando1: '1 tagliando', tagliando2: '2 tagliandi', plugin: 'metano, plug-in o up!' }[st.manTipo]})`,
+        st.furto && `Furto e incendio ${st.furto === 'first_trip' ? 'First Trip' : 'Business Tour'} (${st.furtoMesi} mesi)`, st.gap && 'Garanzia GAP (valore a nuovo)', st.ego && 'CPI Alter Ego (protezione del credito)', st.safe && 'Personal Safe'].filter(Boolean);
       $('fServV').textContent = attivi ? `${attivi} ${attivi === 1 ? 'attivo' : 'attivi'}` : 'nessuno';
       const vfg = Math.round(base * st.vfg) / 100;
       const r = finCalcola({ tipo: st.tipo, prezzo: c.prezzo, anticipo: st.ant, durata: st.dur, tan, vfg, servizi: man + furto + gap, ripartiti });
       $('fAntV').textContent = `${st.ant ? eur(st.ant) : '0 €'} · ${Math.round(st.ant / c.prezzo * 100)}%`;
       if ($('fDurV')) $('fDurV').textContent = st.dur + ' mesi';
       if ($('fVfgV')) $('fVfgV').textContent = `${st.vfg}% · ${eur2(vfg)}`;
-      if (r.errore) { $('fOut').innerHTML = `<p class="hint err">${esc(r.errore)}</p>`; $('fNote').textContent = ''; return; }
+      if (r.errore) { $('fOut').innerHTML = `<p class="hint err">${esc(r.errore)}</p>`; $('fNote').textContent = ''; $('fPrev').disabled = true; return; }
+      $('fPrev').disabled = false;
+      const lp = linkPreventivo(c, r, st, P, nomiServizi);
+      $('fPrevVedi').href = lp;
+      $('fPrev').onclick = () => condividiLink(lp, `Preventivo per ${c.brand} ${c.family}: ${eur2(r.rata)} al mese · Valentino Automobili`);
       $('fOut').innerHTML = `<div class="fin-rata"><b>${eur2(r.rata)}</b><span>al mese</span></div><div class="fin-sub">${palla ? `${r.nRate} rate e maxirata finale di <b>${eur2(r.vfg)}</b> · ${N(Math.round(st.km * st.dur / 12))} km inclusi` : `${r.nRate} rate`}</div>`;
       $('fNote').textContent = `${P.titolo} · TAN ${pctIt(r.tan)} · TAEG ${r.taeg == null ? 'n.d.' : pctIt(r.taeg * 100)} · importo finanziato ${eur2(r.finanziato)} con ${eur2(r.istruttoria)} di spese di istruttoria${r.servizi ? ` e ${eur2(r.servizi)} di servizi finanziati` : ''}${r.ripartiti ? ` · servizi ripartiti ${eur2(r.ripartiti)}, ${eur2(r.rataServizi)} a rata già compresi` : ''} · prima rata ${eur2(r.primaRata)} con imposta di bollo e incasso, poi ${eur2(r.incasso)} di incasso a rata. Esempio indicativo: il preventivo ufficiale si fa sul portale VW FS.`;
     };
@@ -1489,6 +1535,97 @@ function finCalcola(o) {
       rata(c, uso);
     };
     aggiorna();
+  }
+
+  /* ---------- lista per il cliente, confronto e preventivo ---------- */
+  const STELLA = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 5.9L12 16.8l-5.3 2.8 1.1-5.9-4.4-4.2 6-.8z"/></svg>';
+  const LISTA = { t: (store.get('su.lista') || []).filter(x => typeof x === 'string') };
+  const inLista = t => LISTA.t.includes(t);
+  const baseSito = () => location.origin + location.pathname.replace(/[^/]*$/, '');
+  function stella(t) {
+    LISTA.t = inLista(t) ? LISTA.t.filter(x => x !== t) : LISTA.t.concat(t).slice(-12);
+    store.set('su.lista', LISTA.t);
+    document.querySelectorAll(`[data-stella="${t}"]`).forEach(b => b.setAttribute('aria-pressed', String(inLista(t))));
+    renderListaBar();
+    if (S.vistaLista) apriLista();
+    toast(inLista(t) ? 'Aggiunta alla lista per il cliente' : 'Tolta dalla lista');
+  }
+  const autoLista = () => LISTA.t.map(t => S.cars.find(c => c.targa === t)).filter(Boolean);
+  function renderListaBar() { const n = autoLista().length; $('listaBar').hidden = !n; $('listaN').textContent = n; }
+  // MERCATO: giudizio di AutoScout sul prezzo, caricato quando serve
+  let MERC = null;
+  async function mercato() {
+    if (MERC !== null) return MERC;
+    try { const r = await fetch('data/mercato.json?t=' + Date.now(), { cache: 'no-store' }); MERC = r.ok ? await r.json() : false; } catch (e) { MERC = false; }
+    return MERC;
+  }
+  const GIUDIZI_AS = { 'top-price': ['Prezzo top', 'ok'], 'good-price': ['Buon prezzo', 'ok'], 'fair-price': ['Nella media', ''], 'somewhat-expensive': ['Un po\' alto', 'warn'], expensive: ['Alto', 'bad'] };
+  async function giudizioAS(c) {
+    const m = await mercato(), a = m && m.auto && m.auto[c.targa];
+    if (!$('dAS') || S.aperta !== c.targa) return;
+    if (!a) { $('dAS').innerHTML = ''; return; }
+    const [lab, cl] = GIUDIZI_AS[a.g] || ['Senza giudizio', ''];
+    $('dAS').innerHTML = `<dt>Giudizio di AutoScout sul prezzo</dt><dd><span class="gas ${cl}">${esc(lab)}</span> <a href="${esc(a.u)}" target="_blank" rel="noopener">vedi l'annuncio</a></dd>`;
+  }
+  // rata di esempio uguale per tutte, per confrontarle: 36 mesi, nessun anticipo, VFG 45% del prezzo, manutenzione inclusa
+  function rataEsempio(c) {
+    if (!c.prezzo) return null;
+    const tipo = isVW(c) ? 'pvv' : 'multimake', P = FIN[tipo], man = /Plug-in|Metano/.test(c.fuel) || /^up/i.test(c.family || '') ? FIN.manutenzione.plugin : FIN.manutenzione.tagliando1;
+    const r = finCalcola({ tipo, prezzo: c.prezzo, anticipo: 0, durata: 36, tan: tipo === 'pvv' ? P.tan : P.tassi[0].tan, vfg: Math.round(c.prezzo * FIN.vfg.iniziale) / 100, servizi: man * 36 });
+    return r.errore ? null : { ...r, nome: P.nome };
+  }
+  const RIGHE_CONF = [
+    ['Prezzo', c => c.prezzo ? eur(c.prezzo) : 'n.d.', c => c.prezzo || 1e12, 'min'],
+    ['Rata di esempio', c => { const r = rataEsempio(c); return r ? `${eur2(r.rata)}<small>${r.nome}, 36 mesi</small>` : '—'; }, c => (rataEsempio(c) || {}).rata || 1e12, 'min'],
+    ['Immatricolazione', c => immIt(c), c => c.imm || '', 'max'],
+    ['Chilometri', c => N(c.km) + ' km', c => c.km, 'min'],
+    ['Alimentazione', c => esc(c.fuel)], ['Cambio', c => esc(c.cambio)],
+    ['Potenza', c => c.cv ? `${c.cv} CV · ${c.kw} kW` : 'n.d.', c => c.cv || 0, 'max'],
+    ['Colore', c => esc((c.web && c.web.colore) || c.colore || 'n.d.')],
+    ['Carrozzeria', c => esc((c.web && c.web.carrozzeria) || '—')],
+    ['Porte e posti', c => c.web && (c.web.porte || c.web.posti) ? [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', ') : '—'],
+    ['Trazione', c => esc(trazioneDi(c) || '—')],
+    ['Telecamera posteriore', c => camOk(c) ? 'Sì, verificata' : '—'],
+    ['Neopatentati', c => c.web && c.web.neopatentati ? 'Sì' : '—'],
+    ['Garanzia', c => c.web && c.web.garanzia ? c.web.garanzia + ' mesi' : '—', c => (c.web && c.web.garanzia) || 0, 'max']
+  ];
+  function htmlConfronto(l) {
+    if (l.length < 2) return '<p class="hint">Aggiungi almeno due auto alla lista per confrontarle.</p>';
+    const migliori = RIGHE_CONF.map(([, , v, verso]) => { if (!v) return null; const vals = l.map(v); const b = verso === 'min' ? Math.min(...vals) : vals.reduce((a, x) => (x > a ? x : a), vals[0]); return vals.filter(x => x === b).length < l.length ? b : null; });
+    return `<div class="conf"><table><thead><tr><th></th>${l.map(c => `<th><button class="conf-auto" data-open="${c.targa}">${foto(c, 400) ? `<img src="${foto(c, 400)}" alt="">` : ''}<b>${esc(c.brand)} ${esc(c.family)}</b><span>${esc(c.modello)}</span></button></th>`).join('')}</tr></thead>
+      <tbody>${RIGHE_CONF.map(([nome, f, v], i) => `<tr><th>${nome}</th>${l.map(c => `<td class="${v && migliori[i] != null && v(c) === migliori[i] ? 'best' : ''}">${f(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="hint">In evidenza il valore migliore in ogni riga. La rata di esempio è uguale per tutte: 36 mesi senza anticipo, valore futuro 45% del prezzo, manutenzione inclusa.</p>`;
+  }
+  function apriLista(confronta) {
+    const l = autoLista();
+    S.vistaLista = true; S.aperta = null;
+    if (confronta != null) S.confronta = confronta;
+    $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <header><h2>Lista per il cliente</h2><p style="color:var(--ink2)">${l.length ? `${l.length} ${l.length === 1 ? 'auto' : 'auto'} · confrontale e mandale con un solo messaggio` : 'Tocca la stella su un\'auto per aggiungerla.'}</p>
+      <div class="r3">${l.length ? `<button class="btn btn-primary btn-sm" id="lInvia">Invia al cliente</button><button class="btn btn-ghost btn-sm" id="lConf" aria-pressed="${!!S.confronta}">${S.confronta ? 'Vedi elenco' : 'Confronta'}</button><button class="btn btn-ghost btn-sm" id="lVuota">Svuota</button>` : ''}</div></header>
+      <div class="scroll">${S.confronta ? htmlConfronto(l) : `<ul class="lista">${l.map(c => `<li><button class="la" data-open="${c.targa}">${foto(c, 400) ? `<img src="${foto(c, 400)}" alt="">` : '<i></i>'}<span><b>${esc(c.brand)} ${esc(c.family)}</b><small>${esc(c.modello)}</small><small>${immIt(c)} · ${N(c.km)} km · ${esc(c.fuel)}${c.free ? '' : ' · ' + esc(stLabel(c))}</small></span><b class="p">${c.prezzo ? eur(c.prezzo) : 'n.d.'}</b></button><button class="chip" data-stella="${c.targa}" aria-pressed="true" aria-label="Togli dalla lista">Togli</button></li>`).join('')}</ul>`}</div>`;
+    $('drawer').hidden = false;
+    requestAnimationFrame(() => { $('drawer').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); });
+    sheetOpened();
+    $('dClose').onclick = closeAll;
+    if ($('lInvia')) $('lInvia').onclick = () => condividiLink(`${baseSito()}cliente.html#l=${l.map(c => c.targa).join(',')}`, `Le auto che abbiamo scelto per lei da Valentino Automobili (${l.length})`);
+    if ($('lConf')) $('lConf').onclick = () => apriLista(!S.confronta);
+    if ($('lVuota')) $('lVuota').onclick = () => { LISTA.t = []; store.set('su.lista', []); document.querySelectorAll('[data-stella]').forEach(b => b.setAttribute('aria-pressed', 'false')); renderListaBar(); closeAll(); };
+  }
+  function condividiLink(url, testo) {
+    if (navigator.share && !inFrame) navigator.share({ title: 'Valentino Automobili', text: testo, url }).catch(() => {});
+    else copy(testo + '\n' + url, 'Link copiato: incollalo su WhatsApp o in una mail');
+  }
+  // preventivo: tutti i dati stanno nel link, cosi' resta valido anche se l'auto cambia nello stock
+  const codifica = o => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  function linkPreventivo(c, r, st, P, servizi) {
+    const w = c.web || {};
+    const p = {
+      v: 1, d: new Date().toISOString().slice(0, 10), n: `${c.brand} ${c.family}`, m: c.modello, imm: immIt(c), km: c.km, fu: c.fuel, ca: c.cambio, cv: c.cv, kw: c.kw,
+      co: w.colore || c.colore || '', ga: w.garanzia || 0, url: w.url || '', foto: [0, 1, 2, 3].map(i => foto(c, 800, i)).filter(Boolean), pr: c.prezzo,
+      f: { t: P.titolo, ant: r.anticipo, dur: r.durata, rata: r.rata, nr: r.nRate, vfg: r.vfg, km: st.tipo !== 'classico' ? st.km : 0, tan: r.tan, taeg: r.taeg, fin: r.finanziato, prima: r.primaRata, ist: r.istruttoria, inc: r.incasso, bol: r.bollo, serv: servizi }
+    };
+    return `${baseSito()}cliente.html#p=${codifica(p)}`;
   }
 
   /* ---------- storico: caricato solo quando serve ---------- */
@@ -1796,8 +1933,9 @@ function finCalcola(o) {
   };
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('#askAI,[data-tab],[data-open],th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose,#fClose2');
+    const t = e.target.closest('[data-stella],#askAI,[data-tab],[data-open],th[data-col],[data-preset],[data-delta],[data-f],[data-more],[data-q],[data-rm],[data-seg] button,.card,tbody tr,#fReset,#fClose,#fClose2');
     if (!t) return;
+    if (t.dataset.stella) { e.preventDefault(); e.stopPropagation(); return stella(t.dataset.stella); }
     if (t.dataset.tab) return setTab(t.dataset.tab);
     if (t.dataset.open) { const c = S.cars.find(x => x.targa === t.dataset.open); if (c) openDrawer(c, !!t.closest('#drawer .ai')); return; }
     if (t.id === 'askAI') return chiediAI($('q').value.trim());
@@ -1852,6 +1990,8 @@ function finCalcola(o) {
     if (S.aperta && $('drawer').classList.contains('on')) { const c = S.cars.find(x => x.targa === S.aperta); if (c) openDrawer(c); }
   }
   $('btnCliente').onclick = () => { setCliente(!S.cliente); toast(S.cliente ? 'Modalità cliente: anzianità in stock nascosta' : 'Modalità venditore: vedi di nuovo tutto'); };
+
+  $('listaBar').onclick = () => apriLista(false);
 
   /* ---------- avvio ---------- */
   // si parte sempre in modalita' cliente: solo i link delle mail interne (?vista=venditore) aprono la vista completa.

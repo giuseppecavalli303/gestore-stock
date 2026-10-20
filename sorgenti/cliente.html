@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0a2a5c">
+<title>Valentino Automobili Roma</title>
+<link rel="icon" type="image/png" href="icone/icona-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Onest:wght@400;500;600;700&display=swap">
+<style>
+/* Pagina per il cliente: preventivo (#p=...) o lista di auto (#l=TARGA,TARGA). Solo dati da dare al cliente. */
+:root{--bg:#f3f5f9;--card:#fff;--ink:#0c1a2b;--ink2:#4a5a70;--ink3:#7a889c;--line:#e3e8ef;--accent:#0a5cf5;--navy:#0a2a5c;--ok:#0b7a55;--soft:#eef3fb}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Onest,"Segoe UI",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+a{color:var(--accent)}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px 40px}
+header.top{background:var(--navy);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 16px) 0 18px}
+header.top .wrap{padding-bottom:0;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.marca{font-family:"Bricolage Grotesque","Segoe UI",sans-serif;font-weight:700;font-size:22px;letter-spacing:-.02em;line-height:1.1}
+.marca small{display:block;font:500 13px Onest,sans-serif;color:#b8c7e0;letter-spacing:0;margin-top:2px}
+.quando{font-size:13px;color:#b8c7e0}
+h1,h2{font-family:"Bricolage Grotesque","Segoe UI",sans-serif;letter-spacing:-.02em;line-height:1.15;margin:0}
+h1{font-size:30px} h2{font-size:21px}
+.sub{color:var(--ink2);margin:4px 0 0}
+.box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
+.gal{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:16px -16px 0;padding:0 16px;scrollbar-width:none}
+.gal img{flex:0 0 86%;max-width:620px;aspect-ratio:4/3;object-fit:cover;border-radius:16px;scroll-snap-align:center;background:#dde3ec}
+.dati{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:14px}
+.dati div{background:var(--soft);border-radius:12px;padding:9px 12px}
+.dati dt{font-size:11.5px;color:var(--ink3)} .dati dd{margin:0;font-weight:600}
+.prezzo{font-family:"Bricolage Grotesque",sans-serif;font-size:30px;font-weight:700;margin-top:14px}
+.prezzo small{font:500 13px Onest,sans-serif;color:var(--ink2);margin-left:6px}
+.rata{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:6px}
+.rata b{font-family:"Bricolage Grotesque",sans-serif;font-size:40px;letter-spacing:-.02em;color:var(--navy)}
+.rata span{color:var(--ink2)}
+.voci{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+.voci td{padding:8px 0;border-bottom:1px solid var(--line)} .voci td:last-child{text-align:right;font-weight:600}
+.serv{margin:10px 0 0;padding-left:18px;color:var(--ink2)}
+.nota{font-size:12px;color:var(--ink3);margin-top:12px;line-height:1.5}
+.azioni{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:46px;padding:0 20px;border-radius:999px;font:600 15px Onest,sans-serif;text-decoration:none;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.auto{display:grid;grid-template-columns:minmax(0,1fr);gap:0;padding:0;overflow:hidden}
+.auto img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#dde3ec}
+.auto .in{padding:16px}
+.griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:6px}
+.via{opacity:.55}
+.conf{overflow-x:auto;margin:14px -18px 0;padding:0 18px}
+.conf table{border-collapse:collapse;min-width:100%;font-size:14px}
+.conf th,.conf td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;min-width:150px}
+.conf tbody th{color:var(--ink3);font-weight:600;font-size:12.5px;min-width:120px}
+.conf td.top{color:var(--ok);font-weight:700}
+.vuoto{text-align:center;padding:60px 16px;color:var(--ink2)}
+footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
+@media (min-width:760px){ .gal img{flex-basis:48%} .auto{grid-template-columns:42% 1fr} .auto img{height:100%;aspect-ratio:auto} h1{font-size:36px} }
+@media print{
+  body{background:#fff} header.top{background:#fff;color:var(--ink);border-bottom:2px solid var(--navy)} .marca small,.quando{color:var(--ink2)}
+  .azioni{display:none} .box{break-inside:avoid;border-color:#ccd4df} .gal{overflow:visible;flex-wrap:wrap;margin:12px 0 0;padding:0} .gal img{flex:0 0 32%;max-width:none}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><div class="marca">Valentino Automobili<small>Roma · tel. 06 415351</small></div><div class="quando" id="quando"></div></div></header>
+<main class="wrap" id="pagina"><p class="vuoto">Caricamento…</p></main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  const N = n => (n || 0).toLocaleString('it-IT', { useGrouping: 'always' });
+  const eur = n => (n ? N(Math.round(n)) + ' €' : '');
+  const eur2 = n => (n || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', useGrouping: 'always' });
+  const pct = v => v.toFixed(2).replace('.', ',') + '%';
+  const dIt = iso => (iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '');
+  const riga = (k, v) => (v === '' || v == null ? '' : `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`);
+  const azioni = url => `<div class="azioni">${url ? `<a class="btn pri" href="${esc(url)}" target="_blank" rel="noopener">Foto e dettagli sul sito</a>` : ''}<a class="btn" href="tel:+3906415351">Chiama</a><button class="btn" onclick="print()">Salva in PDF</button></div>`;
+
+  function preventivo(p) {
+    const f = p.f || {};
+    document.title = `Preventivo ${p.n} · Valentino Automobili`;
+    $('quando').textContent = 'Preventivo del ' + dIt(p.d);
+    const palla = f.vfg > 0;
+    $('pagina').innerHTML = `
+      ${(p.foto || []).length ? `<div class="gal">${p.foto.map(u => `<img src="${esc(u)}" alt="">`).join('')}</div>` : ''}
+      <div class="box"><h1>${esc(p.n)}</h1><p class="sub">${esc(p.m)}</p>
+        <dl class="dati">${riga('Immatricolazione', p.imm)}${riga('Chilometri', N(p.km) + ' km')}${riga('Alimentazione', p.fu)}${riga('Cambio', p.ca !== 'n.d.' ? p.ca : '')}${riga('Potenza', p.cv ? `${p.cv} CV (${p.kw} kW)` : '')}${riga('Colore', p.co)}${riga('Garanzia', p.ga ? p.ga + ' mesi' : '')}</dl>
+        <div class="prezzo">${eur(p.pr)}<small>prezzo di vendita</small></div></div>
+      <div class="box"><h2>${esc(f.t || 'Finanziamento')}</h2>
+        <div class="rata"><b>${eur2(f.rata)}</b><span>al mese per ${f.nr} mesi${palla ? `, poi maxirata finale di <b style="font-size:inherit;color:inherit">${eur2(f.vfg)}</b>` : ''}</span></div>
+        <table class="voci">
+          <tr><td>Anticipo</td><td>${eur2(f.ant)}</td></tr>
+          <tr><td>Durata</td><td>${f.dur} mesi</td></tr>
+          ${palla && f.km ? `<tr><td>Chilometri inclusi</td><td>${N(Math.round(f.km * f.dur / 12))} km (${N(f.km)} l'anno)</td></tr>` : ''}
+          ${palla ? `<tr><td>Maxirata finale (valore futuro garantito)</td><td>${eur2(f.vfg)}</td></tr>` : ''}
+          <tr><td>Importo totale del credito</td><td>${eur2(f.fin)}</td></tr>
+          <tr><td>TAN</td><td>${pct(f.tan)}</td></tr>
+          <tr><td>TAEG</td><td>${f.taeg == null ? 'n.d.' : pct(f.taeg * 100)}</td></tr>
+          <tr><td>Prima rata (con imposta di bollo e spese di incasso)</td><td>${eur2(f.prima)}</td></tr>
+          <tr><td>Spese di istruttoria</td><td>${eur2(f.ist)}</td></tr>
+          <tr><td>Spese di incasso per rata</td><td>${eur2(f.inc)}</td></tr>
+          <tr><td>Imposta di bollo</td><td>${eur2(f.bol)}</td></tr>
+        </table>
+        ${(f.serv || []).length ? `<p style="margin:14px 0 0;font-weight:600">Servizi compresi nella rata</p><ul class="serv">${f.serv.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+        <p class="nota">Esempio di finanziamento a scopo informativo, soggetto ad approvazione di Volkswagen Financial Services. Le condizioni definitive sono quelle indicate nel contratto e nel modulo informativo europeo (SECCI) che ti consegneremo. Prezzo e disponibilità dell'auto possono cambiare.</p>
+        ${azioni(p.url)}</div>
+      <footer>Valentino Automobili Roma</footer>`;
+  }
+
+  async function lista(targhe) {
+    document.title = 'Le auto scelte per te · Valentino Automobili';
+    $('quando').textContent = 'Auto disponibili';
+    let d;
+    try { const r = await fetch('data/stock.json?t=' + Date.now(), { cache: 'no-store' }); d = await r.json(); } catch (e) { $('pagina').innerHTML = '<p class="vuoto">Non riesco a caricare le auto: riprova tra poco.</p>'; return; }
+    const base = (d.meta && d.meta.annunci && d.meta.annunci.fotoBase) || 'https://cdn.dealerk.it/dealer/datafiles/vehicle/images/';
+    const foto = (c, i = 0, s = 800) => (c.web && c.web.foto && c.web.foto[i] ? base + s + '/' + c.web.foto[i] : '');
+    const imm = c => (c.imm && !/^0+/.test(c.imm) ? c.imm.slice(5, 7) + '/' + c.imm.slice(0, 4) : '');
+    const auto = targhe.map(t => d.cars.find(c => c.targa === t)).filter(Boolean);
+    const disp = auto.filter(c => c.free);
+    const scheda = c => `<div class="box auto${c.free ? '' : ' via'}">${foto(c) ? `<img src="${esc(foto(c))}" alt="">` : ''}<div class="in"><h2>${esc(c.brand)} ${esc(c.family)}</h2><p class="sub">${esc(c.modello)}</p>
+      <dl class="dati">${riga('Immatricolazione', imm(c))}${riga('Chilometri', N(c.km) + ' km')}${riga('Alimentazione', c.fuel)}${riga('Cambio', c.cambio !== 'n.d.' ? c.cambio : '')}${riga('Potenza', c.cv ? c.cv + ' CV' : '')}</dl>
+      ${c.free ? `<div class="prezzo">${eur(c.prezzo) || 'Prezzo su richiesta'}</div>${c.web && c.web.url ? `<div class="azioni"><a class="btn pri" href="${esc(c.web.url)}" target="_blank" rel="noopener">Foto e dettagli</a></div>` : ''}` : '<p class="sub" style="margin-top:12px"><b>Non più disponibile</b></p>'}</div></div>`;
+    const R = [
+      ['Prezzo', c => eur(c.prezzo) || 'su richiesta', c => c.prezzo || 1e12, 'min'],
+      ['Immatricolazione', imm, c => c.imm || '', 'max'], ['Chilometri', c => N(c.km) + ' km', c => c.km, 'min'],
+      ['Alimentazione', c => c.fuel], ['Cambio', c => c.cambio], ['Potenza', c => (c.cv ? c.cv + ' CV' : '—'), c => c.cv || 0, 'max'],
+      ['Colore', c => (c.web && c.web.colore) || c.colore || '—'], ['Carrozzeria', c => (c.web && c.web.carrozzeria) || '—'],
+      ['Porte', c => (c.web && c.web.porte) || '—'], ['Telecamera posteriore', c => (c.web && c.web.cam && c.web.cam.esito === 'si' ? 'Sì' : '—')],
+      ['Garanzia', c => (c.web && c.web.garanzia ? c.web.garanzia + ' mesi' : '—'), c => (c.web && c.web.garanzia) || 0, 'max']
+    ];
+    const conf = l => {
+      const mig = R.map(([, , v, verso]) => { if (!v) return null; const vals = l.map(v); const b = verso === 'min' ? Math.min(...vals) : vals.reduce((a, x) => (x > a ? x : a), vals[0]); return vals.filter(x => x === b).length < l.length ? b : null; });
+      return `<div class="box"><h2>Confronto</h2><div class="conf"><table><thead><tr><th></th>${l.map(c => `<th>${esc(c.brand)} ${esc(c.family)}</th>`).join('')}</tr></thead><tbody>${R.map(([n, f, v], i) => `<tr><th>${n}</th>${l.map(c => `<td class="${v && mig[i] != null && v(c) === mig[i] ? 'top' : ''}">${esc(f(c))}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+    };
+    $('pagina').innerHTML = !auto.length ? '<p class="vuoto">Queste auto non sono più disponibili. Chiamaci allo 06 415351: troviamo insieme l\'alternativa.</p>' : `
+      <div style="margin-top:18px"><h1>Le auto scelte per te</h1><p class="sub">${disp.length} ${disp.length === 1 ? 'auto disponibile' : 'auto disponibili'} · prezzi aggiornati al ${dIt(d.meta && d.meta.day)}</p></div>
+      <div class="griglia">${auto.map(scheda).join('')}</div>
+      ${disp.length > 1 ? conf(disp) : ''}
+      <div class="azioni"><a class="btn pri" href="tel:+3906415351">Chiama per un appuntamento</a><button class="btn" onclick="print()">Salva in PDF</button></div>
+      <footer>Valentino Automobili Roma · prezzi e disponibilità possono cambiare</footer>`;
+  }
+
+  const h = decodeURIComponent(location.hash.slice(1));
+  try {
+    if (h.startsWith('p=')) { const b = h.slice(2).replace(/-/g, '+').replace(/_/g, '/'); preventivo(JSON.parse(decodeURIComponent(escape(atob(b + '==='.slice((b.length + 3) % 4)))))); }
+    else if (h.startsWith('l=')) lista(h.slice(2).split(',').map(t => t.trim().toUpperCase()).filter(Boolean).slice(0, 12));
+    else $('pagina').innerHTML = '<p class="vuoto">Pagina non valida: chiedi di nuovo il link al tuo consulente.</p>';
+  } catch (e) { $('pagina').innerHTML = '<p class="vuoto">Link non leggibile: chiedi di nuovo il link al tuo consulente.</p>'; }
+})();
+</script>
+</body>
+</html>

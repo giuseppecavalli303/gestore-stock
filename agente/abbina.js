@@ -44,7 +44,7 @@ function arricchisci(cars, annunci) {
       url: a.url, come, foto: a.foto.slice(0, FOTO_MAX).map(u => u.replace(/^.*\/images\/\d+\//, '')),
       prezzo: a.prezzo, cambio: a.cambio, marce: a.marce, carrozzeria: a.carrozzeria, porte: a.porte, posti: a.posti,
       trazione: a.trazione, interni: a.interni, colore: a.colore, neopatentati: a.neopatentati, garanzia: a.garanzia,
-      certificato: a.certificato, giro360: a.giro360, video: a.video, km0: a.tipo === 'KM0', camLista: a.camLista || ''
+      certificato: a.certificato, giro360: a.giro360, video: a.video, km0: a.tipo === 'KM0', camLista: a.camLista || '', vin: a.vin || ''
     };
     // il PDF spesso non dice il cambio: lo prendo dall'annuncio, ricordando il valore originale
     const cb = cambioDa(a);

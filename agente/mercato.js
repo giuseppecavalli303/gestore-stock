@@ -54,13 +54,46 @@ async function scarica() {
   return { aggiornato: new Date().toISOString(), totale, annunci: [...perId.values()] };
 }
 
-module.exports = { scarica };
+// annuncio AutoScout di ogni auto dello stock: AutoScout non mostra la targa, quindi marca + km + immatricolazione
+// (anche quelli dell'annuncio sul sito); se restano piu' annunci, il prezzo; se restano dubbi, nessun abbinamento
+const m4 = s => String(s || '').normalize('NFD').replace(/[^a-z]/gi, '').toLowerCase().slice(0, 4);
+function abbinaAutoscout(cs, annunci, as) {
+  const per = new Map();
+  if (!as || !as.annunci) return per;
+  const sito = new Map((annunci || []).map(a => [a.url, a]));
+  const k = new Map();
+  as.annunci.forEach(a => { const key = m4(a.marca) + '|' + a.km + '|' + a.imm; k.set(key, (k.get(key) || []).concat(a)); });
+  for (const c of cs) {
+    if (!(c.web || c.as)) continue;
+    const s = (c.web && sito.get(c.web.url)) || {};
+    let l = k.get(m4(c.brand) + '|' + c.km + '|' + c.imm) || [];
+    if (l.length !== 1) { const l2 = k.get(m4(c.brand) + '|' + s.km + '|' + s.imm) || []; if (l2.length) l = l2; }
+    if (l.length > 1) { const p = l.filter(a => a.prezzo === c.prezzo || a.prezzo === c.prezzoV); if (p.length) l = p; }
+    if (l.length && l.every(a => a.giudizio === l[0].giudizio && a.contatti === l[0].contatti)) per.set(c.targa, l[0]);
+  }
+  return per;
+}
+
+// per l'app: solo il giudizio sul prezzo e il link all'annuncio (i contatti restano sul PC)
+function pubblicaGiudizi(as) {
+  const root = path.join(__dirname, '..'), leggi = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return null; } };
+  const stock = leggi(path.join(root, 'data', 'stock.json')), sito = leggi(path.join(root, 'data', 'annunci.json')) || {};
+  if (!stock) return 0;
+  const per = abbinaAutoscout(stock.cars, sito.annunci, as), auto = {};
+  per.forEach((a, t) => { auto[t] = { g: a.giudizio, u: a.url }; });
+  const dest = path.join(root, 'data', 'mercato.json'), prima = leggi(dest) || {};
+  if (JSON.stringify(prima.auto) !== JSON.stringify(auto)) fs.writeFileSync(dest, JSON.stringify({ aggiornato: as.aggiornato, auto }));
+  return per.size;
+}
+
+module.exports = { scarica, abbinaAutoscout, pubblicaGiudizi };
 
 if (require.main === module) {
   scarica().then(r => {
     fs.writeFileSync(path.join(__dirname, 'autoscout.json'), JSON.stringify(r));
+    const n = pubblicaGiudizi(r);
     const g = {};
     r.annunci.forEach(a => { g[a.giudizio || 'senza'] = (g[a.giudizio || 'senza'] || 0) + 1; });
-    console.log(`AutoScout: ${r.annunci.length} annunci su ${r.totale}. Giudizi: ${Object.entries(g).map(([k, v]) => k + ' ' + v).join(', ')}.`);
+    console.log(`AutoScout: ${r.annunci.length} annunci su ${r.totale}, ${n} abbinati alle auto. Giudizi: ${Object.entries(g).map(([k, v]) => k + ' ' + v).join(', ')}.`);
   }).catch(e => { console.error(e.message); process.exit(1); });
 }
