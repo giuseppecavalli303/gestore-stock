@@ -174,6 +174,8 @@ async function main() {
       scrivi(c.testo);
       if (c.codice !== 0 && c.codice !== 3) throw new Error('Stampa non pubblicata. ' + c.testo);
       if (!PROVA) scrivi(esegui('agente/telecamera.js', '--max', '60').testo);   // in prova niente: il credito Gemini lo usa gia' il PC
+      // lo storico si ricostruisce da tutte le versioni pubblicate: la storia completa la scarico solo adesso che serve
+      try { if (git('rev-parse', '--is-shallow-repository') === 'true') git('fetch', '--unshallow', '-q'); } catch (e) {}
       scrivi(esegui('agente/storico.js').testo);
       // in prova il sito e' gia' aggiornato dal PC: preparo comunque riepilogo e rapporto, per confrontarli
       nuova = pubblica(`Stock aggiornato dalla stampa ${stampa.nome}`) || PROVA;
