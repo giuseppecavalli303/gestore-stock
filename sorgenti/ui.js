@@ -977,7 +977,8 @@
   $('grid').addEventListener('pointermove', e => { const c = e.target.closest('.card'); if (!c) return; const r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
 
   /* ---------- modalita' cliente ---------- */
-  const ORD_GG = [...$('sort').options].filter(o => o.value === 'ingr' || o.value === 'old');
+  // in modalita' cliente sparisce solo "Piu' vecchie in stock"; "Ultimi ingressi" resta: ordina senza mostrare i giorni
+  const ORD_GG = [...$('sort').options].filter(o => o.value === 'old');
   function setCliente(on) {
     S.cliente = !!on;
     document.documentElement.classList.toggle('cliente', S.cliente);
@@ -985,11 +986,11 @@
     $('btnCliente').title = S.cliente ? 'Modalità cliente attiva: tocca per tornare a vedere tutto' : 'Modalità cliente: nasconde da quanto tempo le auto sono in stock';
     if (S.cliente) {
       ORD_GG.forEach(o => o.remove());
-      if (!['cons', 'pa', 'pd', 'km', 'anno', 'cv', 'col'].includes($('sort').value)) $('sort').value = 'cons';
+      if (!['cons', 'ingr', 'pa', 'pd', 'km', 'anno', 'cv', 'col'].includes($('sort').value)) $('sort').value = 'cons';
       delete F.r.giorni;
       if (activePreset === 'old') activePreset = 'all';
       if (!$('stats').hidden) setTab('auto');
-    } else if (!ORD_GG[0].parentNode) ORD_GG.forEach((o, i) => $('sort').options.add(o, 1 + i));
+    } else if (!ORD_GG[0].parentNode) ORD_GG.forEach((o, i) => $('sort').options.add(o, 2 + i));
     if (S.Q && S.Q.r && S.Q.r.giorni) S.Q = capisci($('q').value.trim());
     if (S.cars.length) { renderKpis(); renderFilters(true); apply(); }
     if (S.aperta && $('drawer').classList.contains('on')) { const c = S.cars.find(x => x.targa === S.aperta); if (c) openDrawer(c); }
