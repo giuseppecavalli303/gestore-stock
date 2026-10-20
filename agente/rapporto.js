@@ -9,7 +9,7 @@ const root = path.join(__dirname, '..');
 const OUT = path.join(__dirname, 'rapporti');
 const IO = 'giuseppe.cavalli@valentinoautomobili.it', IO_NOME = 'Giuseppe Cavalli';
 const APP = 'https://giuseppecavalli303.github.io/gestore-stock/';
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const args = process.argv.slice(2);
 
 const leggi = (f, def) => { try { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '')); } catch (e) { return def; } };
@@ -510,17 +510,20 @@ ${tvSett.length ? `<div class="card" style="margin-top:8px"><div class="grande">
 
 /* ---------------- stampa ---------------- */
 function documento(titolo, slides, fonte) {
-  return `<!doctype html><html lang="it"><head><meta charset="utf-8"><title>${esc(titolo)}</title><style>${CSS}</style></head><body>${slides.map((s, i) => s.html(i + 1, fonte)).join('\n')}</body></html>`;
+  // sul server online non c'e' Segoe UI: Inter come carattere di riserva
+  return `<!doctype html><html lang="it"><head><meta charset="utf-8"><title>${esc(titolo)}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"><style>${CSS.replace(/"Segoe UI", system-ui/g, '"Segoe UI", Inter, system-ui').replace(/"Segoe UI", sans-serif/g, '"Segoe UI", Inter, sans-serif')}</style></head><body>${slides.map((s, i) => s.html(i + 1, fonte)).join('\n')}</body></html>`;
 }
 
 async function stampa(lavori) {
-  const puppeteer = require(path.join(root, 'video', 'node_modules', 'puppeteer-core'));
-  const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--force-color-profile=srgb'] });
+  // puppeteer: quello del progetto (anche online), altrimenti quello del video
+  let puppeteer; try { puppeteer = require('puppeteer-core'); } catch (e) { puppeteer = require(path.join(root, 'video', 'node_modules', 'puppeteer-core')); }
+  const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--force-color-profile=srgb'].concat(process.platform === 'linux' ? ['--no-sandbox', '--disable-dev-shm-usage'] : []) });
   try {
     for (const l of lavori) {
       const page = await browser.newPage();
       await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 2 });
-      await page.goto('file:///' + l.html.replace(/\\/g, '/'), { waitUntil: 'load' });
+      await page.goto(require('url').pathToFileURL(l.html).href, { waitUntil: 'networkidle0' });
+      await page.evaluate(() => document.fonts.ready);
       await page.pdf({ path: l.pdf, width: '1280px', height: '720px', printBackground: true, preferCSSPageSize: true });
       if (args.includes('--immagini')) {
         const el = await page.$$('section');

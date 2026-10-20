@@ -7,6 +7,9 @@
     "test": "node agente/test.js"
   },
   "dependencies": {
-    "pdfjs-dist": "3.11.174"
+    "imapflow": "2.1.2",
+    "nodemailer": "10.0.12",
+    "pdfjs-dist": "3.11.174",
+    "puppeteer-core": "23.11.1"
   }
 }
