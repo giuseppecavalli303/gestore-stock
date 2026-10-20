@@ -72,7 +72,7 @@ function Pubblica($messaggio) {
     Esegui 'git add data' | Out-Null
     Esegui "git commit -q -m ""$messaggio""" | Out-Null
     # l'agente online puo' aver pubblicato nel frattempo: mi allineo prima di inviare
-    Esegui 'git pull --rebase -q' | Out-Null
+    Esegui 'git pull --rebase --autostash -q' | Out-Null
     $push = Esegui 'git push'
     if ($push.Codice -ne 0) { throw "Pubblicazione non riuscita: $($push.Testo)" }
     Scrivi "Pubblicato sul sito: $messaggio"

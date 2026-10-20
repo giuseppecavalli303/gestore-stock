@@ -53,7 +53,7 @@ function pubblica(messaggio) {
   git('add', 'data');
   git('commit', '-q', '-m', messaggio);
   // l'agente del PC puo' aver pubblicato i codici modello nel frattempo: mi rimetto in coda prima di inviare
-  try { git('pull', '--rebase', '-q'); } catch (e) { throw new Error('Pubblicazione non riuscita (allineamento): ' + e.message); }
+  try { git('pull', '--rebase', '--autostash', '-q'); } catch (e) { throw new Error('Pubblicazione non riuscita (allineamento): ' + e.message); }
   git('push', '-q');
   scrivi('Pubblicato sul sito: ' + messaggio);
   return true;
