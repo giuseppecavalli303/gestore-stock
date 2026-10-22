@@ -265,6 +265,56 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--hover)}
 /* modalita' cliente */
 #btnCliente[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 html.cliente .col-gg,html.cliente [data-tab="stat"]{display:none}
+/* valutatore permute */
+#dPerm{display:grid;gap:10px}
+.permute{max-width:720px;margin:0 auto;padding:4px 0 40px}
+.val{display:grid;gap:12px}
+.val-in{display:flex;gap:8px}
+.val-in input{flex:1;min-width:0;height:44px;border-radius:999px;padding:0 16px;background:var(--field);border:1px solid var(--hair);color:var(--ink);font:inherit}
+.val-out{display:grid;gap:12px}
+.val-attesa{display:flex;gap:10px;align-items:center;color:var(--ink2);font-size:13.5px;margin:0}
+.val-err{color:var(--bad);font-size:13.5px;margin:0}
+.val-capito{font-size:12px;color:var(--ink3)}
+.val-chips{display:flex;flex-wrap:wrap;gap:6px}
+.val-chip{background:var(--mute-soft);border:1px solid var(--hair);border-radius:999px;padding:4px 10px;font-size:12.5px;color:var(--ink)}
+.val-chip.manca{border-style:dashed;color:var(--warn)}
+.val-lab{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.val-big{background:var(--accent-soft);border:1px solid var(--hair);border-radius:var(--r-md);padding:14px;text-align:center}
+.val-valore{font-size:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:2px 0}
+.val-fonti{font-size:12.5px;color:var(--ink2)}
+.val-warn{color:var(--warn)}
+.val-note,.val-et,.val-graf,.val-box{background:var(--mute-soft);border:1px solid var(--hair);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:8px}
+.val-note-testo p{margin:0 0 8px;font-size:13.5px}
+.val-note-testo span,.val-come{color:var(--ink2);font-size:12.5px}
+.val-come{margin:0}
+.val-riga{display:flex;align-items:center;gap:8px;font-size:13px}
+.val-riga input,.val-et input,.val-salva input,.val-margini input{width:110px;height:36px;border-radius:10px;padding:0 10px;background:var(--field);border:1px solid var(--hair);color:var(--ink);font:inherit}
+.val-et{grid-template-columns:1fr 1fr;align-items:end}
+.val-et label{display:grid;gap:4px;font-size:12.5px;color:var(--ink2)}
+.val-et input{width:100%}
+.val-scarto{font-size:12.5px;color:var(--ink2);align-self:center}
+.val-scarto .neg{color:var(--bad)} .val-scarto .pos{color:var(--ok)}
+.val-graf svg{width:100%;height:auto;display:block}
+.val-asse{stroke:var(--hair);stroke-width:1}
+.val-t{fill:var(--ink3);font-size:9px}
+.val-fascia{fill:var(--accent);opacity:.12}
+.val-tua{stroke:var(--accent);stroke-dasharray:3 3}
+.val-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--ink2)}
+.val-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.val-leg i.anello{border:2px solid var(--ink2);width:7px;height:7px}
+.val-link{color:var(--accent);font-weight:600;font-size:13px;text-align:left;justify-self:start}
+.val-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.val-lista li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-top:1px solid var(--hair);font-size:13px}
+.val-lista li span{color:var(--ink2);font-size:12px}
+.val-lista li b{grid-row:1/3;grid-column:2;align-self:center;font-variant-numeric:tabular-nums}
+.val-lista a{color:var(--ink);text-decoration:none;font-weight:500}
+.val-salva{display:flex;gap:8px;align-items:center}
+.val-salva input{flex:1;min-width:0;text-transform:uppercase}
+.val-piede{display:flex;gap:8px;flex-wrap:wrap}
+.val-margini table{border-collapse:collapse;font-size:13px}
+.val-margini caption{text-align:left;color:var(--ink2);font-size:12px;padding:6px 0}
+.val-margini td{padding:3px 6px 3px 0;white-space:nowrap}
+html.cliente [data-tab="perm"],html.cliente #dPerm,html.cliente #permute{display:none}
 html.cliente .tabs{display:none}
 /* scheda dell'auto: sul telefono una colonna, sul computer grande e a due colonne */
 .dcols{display:flex;flex-direction:column;gap:18px}
@@ -524,7 +574,7 @@ html.locked,html.locked body{overflow:hidden}
   <div class="strip" id="delta" hidden></div>
   <div class="strip" id="views"></div>
 
-  <div class="seg tabs" role="tablist" aria-label="Sezione"><button data-tab="auto" aria-pressed="true">Auto</button><button data-tab="stat" aria-pressed="false">Statistiche</button></div>
+  <div class="seg tabs" role="tablist" aria-label="Sezione"><button data-tab="auto" aria-pressed="true">Auto</button><button data-tab="stat" aria-pressed="false">Statistiche</button><button data-tab="perm" aria-pressed="false">Permute</button></div>
 
   <div class="layout" id="layout">
     <aside class="filters glass" id="filters" aria-label="Filtri"></aside>
@@ -557,6 +607,7 @@ html.locked,html.locked body{overflow:hidden}
   </div>
 
   <section class="stats" id="stats" hidden aria-label="Statistiche"></section>
+  <section class="permute" id="permute" hidden aria-label="Valuta una permuta"></section>
 </div>
 
 <div class="tip" id="tip" role="tooltip" hidden></div>

@@ -8,7 +8,9 @@
  * Proprieta' dello script (Impostazioni progetto > Proprieta' script):
  *   GEMINI_KEY  la chiave API del progetto con fatturazione (obbligatoria)
  *   MODELLO     facoltativa, per cambiare modello senza toccare il codice
- *   CHIAVE_SCELTE la chiave del telefono di Giuseppe: solo con questa si sceglie il codice modello di un'auto
+ *   CHIAVE_SCELTE la chiave del telefono di Giuseppe: solo con questa si sceglie il codice modello di un'auto (e si cambiano i margini del valutatore)
+ *   VAL_CONFIG  margini, passaggio e ripristino del valutatore permute (si impostano dall'app, con la chiave)
+ *   VAL_FOGLIO  id del Foglio Google 'Valutazioni permute' (lo crea da solo alla prima valutazione)
  */
 
 const MODELLO_PREDEFINITO = 'gemini-3.5-flash-lite';   // il 2.5 non e' piu' disponibile per i nuovi utenti
@@ -47,6 +49,7 @@ function doPost(e) {
     if (req.azione === 'telecamera') return json_(telecamera_(req));
     if (req.azione === 'codici') return json_({ scelte: scelte_() });
     if (req.azione === 'scegli') return json_(scegli_(req));
+    if (['valuta', 'salvaValutazione', 'ultime', 'apri', 'margini'].indexOf(req.azione) >= 0) return json_(valutatore_(req));   // Valutatore.gs
     if (!limite_()) return json_({ errore: "Troppe domande in quest'ora: riprova tra poco." });
     const domanda = String(req.domanda || '').trim().slice(0, 600);
     const elenco = String(req.elenco || '').slice(0, MAX_ELENCO);

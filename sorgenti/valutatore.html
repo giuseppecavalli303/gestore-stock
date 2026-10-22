@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a5cf5">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Permute">
+<link rel="icon" type="image/png" href="icone/icona-192.png">
+<link rel="apple-touch-icon" href="icone/apple-touch-icon.png">
+<title>Valuta permuta</title>
+<!--__STILE__-->
+<style>
+  body{min-height:100vh}
+  .vp{max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px 40px}
+  .vp h1{font-size:22px;margin:0 0 4px}
+  .vp p.sub{color:var(--ink2);font-size:13.5px;margin:0 0 16px}
+</style>
+</head>
+<body>
+<div class="vp">
+  <h1>Valuta la permuta</h1>
+  <p class="sub">Scrivi l'auto del cliente come la diresti a un collega: marca, modello, carburante, allestimento, km e anno.</p>
+  <div id="vp"></div>
+</div>
+<script>
+/*__VAL__*/
+// stesso servizio dell'app Stock Usato (vedi sorgenti/ui.js)
+montaValutatore(document.getElementById('vp'), { url: '/*__AI_URL__*/', token: '/*__AI_TOKEN__*/' });
+</script>
+</body>
+</html>

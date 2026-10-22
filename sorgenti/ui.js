@@ -316,7 +316,7 @@
         ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
         <div class="bigprice"><div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
         <div class="dcols">
-        <section id="dFin"><h4>Finanziamento</h4><div id="dCodice">${isVW(c) ? '<p class="hint">Cerco il codice modello nei listini…</p>' : ''}</div><div class="links" id="dSimBtn"></div><div id="dRata"></div></section>
+        <section id="dFin"><h4>Finanziamento</h4><div id="dCodice">${isVW(c) ? '<p class="hint">Cerco il codice modello nei listini…</p>' : ''}</div><div class="links" id="dSimBtn"></div><div id="dRata"></div></section>${S.cliente ? '' : '<section id="dPerm"><h4>Valuta la permuta</h4><div id="dPermBox"></div></section>'}
         <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${c.web && c.web.vin ? `<div class="wide"><dt>Telaio</dt><dd><span class="mono">${esc(c.web.vin)}</span> <button class="linkbtn" id="dVin">Copia</button></dd></div>` : ''}${row('Categoria del listino', c.section, true)}</dl></section>
         ${camOk(c) && c.web.cam.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.cam.url)}" target="_blank" rel="noopener">Vedi la foto della retrocamera</a>` : ''}
         ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', eur(c.web.prezzo) + (prezzoDiverso(c) ? ` (gestionale ${eur(c.prezzoV)})` : ''), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
@@ -338,7 +338,7 @@
     S.aperta = c.targa; S.vistaLista = false;
     if ($('dVin')) $('dVin').onclick = () => copy(c.web.vin, 'Telaio copiato');
     finanziamento(c);
-    if (!S.cliente) giudizioAS(c);
+    if (!S.cliente) { giudizioAS(c); montaValutatore($('dPermBox'), { url: AI_URL, token: AI_TOKEN }); }
     frecceGalleria($('drawer').querySelector('.galwrap'));
     const ga = $('drawer').querySelector('.gal');
     if (ga) ga.onclick = e => { const a = e.target.closest('a'); if (!a || e.ctrlKey || e.metaKey) return; e.preventDefault(); apriVisore(c, [...ga.children].indexOf(a)); };
@@ -970,10 +970,11 @@
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); promptInstall = e; $('btnInstall').hidden = false; });
   $('btnInstall').onclick = async () => { if (!promptInstall) return; promptInstall.prompt(); try { await promptInstall.userChoice; } catch (e) {} promptInstall = null; $('btnInstall').hidden = true; };
   function setTab(t) {
-    if (S.cliente && t === 'stat') t = 'auto';
-    const stat = t === 'stat';
+    if (S.cliente && (t === 'stat' || t === 'perm')) t = 'auto';
+    const stat = t === 'stat', perm = t === 'perm';
     document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === t)));
-    $('layout').hidden = stat; $('stats').hidden = !stat;
+    $('layout').hidden = stat || perm; $('stats').hidden = !stat; $('permute').hidden = !perm;
+    if (perm && !$('permute').firstChild) montaValutatore($('permute'), { url: AI_URL, token: AI_TOKEN });
     if (stat) renderStats();
     try { history.replaceState(history.state, '', stat ? '#statistiche' : location.pathname + location.search); } catch (e) {}
   }
@@ -1047,7 +1048,7 @@
       if (!['cons', 'ingr', 'pa', 'pd', 'km', 'anno', 'cv', 'col'].includes($('sort').value)) $('sort').value = 'cons';
       delete F.r.giorni;
       if (activePreset === 'old') activePreset = 'all';
-      if (!$('stats').hidden) setTab('auto');
+      if (!$('stats').hidden || !$('permute').hidden) setTab('auto');
     } else if (!ORD_GG[0].parentNode) ORD_GG.forEach((o, i) => $('sort').options.add(o, 2 + i));
     if (S.Q && S.Q.r && S.Q.r.giorni) S.Q = capisci($('q').value.trim());
     if (S.cars.length) { renderKpis(); renderFilters(true); apply(); }

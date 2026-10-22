@@ -1,7 +1,7 @@
 // Ricompone l'app dai sorgenti: node sorgenti/build.js
 const fs = require('fs'), path = require('path');
 const src = f => fs.readFileSync(path.join(__dirname, f), 'utf8');
-const core = ['parser.js', 'norm.js', 'query.js', 'finanza.js'].map(src).join('\n');
+const core = ['parser.js', 'norm.js', 'query.js', 'finanza.js', 'valuta.js', 'valutatore-ui.js'].map(src).join('\n');
 const page = src('page.html').replace('/*__CORE__*/', () => core).replace('/*__UI__*/', () => src('ui.js'));
 const root = path.join(__dirname, '..');
 // versione per l'Artifact di claude.ai (senza scheletro HTML)
@@ -27,4 +27,10 @@ fs.writeFileSync(path.join(root, 'index.html'), '<!doctype html><html lang="it">
 console.log(require('./simulatore.js').prepara(path.join(root, 'simulatore.html')));
 // pagina per il cliente (preventivo e lista di auto): statica, la copio accanto all'app
 fs.copyFileSync(path.join(__dirname, 'cliente.html'), path.join(root, 'cliente.html'));
+// valutatore permute anche come pagina a se' (da aggiungere alla schermata Home): stessi stili e stesso codice dell'app
+const ui = src('ui.js'), stile = src('page.html').match(/<style>[\s\S]*?<\/style>/)[0];
+const servizio = k => (ui.match(new RegExp('const ' + k + " = '([^']+)'")) || [])[1];
+fs.writeFileSync(path.join(root, 'valutatore.html'), src('valutatore.html').replace('<!--__STILE__-->', () => stile)
+  .replace('/*__VAL__*/', () => ['valuta.js', 'valutatore-ui.js'].map(src).join('\n'))
+  .replace('/*__AI_URL__*/', () => servizio('AI_URL')).replace('/*__AI_TOKEN__*/', () => servizio('AI_TOKEN')));
 console.log('ok', page.length);

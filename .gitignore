@@ -27,3 +27,7 @@ agente/chiave-codici-qr.png
 agente/config.json
 agente/stato-prova.json
 agente/prova-posta.json
+
+# progetti interni (margini, logica): il repo e' pubblico
+docs/superpowers/
+.superpowers/
