@@ -46,15 +46,15 @@
   const trazioneDi = c => (RE_4X4.test(c.modello) || (c.web && /integr/i.test(c.web.trazione)) ? 'Integrale' : c.web && c.web.trazione ? c.web.trazione : '');
   // telecamera: vale solo se l'elenco dotazioni la nomina E le foto la confermano
   const camOk = c => !!(c.web && c.web.cam && c.web.cam.esito === 'si');
-  // tetto apribile / in vetro: stessa regola (dotazioni del sito + conferma dalle foto, agente/tetto.js)
+  // tetto apribile: stessa regola (dotazioni del sito + una foto con il tetto APERTO, agente/tetto.js)
   const tettoOk = c => !!(c.web && c.web.tetto && c.web.tetto.esito === 'si');
-  const tettoNome = c => tettoApribile(c.web && c.web.tettoLista) ? 'Tetto apribile' : 'Tetto in vetro';
-  const tettoTesto = w => (!w.tettoLista ? '' : `${w.tettoLista}. ` + (!w.tetto ? 'Controllo delle foto in attesa' : w.tetto.esito === 'si' ? `Confermato dalle foto${w.tetto.foto ? ` (foto ${w.tetto.foto})` : ''}` : "Tra le foto non si vede: da verificare sull'auto"));
+  const tettoNome = () => 'Tetto apribile';
+  const tettoTesto = w => (!w.tettoLista ? '' : `${w.tettoLista}. ` + (!w.tetto ? 'Controllo delle foto in attesa' : w.tetto.esito === 'si' ? `Confermato: in foto${w.tetto.foto ? ' ' + w.tetto.foto : ''} è aperto` : "Nessuna foto con il tetto aperto: da verificare sull'auto"));
   const camTesto = w => (!w.camLista ? '' : !w.cam ? "Nelle dotazioni c'è scritta: controllo delle foto in attesa" : w.cam.esito === 'si' ? `Confermata: c'è la foto dello schermo con la retrocamera${w.cam.foto ? ` (foto ${w.cam.foto})` : ''}` : "Nelle dotazioni c'è scritta, ma tra le foto non c'è quella della retrocamera: da verificare sull'auto");
   const TRIS = [
     { k: 'as', label: 'Su AutoScout' }, { k: 'hasPrice', label: 'Con prezzo', get: c => c.prezzo > 0 }, { k: 'check', label: 'Check list fatta' },
     { k: 'spec', label: 'Prezzo speciale' }, { k: 'iva', label: 'IVA esposta' }, { k: 'mini', label: 'Mini PP' }, { k: 'fv', label: 'Foglio verde' },
-    { k: 'web', label: 'Annuncio sul sito', get: c => !!c.web }, { k: 'neo', label: 'Per neopatentati', get: c => !!(c.web && c.web.neopatentati) }, { k: 'awd', label: 'Trazione integrale (4x4)', get: c => c.trazione === 'Integrale' }, { k: 'cam', label: 'Telecamera confermata dalle foto', get: c => camOk(c) }, { k: 'tetto', label: 'Tetto apribile o in vetro (confermato)', get: c => tettoOk(c) }
+    { k: 'web', label: 'Annuncio sul sito', get: c => !!c.web }, { k: 'neo', label: 'Per neopatentati', get: c => !!(c.web && c.web.neopatentati) }, { k: 'awd', label: 'Trazione integrale (4x4)', get: c => c.trazione === 'Integrale' }, { k: 'cam', label: 'Telecamera confermata dalle foto', get: c => camOk(c) }, { k: 'tetto', label: 'Tetto apribile (foto aperto)', get: c => tettoOk(c) }
   ];
   const ZERO_OK = { km: 1, giorni: 1 };
 
@@ -324,7 +324,7 @@
         <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${c.web && c.web.vin ? `<div class="wide"><dt>Telaio</dt><dd><span class="mono">${esc(c.web.vin)}</span> <button class="linkbtn" id="dVin">Copia</button></dd></div>` : ''}${row('Categoria del listino', c.section, true)}</dl></section>
         ${camOk(c) && c.web.cam.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.cam.url)}" target="_blank" rel="noopener">Vedi la foto della retrocamera</a>` : ''}
         ${tettoOk(c) && c.web.tetto.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.tetto.url)}" target="_blank" rel="noopener">Vedi la foto del tetto</a>` : ''}
-        ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', eur(c.web.prezzo) + (prezzoDiverso(c) ? ` (gestionale ${eur(c.prezzoV)})` : ''), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${row('Tetto apribile o in vetro', tettoTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
+        ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', eur(c.web.prezzo) + (prezzoDiverso(c) ? ` (gestionale ${eur(c.prezzoV)})` : ''), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${row('Tetto apribile', tettoTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
         <section id="dStoria" hidden><h4>Storia nelle stampe</h4><div class="timeline" id="dStoriaBody"></div></section>
         <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${ggVisibili() ? row('Data di ingresso', dIt(c.ingr)) : ''}${row('Anticipata', c.antic)}</dl></section>
         ${c.acq || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', c.acq)}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
@@ -600,7 +600,7 @@
     ['Porte e posti', c => c.web && (c.web.porte || c.web.posti) ? [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', ') : '—'],
     ['Trazione', c => esc(trazioneDi(c) || '—')],
     ['Telecamera posteriore', c => camOk(c) ? 'Sì, verificata' : '—'],
-    ['Tetto apribile o in vetro', c => tettoOk(c) ? tettoNome(c) + ', verificato' : '—'],
+    ['Tetto apribile', c => tettoOk(c) ? 'Sì, verificato' : '—'],
     ['Neopatentati', c => c.web && c.web.neopatentati ? 'Sì' : '—'],
     ['Garanzia', c => c.web && c.web.garanzia ? c.web.garanzia + ' mesi' : '—', c => (c.web && c.web.garanzia) || 0, 'max']
   ];

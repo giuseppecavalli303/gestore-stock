@@ -60,8 +60,7 @@ function parseQuery(raw, vocab) {
   kw(/\bcheck ?list\b/g, () => { Q.check = true; });
   kw(/\bneopatentat\w*/g, () => { Q.neo = true; });
   kw(/\b(tele|retro)camera\b|\bcamera posteriore\b|\bcamera (di|per la) retromarcia\b/g, () => { Q.cam = true; });
-  kw(/\btett(?:o|uccio) apribile\b|\btettuccio\b|\bsunroof\b|\btetto (?:elettrico|scorrevole)\b/g, () => { Q.tetto = 'apribile'; });
-  kw(/\btetto (?:panoramico|panorama|in vetro|in cristallo|vetrato)\b|\bpanoramic roof\b/g, () => { if (!Q.tetto) Q.tetto = 'vetro'; });
+  kw(/\btett(?:o|uccio) apribile\b|\btettuccio\b|\bsunroof\b|\btetto (?:elettrico|scorrevole|panoramico|panorama|in vetro|in cristallo|vetrato)\b|\bpanoramic roof\b/g, () => { Q.tetto = true; });
   kw(/\b4x4\b|\b4 ?x ?4\b|\btrazione integrale\b|\bintegrale\b|\b4 ?motion\b|\bawd\b|\b4wd\b|\bquattro ruote motrici\b/g, () => { Q.awd = true; });
   kw(/\bcon foto\b|\bsul sito\b/g, () => { Q.web = true; });
   kw(/\bsenza foto\b|\bnon sul sito\b|\bsenza annuncio\b/g, () => { Q.web = false; });
@@ -112,14 +111,11 @@ function parseQuery(raw, vocab) {
   if (Q.neo) Q.chips.push('Per neopatentati');
   if (Q.awd) Q.chips.push('Trazione integrale (4x4)');
   if (Q.cam) Q.chips.push('Telecamera confermata');
-  if (Q.tetto) Q.chips.push(Q.tetto === 'apribile' ? 'Tetto apribile confermato' : 'Tetto in vetro confermato');
+  if (Q.tetto) Q.chips.push('Tetto apribile confermato');
   if (Q.web != null) Q.chips.push(Q.web ? 'Con annuncio sul sito' : 'Senza annuncio sul sito');
   for (const w of Q.terms) Q.chips.push('“' + w + '”');
   return Q;
 }
-
-// tetto apribile: le dotazioni dicono che si apre (scorrevole, elettrico, a compasso); se no e' un tetto in vetro fisso
-const tettoApribile = s => /apribil|scorrevol|elettric|compasso|sunroof/i.test(s || '');
 
 function matchQuery(c, Q) {
   for (const k in Q.r) {
@@ -146,7 +142,7 @@ function matchQuery(c, Q) {
   if (Q.neo && !(c.web && c.web.neopatentati)) return false;
   if (Q.awd && c.trazione !== 'Integrale') return false;
   if (Q.cam && !(c.web && c.web.cam && c.web.cam.esito === 'si')) return false;
-  if (Q.tetto && !(c.web && c.web.tetto && c.web.tetto.esito === 'si' && (Q.tetto === 'vetro' || tettoApribile(c.web.tettoLista)))) return false;
+  if (Q.tetto && !(c.web && c.web.tetto && c.web.tetto.esito === 'si')) return false;
   if (Q.web != null && !!c.web !== Q.web) return false;
   for (const w of Q.terms) if (!c._h.includes(w)) return false;
   return true;

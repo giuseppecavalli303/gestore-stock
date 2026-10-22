@@ -174,9 +174,10 @@ async function leggi(file) {
     const V0 = buildVocab([]);
     const qa = parseQuery('tetto apribile', V0), qv = parseQuery('tetto panoramico', V0);
     const auto = (lista, esito) => ({ _h: '', web: { tettoLista: lista, tetto: esito ? { esito } : undefined } });
-    const apribile = auto('Tetto apribile anteriore di vetro , elettrico, a compasso e scorrevole', 'si'), panorama = auto('Tetto Panorama con tendina parasole', 'si');
-    ok(qa.chips.includes('Tetto apribile confermato') && matchQuery(apribile, qa) && !matchQuery(panorama, qa), `tetto: "tetto apribile" trova solo gli apribili confermati (${qa.chips.join(' · ')})`);
-    ok(qv.chips.includes('Tetto in vetro confermato') && matchQuery(apribile, qv) && matchQuery(panorama, qv), 'tetto: "tetto panoramico" trova tutti i tetti in vetro confermati');
+    // apribile = in una foto il tetto e' APERTO (cosi' vengono fotografate, dice Giuseppe); 'vetro' = vetro visto ma chiuso
+    const apribile = auto('Tetto Panorama con tendina parasole', 'si'), panorama = auto('Tetto apribile anteriore di vetro , elettrico, a compasso e scorrevole', 'vetro');
+    ok(qa.chips.includes('Tetto apribile confermato') && matchQuery(apribile, qa) && !matchQuery(panorama, qa), `tetto: "tetto apribile" trova solo quelli fotografati aperti (${qa.chips.join(' · ')})`);
+    ok(qv.chips.includes('Tetto apribile confermato') && matchQuery(apribile, qv) && !matchQuery(panorama, qv), 'tetto: anche "tetto panoramico" vale solo se fotografato aperto (il resto si ignora)');
     ok(!matchQuery(auto('Tetto apribile anteriore di vetro', 'no'), qa) && !matchQuery(auto('Tetto apribile anteriore di vetro', null), qa), 'tetto: senza conferma dalle foto non compare');
   }
   //__VALUTATORE__

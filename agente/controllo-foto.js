@@ -21,7 +21,8 @@ async function chiedi(istruzioni, c, urls) {
 }
 
 // opz: { nome, lista: campo di web con la frase delle dotazioni, esito: campo di web dove va il risultato, cache: file,
-//        istruzioni, dalFondo: le foto decisive stanno di solito in fondo alla galleria, ultimeUnaAUna: quante ricontrollare una per una, max }
+//        istruzioni, dalFondo: le foto decisive stanno di solito in fondo alla galleria, ultimeUnaAUna: quante ricontrollare una per una, max,
+//        riconferma: ogni 'si' viene ricontrollato sulla sola foto indicata }
 async function controlla(opz) {
   const data = JSON.parse(fs.readFileSync(FILE, 'utf8'));
   let cache = {}, fotoTutte = {};
@@ -48,7 +49,17 @@ async function controlla(opz) {
           await pausa(300);
           return { si: j.telecamera === 'si', foto: j.telecamera === 'si' && j.foto ? j.foto + offset : null, indizio: j.indizio || '' };
         };
-        for (const k of gruppi) { esito = await prova(tutte.slice(k, k + PER_RICHIESTA), k); if (esito.si) break; }
+        for (const k of gruppi) {
+          esito = await prova(tutte.slice(k, k + PER_RICHIESTA), k);
+          if (!esito.si) continue;
+          if (!opz.riconferma) break;
+          // riconferma: la foto indicata da sola; se non regge, le foto del gruppo una per una (cosi' anche il numero e' quello giusto)
+          const sola = esito.foto ? await prova([tutte[esito.foto - 1]], esito.foto - 1) : { si: false };
+          if (sola.si) { esito = sola; break; }
+          esito = { si: false, foto: null, indizio: '' };
+          for (let i = k; i < Math.min(tutte.length, k + PER_RICHIESTA); i++) { const e = await prova([tutte[i]], i); if (e.si) { esito = e; break; } }
+          if (esito.si) break;
+        }
         // seconda verifica prima di dire "non confermata": le ultime foto una per una
         if (!esito.si) {
           for (let i = tutte.length - 1; i >= Math.max(0, tutte.length - (opz.ultimeUnaAUna || 0)); i--) { const e = await prova([tutte[i]], i); if (e.si) { esito = e; break; } }
