@@ -165,6 +165,20 @@ async function leggi(file) {
     ok(senzaKm.ok && !senzaKm.note.some(n => /corrette per i km/.test(n)) && senzaKm.note.some(n => /km/i.test(n)), 'valutatore: senza km non dice "corrette per i km" e avvisa');
     ok(simili(Object.assign({}, CLIO, { alimentazione: 'gpl' }), lotto).length === 7 && simili(Object.assign({}, CLIO, { alimentazione: 'Gasolio' }), [A(6000, 120000, 2013, { alimentazione: 'Diesel' })]).length === 1, 'valutatore: carburante scritto a mano ("gpl", "Gasolio") riconosciuto');
   }
+  // tetto apribile / in vetro: stessa regola della telecamera (dotazioni del sito + conferma dalle foto)
+  {
+    const { tettoDaPagina } = require('./annunci.js');
+    const pag = '"equipmentStandardList":["Barre longitud.al tetto nero","Spoiler al tetto","Tetto black","Tetto in contrasto","Cielo in grigio luce","Scomparto portaoggetti al tetto"],"equipmentOptionalList":["Tetto apribile anteriore di vetro , elettrico, a compasso e scorrevole"]';
+    ok(tettoDaPagina(pag) === 'Tetto apribile anteriore di vetro , elettrico, a compasso e scorrevole', `tetto: dalle dotazioni solo il tetto vero, non barre, spoiler o colore (${tettoDaPagina(pag)})`);
+    ok(tettoDaPagina('"equipmentList":["Tetto Panorama con tendina parasole","Tetto in cristallo"]') === 'Tetto Panorama con tendina parasole · Tetto in cristallo', 'tetto: panorama e cristallo riconosciuti');
+    const V0 = buildVocab([]);
+    const qa = parseQuery('tetto apribile', V0), qv = parseQuery('tetto panoramico', V0);
+    const auto = (lista, esito) => ({ _h: '', web: { tettoLista: lista, tetto: esito ? { esito } : undefined } });
+    const apribile = auto('Tetto apribile anteriore di vetro , elettrico, a compasso e scorrevole', 'si'), panorama = auto('Tetto Panorama con tendina parasole', 'si');
+    ok(qa.chips.includes('Tetto apribile confermato') && matchQuery(apribile, qa) && !matchQuery(panorama, qa), `tetto: "tetto apribile" trova solo gli apribili confermati (${qa.chips.join(' · ')})`);
+    ok(qv.chips.includes('Tetto in vetro confermato') && matchQuery(apribile, qv) && matchQuery(panorama, qv), 'tetto: "tetto panoramico" trova tutti i tetti in vetro confermati');
+    ok(!matchQuery(auto('Tetto apribile anteriore di vetro', 'no'), qa) && !matchQuery(auto('Tetto apribile anteriore di vetro', null), qa), 'tetto: senza conferma dalle foto non compare');
+  }
   //__VALUTATORE__
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
   process.exit(errori ? 1 : 0);

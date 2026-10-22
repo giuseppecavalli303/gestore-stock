@@ -146,6 +146,8 @@ try {
             if ($c.Codice -ne 0 -and $c.Codice -ne 3) { throw "Stampa non pubblicata. $($c.Testo)" }
             $t = Esegui 'node agente\telecamera.js --max 60'
             Scrivi $t.Testo
+            $tt = Esegui 'node agente\tetto.js --max 60'            # tetto apribile / in vetro: stessa regola della telecamera
+            Scrivi $tt.Testo
             $l = Esegui 'node agente\listini.js'                     # codici modello VW dai listini del Desktop
             Scrivi $l.Testo
             $s = Esegui 'node agente\storico.js'
@@ -176,6 +178,8 @@ try {
             if ($b.Codice -eq 0) { Scrivi $b.Testo }
             $t = Esegui 'node agente\telecamera.js --max 60'
             Scrivi $t.Testo
+            $tt = Esegui 'node agente\tetto.js --max 60'            # tetto apribile / in vetro: stessa regola della telecamera
+            Scrivi $tt.Testo
             $l = Esegui 'node agente\listini.js'
             Scrivi $l.Testo
             $m = Esegui 'node agente\mercato.js'                      # giudizio di AutoScout sul prezzo, per la scheda

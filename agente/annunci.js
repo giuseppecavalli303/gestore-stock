@@ -84,9 +84,15 @@ function elenco(html, chiave) {
   for (; j < html.length; j++) { const ch = html[j]; if (ch === '[') prof++; else if (ch === ']' && --prof === 0) break; }
   try { return JSON.parse(html.slice(i + chiave.length + 3, j + 1)).map(x => (typeof x === 'string' ? x : JSON.stringify(x))); } catch (e) { return []; }
 }
+const dotazioni = html => elenco(html, 'equipmentStandardList').concat(elenco(html, 'equipmentList'), elenco(html, 'equipmentOptionalList'));
 function telecameraDaPagina(html) {
-  const righe = elenco(html, 'equipmentStandardList').concat(elenco(html, 'equipmentList'), elenco(html, 'equipmentOptionalList'));
-  return righe.filter(x => RE_CAM.test(x)).map(x => x.replace(/&amp;/g, '&')).join(' · ');
+  return dotazioni(html).filter(x => RE_CAM.test(x)).map(x => x.replace(/&amp;/g, '&')).join(' · ');
+}
+// tetto apribile o in vetro: stessa regola della telecamera (dotazioni + conferma dalle foto, agente/tetto.js).
+// Non contano barre e spoiler al tetto, tetto verniciato nero o a contrasto, cielo dell'abitacolo.
+const RE_TETTO = /tetto\s+(apribil|panoram|in\s+(vetro|cristallo))|tetto\s+elettric|tetto\s+scorrevol|sunroof|panoramic\s*roof|sky\s*dome|open\s*sky/i;
+function tettoDaPagina(html) {
+  return dotazioni(html).filter(x => RE_TETTO.test(x)).map(x => x.replace(/&amp;/g, '&')).join(' · ');
 }
 async function galleriaCompleta(annunci) {
   let cache = {};
@@ -94,15 +100,15 @@ async function galleriaCompleta(annunci) {
   let lette = 0, errori = 0;
   for (const a of annunci) {
     const c = cache[a.id];
-    if (c && c.cam != null && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; continue; }
+    if (c && c.cam != null && c.tetto != null && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; a.tettoLista = c.tetto; continue; }
     try {
       await pausa(400);
       const r = await fetch(a.url, { headers: { 'User-Agent': 'Mozilla/5.0 (Gestore stock Valentino)' } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      const html = await r.text(), foto = fotoDaPagina(html), cam = telecameraDaPagina(html);
-      cache[a.id] = { t: Date.now(), foto, cam };
+      const html = await r.text(), foto = fotoDaPagina(html), cam = telecameraDaPagina(html), tetto = tettoDaPagina(html);
+      cache[a.id] = { t: Date.now(), foto, cam, tetto };
       if (foto.length > a.foto.length) a.foto = foto;
-      a.camLista = cam;
+      a.camLista = cam; a.tettoLista = tetto;
       lette++;
       if (lette % 50 === 0) fs.writeFileSync(CACHE, JSON.stringify(cache));   // salvo strada facendo
     } catch (e) { errori++; }
@@ -113,7 +119,7 @@ async function galleriaCompleta(annunci) {
   if (lette || errori) console.log(`Gallerie lette: ${lette}${errori ? `, non lette: ${errori}` : ''}.`);
 }
 
-module.exports = { scarica };
+module.exports = { scarica, tettoDaPagina };
 
 if (require.main === module) {
   scarica().then(d => {

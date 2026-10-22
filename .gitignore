@@ -16,6 +16,7 @@ video/node_modules/
 video/out/
 *.mp4
 agente/telecamera-cache.json
+agente/tetto-cache.json
 icone/grande-*.png
 agente/autoscout.json
 agente/rapporti/
