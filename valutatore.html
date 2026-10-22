@@ -322,8 +322,8 @@ html.cliente .col-gg,html.cliente [data-tab="stat"]{display:none}
 .val-margini table{border-collapse:collapse;font-size:13px}
 .val-margini caption{text-align:left;color:var(--ink2);font-size:12px;padding:6px 0}
 .val-margini td{padding:3px 6px 3px 0;white-space:nowrap}
-html.cliente [data-tab="perm"],html.cliente #dPerm,html.cliente #permute{display:none}
-html.cliente .tabs{display:none}
+/* in modalita' cliente le schede restano (Auto e Permute), sparisce solo Statistiche */
+html.cliente .tabs{grid-auto-columns:minmax(0,1fr)}
 /* scheda dell'auto: sul telefono una colonna, sul computer grande e a due colonne */
 .dcols{display:flex;flex-direction:column;gap:18px}
 @media (min-width:1100px){

@@ -78,11 +78,11 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  NO   ') + m); if (!c) err
     await p.evaluate(b => document.querySelector(b + ' [data-v="margini"]').click(), box);
     await p.waitForSelector(box + ' [data-m="salva"]', { timeout: 3000 }).catch(() => {});
     ok(await p.evaluate(b => !!document.querySelector(b + ' [data-m="salva"]'), box), `${nome}: con la chiave il tasto "Salva i margini" c'è`);
-    // modalita' cliente dalla scheda Permute: il valutatore sparisce
+    // modalita' cliente dalla scheda Permute: il valutatore resta (deciso da Giuseppe il 22/10)
     await p.evaluate(() => document.getElementById('btnCliente').click());
     await pausa(300);
-    const dopoCliente = await p.evaluate(() => { const s = document.getElementById('permute'); return { visibile: !s.hidden && getComputedStyle(s).display !== 'none', lista: !document.getElementById('layout').hidden }; });
-    ok(!dopoCliente.visibile && dopoCliente.lista, `${nome}: toccando Cliente dalla scheda Permute il valutatore sparisce`);
+    const dopoCliente = await p.evaluate(() => { const s = document.getElementById('permute'), t = document.querySelector('[data-tab="perm"]'), st = document.querySelector('[data-tab="stat"]'); return { visibile: !s.hidden && getComputedStyle(s).display !== 'none', tab: getComputedStyle(t).display !== 'none' && t.offsetParent !== null, stat: getComputedStyle(st).display }; });
+    ok(dopoCliente.visibile && dopoCliente.tab && dopoCliente.stat === 'none', `${nome}: in modalità cliente la scheda Permute resta, Statistiche no`);
     await p.evaluate(() => document.getElementById('btnCliente').click());
     await pausa(300);
     // nella scheda di un'auto, accanto a Finanziamento
@@ -99,7 +99,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  NO   ') + m); if (!c) err
     await p.evaluate(() => document.querySelector('.card') && document.querySelector('.card').click());
     await pausa(800);
     const cliente = await p.evaluate(() => ({ sez: !!document.getElementById('dPerm'), tab: getComputedStyle(document.querySelector('[data-tab="perm"]')).display }));
-    ok(!cliente.sez && cliente.tab === 'none', `${nome}: in modalità cliente il valutatore non c'è`);
+    ok(cliente.sez && cliente.tab !== 'none', `${nome}: in modalità cliente il valutatore c'è anche nella scheda dell'auto`);
     ok(!err.length, `${nome}: nessun errore nella pagina ${err.join(' | ')}`);
     await p.close();
   }
