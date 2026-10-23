@@ -483,8 +483,10 @@ html.locked,html.locked body{overflow:hidden}
   .sky i{animation:none;filter:blur(60px)}
   .m-long{display:none} .m-short{display:inline}
 
-  /* la riga del marchio scorre via, resta agganciata solo la ricerca */
-  .top{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px;border-radius:24px;top:calc(env(safe-area-inset-top,0px) - 58px)}
+  /* scorrendo in giu' resta agganciata solo la ricerca (classe "ridotta", vedi ui.js); scorrendo in su torna tutta l'intestazione */
+  .top{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px;border-radius:24px;top:calc(env(safe-area-inset-top,0px) + 6px);transition:top .25s ease}
+  .top.ridotta{top:calc(env(safe-area-inset-top,0px) - var(--nascondi,58px))}
+  .top>*{transition:opacity .2s} .top.ridotta>:not(.search){opacity:0;pointer-events:none}
   .brand{height:44px;gap:10px}
   .brand>div:last-child{min-width:0}
   .mark{width:36px;height:36px;border-radius:11px}

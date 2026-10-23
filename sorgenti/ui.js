@@ -1093,4 +1093,22 @@
       setData(shared, prev);
     } catch (e) { /* nessuno stock condiviso qui: restano i dati locali */ }
   })();
+
+  // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta
+  (() => {
+    const top = document.querySelector('.top'), mq = matchMedia('(max-width:980px)');
+    const misura = () => top.style.setProperty('--nascondi', Math.max(0, top.querySelector('.search').offsetTop - 8) + 'px');
+    let ultimoY = scrollY;
+    addEventListener('scroll', () => {
+      if (!mq.matches) { top.classList.remove('ridotta'); return; }
+      const y = scrollY;
+      if (y < 80) top.classList.remove('ridotta');
+      else if (y > ultimoY + 6) { misura(); top.classList.add('ridotta'); }
+      else if (y < ultimoY - 6) top.classList.remove('ridotta');
+      else return;
+      ultimoY = y;
+    }, { passive: true });
+    addEventListener('resize', misura);
+    misura();
+  })();
 })();

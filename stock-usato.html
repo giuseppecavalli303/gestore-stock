@@ -475,8 +475,10 @@ html.locked,html.locked body{overflow:hidden}
   .sky i{animation:none;filter:blur(60px)}
   .m-long{display:none} .m-short{display:inline}
 
-  /* la riga del marchio scorre via, resta agganciata solo la ricerca */
-  .top{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px;border-radius:24px;top:calc(env(safe-area-inset-top,0px) - 58px)}
+  /* scorrendo in giu' resta agganciata solo la ricerca (classe "ridotta", vedi ui.js); scorrendo in su torna tutta l'intestazione */
+  .top{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px;border-radius:24px;top:calc(env(safe-area-inset-top,0px) + 6px);transition:top .25s ease}
+  .top.ridotta{top:calc(env(safe-area-inset-top,0px) - var(--nascondi,58px))}
+  .top>*{transition:opacity .2s} .top.ridotta>:not(.search){opacity:0;pointer-events:none}
   .brand{height:44px;gap:10px}
   .brand>div:last-child{min-width:0}
   .mark{width:36px;height:36px;border-radius:11px}
@@ -2465,6 +2467,24 @@ function montaValutatore(el, opz) {
       try { prev = await get('data/prev.json'); } catch (e) {}
       setData(shared, prev);
     } catch (e) { /* nessuno stock condiviso qui: restano i dati locali */ }
+  })();
+
+  // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta
+  (() => {
+    const top = document.querySelector('.top'), mq = matchMedia('(max-width:980px)');
+    const misura = () => top.style.setProperty('--nascondi', Math.max(0, top.querySelector('.search').offsetTop - 8) + 'px');
+    let ultimoY = scrollY;
+    addEventListener('scroll', () => {
+      if (!mq.matches) { top.classList.remove('ridotta'); return; }
+      const y = scrollY;
+      if (y < 80) top.classList.remove('ridotta');
+      else if (y > ultimoY + 6) { misura(); top.classList.add('ridotta'); }
+      else if (y < ultimoY - 6) top.classList.remove('ridotta');
+      else return;
+      ultimoY = y;
+    }, { passive: true });
+    addEventListener('resize', misura);
+    misura();
   })();
 })();
 
