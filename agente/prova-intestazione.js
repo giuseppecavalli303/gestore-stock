@@ -17,6 +17,10 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  NO   ') + m); if (!c) err
   await p.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await p.goto('http://localhost:' + server.address().port + '/index.html', { waitUntil: 'networkidle0' });
   await pausa(1200);
+  // app installata: niente "Installa app" (come sul telefono di Giuseppe); il caricamento sta sulla riga del marchio, accanto a Cliente
+  await p.evaluate(() => { document.getElementById('btnInstall').hidden = true; });
+  const riga = await p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { cliente: r('#btnCliente').top, load: r('#btnLoad').top, alto: r('.top').height }; });
+  ok(Math.abs(riga.cliente - riga.load) < 4 && riga.alto < 150, `intestazione su due righe: Cliente e carica PDF sulla stessa riga (altezza ${Math.round(riga.alto)} px)`);
   const pos = () => p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { brand: r('.top .brand').bottom, search: r('.top .search').top, load: r('#btnLoad').bottom }; });
   const scorri = async y => { await p.evaluate(y => window.scrollTo(0, y), y); await pausa(450); };
   for (const y of [200, 600, 1200]) await scorri(y);
