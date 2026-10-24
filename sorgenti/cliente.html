@@ -25,6 +25,8 @@ header.top .wrap{padding-bottom:0;display:flex;justify-content:space-between;ali
 h1,h2{font-family:"Bricolage Grotesque","Segoe UI",sans-serif;letter-spacing:-.02em;line-height:1.15;margin:0}
 h1{font-size:30px} h2{font-size:21px}
 .sub{color:var(--ink2);margin:4px 0 0}
+.bollo-km0{position:absolute;left:10px;top:10px;z-index:2;font-style:normal;font-weight:800;font-size:13px;padding:4px 11px;border-radius:999px;background:#ffd23f;color:#14181f;box-shadow:0 4px 14px -4px rgba(0,0,0,.45)}
+.auto{position:relative} .k0{display:inline-block;margin-left:8px;vertical-align:middle;font-size:13px;font-weight:800;padding:3px 10px;border-radius:999px;background:#ffd23f;color:#14181f}
 .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
 .gal{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:16px -16px 0;padding:0 16px;scrollbar-width:none}
 .gal img{flex:0 0 86%;max-width:620px;aspect-ratio:4/3;object-fit:cover;border-radius:16px;scroll-snap-align:center;background:#dde3ec}
@@ -92,7 +94,7 @@ footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
     const sito = u => (/^https:\/\/(www\.)?valentinoautomobili\.it\//i.test(String(u || '')) ? String(u) : '');
     return {
       n: testo(p.n), m: testo(p.m), d: /^\d{4}-\d{2}-\d{2}/.test(String(p.d || '')) ? String(p.d) : '', imm: testo(p.imm), fu: testo(p.fu), ca: testo(p.ca), co: testo(p.co),
-      km: num(p.km), pr: num(p.pr), cv: num(p.cv), kw: num(p.kw), ga: num(p.ga), url: sito(p.url),
+      km: num(p.km), pr: num(p.pr), cv: num(p.cv), kw: num(p.kw), ga: num(p.ga), k0: p.k0 ? 1 : 0, url: sito(p.url),
       foto: (Array.isArray(p.foto) ? p.foto : []).filter(u => /^https:\/\/cdn\.dealerk\.it\//.test(String(u))).slice(0, 60),
       f: {
         t: testo(f.t), rata: num(f.rata), nr: num(f.nr), dur: num(f.dur), ant: num(f.ant), vfg: num(f.vfg), km: num(f.km), fin: num(f.fin),
@@ -110,7 +112,7 @@ footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
     const palla = f.vfg > 0;
     $('pagina').innerHTML = `
       ${(p.foto || []).length ? `<div class="galwrap"><button class="gfr sx" aria-label="Foto precedente"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="gfr dx" aria-label="Foto successiva"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><span class="gnum"></span><div class="gal">${p.foto.map(u => `<img src="${esc(u)}" alt="">`).join('')}</div></div>` : ''}
-      <div class="box"><h1>${esc(p.n)}</h1><p class="sub">${esc(p.m)}</p>
+      <div class="box"><h1>${esc(p.n)}${p.k0 ? '<span class="k0">Km 0</span>' : ''}</h1><p class="sub">${esc(p.m)}</p>
         <dl class="dati">${riga('Immatricolazione', p.imm)}${riga('Chilometri', N(p.km) + ' km')}${riga('Alimentazione', p.fu)}${riga('Cambio', p.ca !== 'n.d.' ? p.ca : '')}${riga('Potenza', p.cv ? `${p.cv} CV (${p.kw} kW)` : '')}${riga('Colore', p.co)}${riga('Garanzia', p.ga ? p.ga + ' mesi' : '')}</dl>
         <div class="prezzo">${eur(p.pr)}<small>prezzo di vendita</small></div></div>
       <div class="box"><h2>${esc(f.t || 'Finanziamento')}</h2>
@@ -153,7 +155,8 @@ footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
     const imm = c => (c.imm && !/^0+/.test(c.imm) ? c.imm.slice(5, 7) + '/' + c.imm.slice(0, 4) : '');
     const auto = targhe.map(t => d.cars.find(c => c.targa === t)).filter(Boolean);
     const disp = auto.filter(c => c.free);
-    const scheda = c => `<div class="box auto${c.free ? '' : ' via'}">${foto(c) ? `<img src="${esc(foto(c))}" alt="">` : ''}<div class="in"><h2>${esc(c.brand)} ${esc(c.family)}</h2><p class="sub">${esc(c.modello)}</p>
+    const km0 = c => /KM\s?0\b|KM\s?ZERO/i.test(c.section || '') || !!(c.web && c.web.km0);
+    const scheda = c => `<div class="box auto${c.free ? '' : ' via'}">${km0(c) ? '<i class="bollo-km0">Km 0</i>' : ''}${foto(c) ? `<img src="${esc(foto(c))}" alt="">` : ''}<div class="in"><h2>${esc(c.brand)} ${esc(c.family)}</h2><p class="sub">${esc(c.modello)}</p>
       <dl class="dati">${riga('Immatricolazione', imm(c))}${riga('Chilometri', N(c.km) + ' km')}${riga('Alimentazione', c.fuel)}${riga('Cambio', c.cambio !== 'n.d.' ? c.cambio : '')}${riga('Potenza', c.cv ? c.cv + ' CV' : '')}</dl>
       ${c.free ? `<div class="prezzo">${eur(c.prezzo) || 'Prezzo su richiesta'}</div>${c.web && c.web.url ? `<div class="azioni"><a class="btn pri" href="${esc(c.web.url)}" target="_blank" rel="noopener">Foto e dettagli</a></div>` : ''}` : '<p class="sub" style="margin-top:12px"><b>Non più disponibile</b></p>'}</div></div>`;
     const R = [

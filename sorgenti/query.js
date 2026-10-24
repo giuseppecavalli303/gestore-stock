@@ -22,6 +22,9 @@ function buildVocab(cars) {
   return v.sort((a, b) => b.key.length - a.key.length).filter(e => { const k = e.key + '|' + e.kind + '|' + e.val; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
+// Km 0: la stampa le mette in sezioni apposite (VW KM0, REMARKETING EUROPA-500 KM0...); il sito le segna come KM0
+const km0 = c => /KM\s?0\b|KM\s?ZERO/i.test(c.section || '') || !!(c.web && c.web.km0);
+
 function parseQuery(raw, vocab) {
   const Q = { r: {}, st: new Set(), fuel: new Set(), cambio: new Set(), color: new Set(), brand: new Set(), family: new Set(), vend: new Set(), ubic: [], terms: [], chips: [] };
   let t = ' ' + deacc((raw || '').toLowerCase()).replace(/[€]/g, ' euro ').replace(/[,;:]+/g, ' ') + ' ';
@@ -39,6 +42,7 @@ function parseQuery(raw, vocab) {
   const take = (re, fn) => { t = t.replace(re, (...a) => (fn(...a) === false ? a[0] : ' ')); };
   const put = (k, lo, hi) => { if (k === 'kw') { k = 'cv'; if (lo != null) lo = Math.round(lo * 1.36); if (hi != null) hi = Math.round(hi * 1.36); } setR(k, lo, hi); };
   const ctx = t;
+  take(/\bkm ?0\b|\bkm ?zero\b|\bchilometri zero\b|\b0 ?km\b/g, () => { Q.km0 = true; });   // prima dei numeri: "km 0" non e' un limite di km
   take(new RegExp(`\\b(?:tra|fra)\\s+(?:i|gli|le)?\\s*(\\d+)\\s*${U}\\s*(?:e|ed)\\s+(?:i|gli|le)?\\s*(\\d+)\\s*${U}`, 'g'), (m, a, u1, b, u2) => { const k = unitKey(u2 || u1, +b, ctx); if (!k) return false; put(k, Math.min(+a, +b), Math.max(+a, +b)); });
   take(new RegExp(`(?:\\b(?:sotto|meno di|max|massimo|fino a|fino al|entro|non oltre|al massimo|prima del)|<=?)\\s*(?:i|gli|le|il|a)?\\s*(\\d+)\\s*${U}`, 'g'), (m, n, u) => { const k = unitKey(u, +n, ctx); if (!k) return false; put(k, null, /prima del/.test(m) ? +n - 1 : +n); });
   take(new RegExp(`(?:\\b(?:sopra|oltre|piu di|almeno|min|minimo|da almeno|a partire da|dal|dopo il|da piu di)|>=?)\\s*(?:i|gli|le|il|a)?\\s*(\\d+)\\s*${U}`, 'g'), (m, n, u) => { const k = unitKey(u, +n, ctx); if (!k) return false; put(k, +n, null); });
@@ -109,6 +113,7 @@ function parseQuery(raw, vocab) {
   if (Q.spec) Q.chips.push('Prezzo speciale');
   if (Q.check) Q.chips.push('Check list fatta');
   if (Q.neo) Q.chips.push('Per neopatentati');
+  if (Q.km0) Q.chips.push('Km 0');
   if (Q.awd) Q.chips.push('Trazione integrale (4x4)');
   if (Q.cam) Q.chips.push('Telecamera confermata');
   if (Q.tetto) Q.chips.push('Tetto apribile confermato');
@@ -140,6 +145,7 @@ function matchQuery(c, Q) {
   if (Q.spec && !c.spec) return false;
   if (Q.check && !c.check) return false;
   if (Q.neo && !(c.web && c.web.neopatentati)) return false;
+  if (Q.km0 && !km0(c)) return false;
   if (Q.awd && c.trazione !== 'Integrale') return false;
   if (Q.cam && !(c.web && c.web.cam && c.web.cam.esito === 'si')) return false;
   if (Q.tetto && !(c.web && c.web.tetto && c.web.tetto.esito === 'si')) return false;

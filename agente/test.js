@@ -230,6 +230,15 @@ async function leggi(file) {
     const tante = Array.from({ length: 16 }, (_, i) => A(6000 + i * 37, 110000 + i * 1500, 2013));
     ok(valuta(CLIO, tante, CFG, null).qualita === 'buono', 'valutatore: con 15 o piu\' auto il confronto e\' buono');
   }
+  // Km 0: dalla sezione della stampa (VW KM0, REMARKETING ... KM0) oppure dal sito
+  {
+    const { km0, parseQuery: pq, matchQuery: mq, buildVocab: bv } = new Function(['parser.js', 'norm.js', 'query.js'].map(src).join('\n') + '\nreturn { km0, parseQuery, matchQuery, buildVocab };')();
+    const a = (section, web) => ({ _h: '', section, web });
+    ok(km0(a('VW KM0')) && km0(a('REMARKETING EUROPA-500 KM0')) && km0(a('POLO BENZINA', { km0: true })) && !km0(a('POLO BENZINA - LIFE 95CV MAN.')) && !km0(a('T-ROC BENZINA', { km0: false })), 'km0: riconosciuta dalla sezione della stampa o dal sito');
+    const Q0 = pq('polo km0', bv([])), Q1 = pq('km 0', bv([]));
+    ok(Q0.chips.includes('Km 0') && Q1.chips.includes('Km 0') && mq(a('VW KM0'), Q1) && !mq(a('POLO BENZINA'), Q1), `km0: la ricerca "km0" o "km 0" trova solo le Km 0 (${Q0.chips.join(' · ')})`);
+    ok(!pq('golf meno di 40.000 km', bv([])).chips.includes('Km 0'), 'km0: "meno di 40.000 km" non diventa Km 0');
+  }
   //__VALUTATORE__
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
   process.exit(errori ? 1 : 0);

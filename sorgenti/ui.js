@@ -54,7 +54,7 @@
   const TRIS = [
     { k: 'as', label: 'Su AutoScout' }, { k: 'hasPrice', label: 'Con prezzo', get: c => c.prezzo > 0 }, { k: 'check', label: 'Check list fatta' },
     { k: 'spec', label: 'Prezzo speciale' }, { k: 'iva', label: 'IVA esposta' }, { k: 'mini', label: 'Mini PP' }, { k: 'fv', label: 'Foglio verde' },
-    { k: 'web', label: 'Annuncio sul sito', get: c => !!c.web }, { k: 'neo', label: 'Per neopatentati', get: c => !!(c.web && c.web.neopatentati) }, { k: 'awd', label: 'Trazione integrale (4x4)', get: c => c.trazione === 'Integrale' }, { k: 'cam', label: 'Telecamera confermata dalle foto', get: c => camOk(c) }, { k: 'tetto', label: 'Tetto apribile (foto aperto)', get: c => tettoOk(c) }
+    { k: 'web', label: 'Annuncio sul sito', get: c => !!c.web }, { k: 'neo', label: 'Per neopatentati', get: c => !!(c.web && c.web.neopatentati) }, { k: 'awd', label: 'Trazione integrale (4x4)', get: c => c.trazione === 'Integrale' }, { k: 'km0', label: 'Km 0', get: c => km0(c) }, { k: 'cam', label: 'Telecamera confermata dalle foto', get: c => camOk(c) }, { k: 'tetto', label: 'Tetto apribile (foto aperto)', get: c => tettoOk(c) }
   ];
   const ZERO_OK = { km: 1, giorni: 1 };
 
@@ -188,7 +188,8 @@
     check: { label: 'Check list fatta', set() { F.tri.check = true; } },
     noWeb: { label: 'Libere senza annuncio sul sito', set() { F.disp = 'free'; F.tri.web = false; } },
     priceDiff: { label: 'Prezzo diverso dal sito', set() { F.preset = 'priceDiff'; } },
-    neo: { label: 'Per neopatentati', set() { F.disp = 'free'; F.tri.neo = true; } }
+    neo: { label: 'Per neopatentati', set() { F.disp = 'free'; F.tri.neo = true; } },
+    km0: { label: 'Km 0', set() { F.tri.km0 = true; } }
   };
   let activePreset = 'all';
   function countPreset(id) { const keep = F, kp = activePreset; resetF(); PRESETS[id].set(); const Q = S.Q; S.Q = parseQuery('', []); const n = S.cars.filter(c => pass(c)).length; S.Q = Q; F = keep; activePreset = kp; return n; }
@@ -203,7 +204,7 @@
     $('kpis').innerHTML = tiles.join('');
   }
   function renderViews() {
-    $('views').innerHTML = '<span class="lab">Viste rapide</span>' + ['noWeb', 'priceDiff', 'noAs', 'noPrice', 'recentBooked', 'neo', 'spec', 'check'].map(id => `<button class="chip" data-preset="${id}" aria-pressed="false">${PRESETS[id].label} <span class="n">${N(countPreset(id))}</span></button>`).join('');
+    $('views').innerHTML = '<span class="lab">Viste rapide</span>' + ['km0', 'noWeb', 'priceDiff', 'noAs', 'noPrice', 'recentBooked', 'neo', 'spec', 'check'].map(id => `<button class="chip" data-preset="${id}" aria-pressed="false">${PRESETS[id].label} <span class="n">${N(countPreset(id))}</span></button>`).join('');
   }
   function renderDelta() {
     const d = S.delta; $('delta').hidden = !d; if (!d) return;
@@ -280,7 +281,7 @@
     const tags = (c._d === 'new' ? '<span class="tag new">Nuovo ingresso</span>' : '') + (c.as ? '<span class="tag as">AutoScout</span>' : '') + (c.spec ? '<span class="tag">Prezzo speciale</span>' : '') + (c.iva ? '<span class="tag">IVA esposta</span>' : '') + (c.booked && c.st !== 1 && c.st !== 0 ? '<span class="tag">Prenotata</span>' : '') + (c.web && c.web.neopatentati ? '<span class="tag">Neopatentati</span>' : '') + (camOk(c) ? '<span class="tag as">Telecamera</span>' : '') + (tettoOk(c) ? `<span class="tag as">${tettoNome(c)}</span>` : '');
     const ph = foto(c, 400);
     return `<button class="card" data-i="${i}">
-      <div class="ph"><span class="stella" role="button" tabindex="0" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}" aria-label="Lista per il cliente">${STELLA}</span>${ph ? `<img src="${ph}" alt="" loading="lazy" decoding="async">` : '<span>Nessuna foto sul sito</span>'}${c.web && c.web.foto.length > 1 ? `<i class="nfoto">${c.web.foto.length} foto</i>` : ''}</div>
+      <div class="ph"><span class="stella" role="button" tabindex="0" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}" aria-label="Lista per il cliente">${STELLA}</span>${ph ? `<img src="${ph}" alt="" loading="lazy" decoding="async">` : '<span>Nessuna foto sul sito</span>'}${c.web && c.web.foto.length > 1 ? `<i class="nfoto">${c.web.foto.length} foto</i>` : ''}${km0(c) ? '<i class="bollo-km0">Km 0</i>' : ''}</div>
       <div class="r1">${stPill(c)}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni === 0 ? 'entrata oggi' : c.giorni === 1 ? 'entrata ieri' : c.giorni + ' gg in stock'}</span>` : ''}</div>
       <div><h3><span>${esc(c.brand)}</span> ${esc(c.family)}</h3><p class="mod">${esc(c.modello)}</p></div>
       <div class="specs"><div><b>${N(c.km)}</b><span>km</span></div><div><b>${immIt(c)}</b><span>immatr.</span></div><div><b>${c.cv ? c.cv + ' CV' : 'n.d.'}</b><span>potenza</span></div><div><b>${esc(c.fuel)}</b><span>alim.</span></div><div><b>${esc(c.cambio)}</b><span>cambio</span></div><div><b><i class="sw" style="background:${COLOR_HEX[c.colorG] || '#9aa3b2'}"></i>${esc(c.colorG)}</b><span>colore</span></div></div>
@@ -290,7 +291,7 @@
     </button>`;
   }
   function rowHtml(c, i) {
-    return `<tr data-i="${i}"><td>${stPill(c)}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r"><b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(c.acq)}</td><td>${esc(c.vend)}</td></tr>`;
+    return `<tr data-i="${i}"><td>${stPill(c)}${km0(c) ? ' <span class="pill km0">Km 0</span>' : ''}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r"><b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(c.acq)}</td><td>${esc(c.vend)}</td></tr>`;
   }
   function renderList() {
     const cards = S.view === 'cards', part = S.list.slice(0, S.shown);
@@ -312,7 +313,7 @@
     const row = (k, v, wide) => (v === '' || v == null ? '' : `<div class="${wide ? 'wide' : ''}"><dt>${k}</dt><dd>${esc(v)}</dd></div>`);
     const yn = b => (b ? 'Sì' : 'No');
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <header>${daAI && S.aiUltimo ? '<button class="linkbtn" id="dBack">← Torna ai consigli</button>' : daLista ? '<button class="linkbtn" id="dBackL">← Torna alla lista</button>' : ''}<div class="r3">${stPill(c)}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span>` : ''}</div>
+      <header>${daAI && S.aiUltimo ? '<button class="linkbtn" id="dBack">← Torna ai consigli</button>' : daLista ? '<button class="linkbtn" id="dBackL">← Torna alla lista</button>' : ''}<div class="r3">${stPill(c)}${km0(c) ? '<span class="pill km0">Km 0</span>' : ''}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span>` : ''}</div>
       <h2>${esc(c.brand)} ${esc(c.family)}</h2><p style="color:var(--ink2)">${esc(c.modello)}</p>
       <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button><button class="btn btn-ghost btn-sm stella-btn" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}">${STELLA}<span>Lista</span></button></div></header>
       <div class="scroll">
@@ -599,6 +600,7 @@
     ['Carrozzeria', c => esc((c.web && c.web.carrozzeria) || '—')],
     ['Porte e posti', c => c.web && (c.web.porte || c.web.posti) ? [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', ') : '—'],
     ['Trazione', c => esc(trazioneDi(c) || '—')],
+    ['Km 0', c => km0(c) ? 'Sì' : '—'],
     ['Telecamera posteriore', c => camOk(c) ? 'Sì, verificata' : '—'],
     ['Tetto apribile', c => tettoOk(c) ? 'Sì, verificato' : '—'],
     ['Neopatentati', c => c.web && c.web.neopatentati ? 'Sì' : '—'],
@@ -637,7 +639,7 @@
     const w = c.web || {};
     const p = {
       v: 1, d: new Date().toISOString().slice(0, 10), n: `${c.brand} ${c.family}`, m: c.modello, imm: immIt(c), km: c.km, fu: c.fuel, ca: c.cambio, cv: c.cv, kw: c.kw,
-      co: w.colore || c.colore || '', ga: w.garanzia || 0, url: w.url || '', foto: [0, 1, 2, 3].map(i => foto(c, 800, i)).filter(Boolean), pr: c.prezzo,
+      co: w.colore || c.colore || '', ga: w.garanzia || 0, k0: km0(c) ? 1 : 0, url: w.url || '', foto: [0, 1, 2, 3].map(i => foto(c, 800, i)).filter(Boolean), pr: c.prezzo,
       f: { t: P.titolo, ant: r.anticipo, dur: r.durata, rata: r.rata, nr: r.nRate, vfg: r.vfg, km: st.tipo !== 'classico' ? st.km : 0, tan: r.tan, taeg: r.taeg, fin: r.finanziato, prima: r.primaRata, ist: r.istruttoria, inc: r.incasso, bol: r.bollo, serv: servizi }
     };
     return `${baseSito()}cliente.html#p=${codifica(p)}`;
@@ -767,7 +769,7 @@
     if (l.length < 12 && !(D.awd && l.length)) l = base;   // vincoli troppo stretti o capiti male: Gemini sceglie su tutte le disponibili
     return l.sort(SORTS.cons).slice(0, 400);
   }
-  const rigaAI = c => [c.targa, `${c.brand} ${c.modello}`.slice(0, 60), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, ggVisibili() ? (c.giorni ?? '?') + ' gg' : '', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.trazione === 'Integrale' ? 'trazione integrale 4x4' : c.trazione && 'trazione ' + c.trazione.toLowerCase(), camOk(c) && 'telecamera posteriore confermata', tettoOk(c) && tettoNome(c).toLowerCase() + ' confermato', c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
+  const rigaAI = c => [c.targa, `${c.brand} ${c.modello}`.slice(0, 60), immIt(c), N(c.km) + ' km', c.fuel, c.cambio, c.cv ? c.cv + ' CV' : 'CV n.d.', c.prezzo ? eur(c.prezzo) : 'prezzo da definire', c.colorG, c.ubic, ggVisibili() ? (c.giorni ?? '?') + ' gg' : '', [c.st === 7 && 'in arrivo', c.st === 6 && 'in riparazione', c.trazione === 'Integrale' ? 'trazione integrale 4x4' : c.trazione && 'trazione ' + c.trazione.toLowerCase(), km0(c) && 'km 0', camOk(c) && 'telecamera posteriore confermata', tettoOk(c) && tettoNome(c).toLowerCase() + ' confermato', c.web && c.web.neopatentati && 'neopatentati', c.web && c.web.porte && c.web.porte + ' porte', c.web && c.web.carrozzeria].filter(Boolean).join(', ')].join(' | ');
   function mostraAI(st) {
     S.aiUltimo = st;
     const auto = (st.auto || []).map(a => ({ a, c: S.cars.find(x => x.targa === String(a.targa).toUpperCase().replace(/\s+/g, '')) })).filter(x => x.c);
