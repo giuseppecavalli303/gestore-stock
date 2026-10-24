@@ -1101,19 +1101,19 @@
     if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); const q = $('q'); q.focus(); q.select(); }
   });
 
-  // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta.
-  // Vicino all'inizio della pagina l'intestazione scorre con il resto ("ridotta" senza "compatta"): cosi' non copre la riga dei numeri.
+  // telefono: scorrendo in giu' l'intestazione diventa compatta (solo la ricerca, sotto la barra di stato), scorrendo in su torna intera.
+  // Vicino all'inizio, risalendo, resta compatta fino in cima: cosi' l'intestazione intera non copre la riga dei numeri.
   (() => {
     const top = document.querySelector('.top'), mq = matchMedia('(max-width:980px)');
     const misura = () => top.style.setProperty('--nascondi', Math.max(0, top.querySelector('.search').offsetTop - 8) + 'px');
-    const stato = (ridotta, compatta) => { top.classList.toggle('ridotta', ridotta); top.classList.toggle('compatta', compatta); };
+    const stato = compatta => top.classList.toggle('compatta', compatta);
     let ultimoY = scrollY;
     const aggiorna = () => {
-      if (!mq.matches) { stato(false, false); return; }
-      const k = $('kpis'), y = scrollY, alto = k && k.offsetParent ? k.offsetTop : top.offsetHeight;   // dove inizia la riga dei numeri (non cambia scorrendo)
-      if (y <= alto) stato(true, false);
-      else if (y > ultimoY + 6) { misura(); stato(true, true); }
-      else if (y < ultimoY - 6) stato(false, false);
+      if (!mq.matches) { stato(false); return; }
+      const k = $('kpis'), y = scrollY, fineNumeri = k && k.offsetParent ? k.offsetTop + k.offsetHeight : top.offsetHeight;   // non cambia scorrendo
+      if (y <= 4) stato(false);
+      else if (y > ultimoY + 6) { misura(); stato(true); }
+      else if (y < ultimoY - 6) stato(y <= fineNumeri);   // risalendo: intera nella lista, compatta sopra la riga dei numeri (la lascia vedere), intera in cima
       else return;
       ultimoY = y;
     };

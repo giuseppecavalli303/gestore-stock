@@ -59,10 +59,11 @@ h1,h2,h3,p{margin:0}
 
 .glass{background:linear-gradient(140deg,var(--glass-hi),var(--glass));-webkit-backdrop-filter:blur(26px) saturate(175%);backdrop-filter:blur(26px) saturate(175%);border:1px solid var(--edge);box-shadow:var(--shadow),inset 0 1px 0 var(--spec),inset 0 -1px 0 var(--hair);border-radius:var(--r-lg)}
 
-.app{position:relative;max-width:1560px;margin:0 auto;padding-inline:20px;padding-block:16px 60px;display:flex;flex-direction:column;gap:16px}
+.app{position:relative;max-width:1560px;margin:0 auto;padding-inline:20px;padding-block:calc(var(--safe-top) + 16px) 60px;display:flex;flex-direction:column;gap:16px}
 
 /* barra superiore */
-.top{position:sticky;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:30;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px;padding:12px 14px 12px 18px}
+:root{--safe-top:env(safe-area-inset-top,0px)}   /* zona della barra di stato del telefono (le prove la simulano cambiando questa variabile) */
+.top{position:sticky;top:calc(var(--safe-top) + 10px);z-index:30;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px;padding:12px 14px 12px 18px}
 .brand{display:flex;align-items:center;gap:12px;min-width:0}
 .mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(150deg,var(--accent),var(--info));color:var(--accent-ink);box-shadow:inset 0 1px 0 var(--spec),var(--shadow-sm);flex:none}
 .brand h1{font-family:var(--f-display);font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.1;white-space:nowrap}
@@ -450,7 +451,7 @@ table.vel{white-space:nowrap}
 .ai-list .nm{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .ai-list .plate{font-size:11px}
 /* fascia piena sotto orologio e batteria quando l'app e' installata a tutto schermo: il contenuto ci scorre sotto senza restare a meta' */
-.barra-stato{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:45;pointer-events:none;box-shadow:0 6px 14px -6px var(--bg)}
+.barra-stato{position:fixed;top:0;left:0;right:0;height:var(--safe-top);background:var(--bg);z-index:45;pointer-events:none;box-shadow:0 6px 14px -6px var(--bg)}
 .m-short,.fdone{display:none}
 html.locked,html.locked body{overflow:hidden}
 @media (hover:none){
@@ -460,15 +461,19 @@ html.locked,html.locked body{overflow:hidden}
 
 /* telefono e tablet: ricerca sempre in vista, comandi in basso a portata di pollice, pannelli che salgono dal fondo */
 @media (max-width:980px){
-  .app{padding-inline:16px;padding-block:10px 112px;gap:12px}
+  .app{padding-inline:16px;padding-block:calc(var(--safe-top) + 10px) 112px;gap:12px}   /* spazio per la barra di stato: l'intestazione non nasce sotto l'orologio */
   .glass{-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
   .sky i{animation:none;filter:blur(60px)}
   .m-long{display:none} .m-short{display:inline}
 
-  /* scorrendo in giu' resta agganciata solo la ricerca (classe "ridotta", vedi ui.js); scorrendo in su torna tutta l'intestazione */
-  .top{grid-template-columns:minmax(0,1fr) auto auto;gap:10px;padding:10px;border-radius:24px;top:calc(env(safe-area-inset-top,0px) + 6px);transition:top .25s ease}
-  .top.ridotta{top:calc(env(safe-area-inset-top,0px) - var(--nascondi,58px))}
+  /* scorrendo in giu' resta agganciata solo la ricerca (classe "compatta", vedi ui.js); scorrendo in su torna tutta l'intestazione */
+  /* barra compatta: l'intestazione resta ferma sotto la barra di stato, scivola in su della parte sopra la ricerca
+     e quella parte viene ritagliata via: resta solo il campo di ricerca, intero; l'altezza della pagina non cambia, quindi niente scatti */
+  .top{grid-template-columns:minmax(0,1fr) auto auto;gap:10px;padding:10px;border-radius:24px;top:calc(var(--safe-top) + 6px);transition:transform .25s ease,clip-path .25s ease;will-change:transform;clip-path:inset(0 0 0 0 round 10px)}
+  .top.compatta{transform:translateY(calc(var(--nascondi,58px) * -1));clip-path:inset(var(--nascondi,58px) 0 0 0 round 10px)}
   .top>*{transition:opacity .2s} .top.compatta>:not(.search){opacity:0;pointer-events:none}
+  .barra-stato{height:calc(var(--safe-top) + 6px)}   /* copre anche lo spazio tra la barra di stato e la ricerca compatta */
+
   .brand{height:44px;gap:10px}
   .brand>div:last-child{min-width:0}
   .mark{width:36px;height:36px;border-radius:11px}
