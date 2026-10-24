@@ -37,7 +37,7 @@ async function controlla(opz) {
     const id = idDi(w);
     if (!cache[id] && fatte < opz.max && AI_URL) {
       // tutte le foto della galleria a piena risoluzione
-      const tutte = (fotoTutte[id] && fotoTutte[id].foto) || w.foto.map(f => base + '800/' + f);
+      const tutte = ((fotoTutte[id] && fotoTutte[id].foto) || w.foto.map(f => base + '800/' + f)).slice(0, opz.prime || 1000);   // prime: guarda solo le prime N foto
       const gruppi = [];
       if (opz.dalFondo) for (let fine = tutte.length; fine > 0; fine -= PER_RICHIESTA) gruppi.push(Math.max(0, fine - PER_RICHIESTA));
       else for (let k = 0; k < tutte.length; k += PER_RICHIESTA) gruppi.push(k);

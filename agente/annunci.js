@@ -25,6 +25,18 @@ async function pagina(n, tipo = 'KM0%7CUSED') {
   }
 }
 
+// per il cartello salone: cilindrata, classe Euro e condizione dell'offerta (dalla descrizione dell'annuncio)
+function dettagliAnnuncio(v) {
+  const d = String((v && v.description) || '').replace(/&#x20ac;/g, '€').replace(/<[^>]+>/g, ' ');
+  const euro = d.match(/Euro ?(\d[\w\-]*)/i), vw = /volkswagen/i.test((v && v.make) || '');
+  const off = /valida con progetto valore[^.]*?(\d+) ?mesi/i.exec(d), fin = /valida con finanziamento/i.test(d);
+  return {
+    cc: +(v && v.displacement) > 0 ? +v.displacement : 0,
+    euro: euro ? 'Euro ' + euro[1].replace(/[.]$/, '') : '',
+    offerta: off ? `OFFERTA VALIDA CON PROGETTO VALORE ${vw ? 'VOLKSWAGEN ' : ''}${off[1]} MESI` : fin ? 'OFFERTA VALIDA CON FINANZIAMENTO' : ''
+  };
+}
+
 function annuncio(v) {
   const e = v.emissionConsumption || {};
   const get = k => (v[k] != null && v[k] !== '' ? v[k] : e[k]);
@@ -41,6 +53,7 @@ function annuncio(v) {
     colore: [get('colorExt'), get('colorType')].filter(Boolean).join(' '), interni: [get('colorInt'), get('tapestry')].filter(Boolean).join(' '),
     neopatentati: !!get('novice'), garanzia: +get('warrantyMonth') > 0 ? +get('warrantyMonth') : 0, certificato: get('seal_name') || '',
     giro360: get('image360LinkClosedDoors') || '', video: get('video') || '', url, foto: foto.slice(0, 20),
+    ...dettagliAnnuncio(v),
     vin: /^[A-HJ-NPR-Z0-9]{17}$/.test(String(get('vin') || '').toUpperCase()) ? String(get('vin')).toUpperCase() : ''   // telaio, quando il sito lo pubblica
   };
 }
@@ -85,6 +98,10 @@ function elenco(html, chiave) {
   try { return JSON.parse(html.slice(i + chiave.length + 3, j + 1)).map(x => (typeof x === 'string' ? x : JSON.stringify(x))); } catch (e) { return []; }
 }
 const dotazioni = html => elenco(html, 'equipmentStandardList').concat(elenco(html, 'equipmentList'), elenco(html, 'equipmentOptionalList'));
+// elenco completo delle dotazioni (per il cartello salone: resta nella memoria locale, non si pubblica)
+function dotazioniDaPagina(html) {
+  return dotazioni(html).map(x => x.replace(/&amp;/g, '&').trim()).filter(Boolean);
+}
 function telecameraDaPagina(html) {
   return dotazioni(html).filter(x => RE_CAM.test(x)).map(x => x.replace(/&amp;/g, '&')).join(' · ');
 }
@@ -100,13 +117,13 @@ async function galleriaCompleta(annunci) {
   let lette = 0, errori = 0;
   for (const a of annunci) {
     const c = cache[a.id];
-    if (c && c.cam != null && c.tetto != null && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; a.tettoLista = c.tetto; continue; }
+    if (c && c.cam != null && c.tetto != null && c.dot && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; a.tettoLista = c.tetto; continue; }
     try {
       await pausa(400);
       const r = await fetch(a.url, { headers: { 'User-Agent': 'Mozilla/5.0 (Gestore stock Valentino)' } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const html = await r.text(), foto = fotoDaPagina(html), cam = telecameraDaPagina(html), tetto = tettoDaPagina(html);
-      cache[a.id] = { t: Date.now(), foto, cam, tetto };
+      cache[a.id] = { t: Date.now(), foto, cam, tetto, dot: dotazioniDaPagina(html) };
       if (foto.length > a.foto.length) a.foto = foto;
       a.camLista = cam; a.tettoLista = tetto;
       lette++;
@@ -119,7 +136,7 @@ async function galleriaCompleta(annunci) {
   if (lette || errori) console.log(`Gallerie lette: ${lette}${errori ? `, non lette: ${errori}` : ''}.`);
 }
 
-module.exports = { scarica, tettoDaPagina };
+module.exports = { scarica, tettoDaPagina, dettagliAnnuncio, dotazioniDaPagina };
 
 if (require.main === module) {
   scarica().then(d => {

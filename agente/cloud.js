@@ -169,7 +169,7 @@ async function main() {
       const c = esegui('agente/converti.js', path.join(ARRIVI, stampa.nome));
       scrivi(c.testo);
       if (c.codice !== 0 && c.codice !== 3) throw new Error('Stampa non pubblicata. ' + c.testo);
-      if (!PROVA) { scrivi(esegui('agente/telecamera.js', '--max', '60').testo); scrivi(esegui('agente/tetto.js', '--max', '60').testo); }   // in prova niente: il credito Gemini lo usa gia' il PC
+      if (!PROVA) { scrivi(esegui('agente/telecamera.js', '--max', '60').testo); scrivi(esegui('agente/tetto.js', '--max', '60').testo); scrivi(esegui('agente/prezzo-speciale.js', '--max', '150').testo); scrivi(esegui('agente/cartelli.js', '--max', '80').testo); }   // in prova niente: il credito Gemini lo usa gia' il PC
       // lo storico si ricostruisce da tutte le versioni pubblicate: la storia completa la scarico solo adesso che serve
       try { if (git('rev-parse', '--is-shallow-repository') === 'true') git('fetch', '--unshallow', '-q'); } catch (e) {}
       scrivi(esegui('agente/storico.js').testo);
@@ -200,7 +200,7 @@ async function main() {
     scrivi(a.testo);
     if (!a.codice) {
       const b = esegui('agente/abbina.js'); if (!b.codice) scrivi(b.testo);
-      if (!PROVA) { scrivi(esegui('agente/telecamera.js', '--max', '60').testo); scrivi(esegui('agente/tetto.js', '--max', '60').testo); }
+      if (!PROVA) { scrivi(esegui('agente/telecamera.js', '--max', '60').testo); scrivi(esegui('agente/tetto.js', '--max', '60').testo); scrivi(esegui('agente/prezzo-speciale.js', '--max', '150').testo); scrivi(esegui('agente/cartelli.js', '--max', '80').testo); }
       scrivi(esegui('agente/mercato.js').testo);
       pubblica('Foto e annunci del sito aggiornati');
     }

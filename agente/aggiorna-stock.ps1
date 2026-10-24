@@ -162,6 +162,10 @@ try {
             Scrivi $t.Testo
             $tt = Esegui 'node agente\tetto.js --max 60'            # tetto apribile / in vetro: stessa regola della telecamera
             Scrivi $tt.Testo
+            $ps = Esegui 'node agente\prezzo-speciale.js --max 150'  # bollino PREZZO SPECIALE nella prima foto (cartello PS)
+            Scrivi $ps.Testo
+            $ca = Esegui 'node agente\cartelli.js --max 80'          # righe del cartello salone (Gemini sceglie le dotazioni)
+            Scrivi $ca.Testo
             $l = Esegui 'node agente\listini.js'                     # codici modello VW dai listini del Desktop
             Scrivi $l.Testo
             $s = Esegui 'node agente\storico.js'
@@ -194,6 +198,10 @@ try {
             Scrivi $t.Testo
             $tt = Esegui 'node agente\tetto.js --max 60'            # tetto apribile / in vetro: stessa regola della telecamera
             Scrivi $tt.Testo
+            $ps = Esegui 'node agente\prezzo-speciale.js --max 150'  # bollino PREZZO SPECIALE nella prima foto (cartello PS)
+            Scrivi $ps.Testo
+            $ca = Esegui 'node agente\cartelli.js --max 80'          # righe del cartello salone (Gemini sceglie le dotazioni)
+            Scrivi $ca.Testo
             $l = Esegui 'node agente\listini.js'
             Scrivi $l.Testo
             $m = Esegui 'node agente\mercato.js'                      # giudizio di AutoScout sul prezzo, per la scheda

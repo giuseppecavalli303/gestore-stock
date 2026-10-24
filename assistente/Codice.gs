@@ -47,6 +47,7 @@ function doPost(e) {
   try {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (req.token !== TOKEN) return json_({ errore: 'Richiesta non autorizzata.' });
+    if (req.azione === 'cartello') return json_(limite_('c', MAX_FOTO_ORA) ? cartello_(req) : { errore: "Troppi cartelli in quest'ora: riprova tra poco." });
     if (req.azione === 'telecamera') return json_(limite_('f', MAX_FOTO_ORA) ? telecamera_(req) : { errore: "Troppi controlli delle foto in quest'ora: riprova tra poco." });
     if (req.azione === 'codici') return json_({ scelte: scelte_() });
     if (req.azione === 'scegli') return json_(scegli_(req));
@@ -120,6 +121,41 @@ function conta_(modello, tin, tout) {
     p.setProperty(k, JSON.stringify(m));
     return { domande: m.domande, spesa: Math.round(m.spesa * 100) / 100 };
   } finally { if (preso) lock.releaseLock(); }
+}
+
+/* Cartello salone: dall'elenco dotazioni dell'annuncio Gemini sceglie le piu' importanti per chi compra
+   e le scrive in righe corte come nei cartelli di Valentino; scrive anche il titolo del cartello. */
+const SCHEMA_CARTELLO = { type: 'OBJECT', properties: { nome: { type: 'STRING' }, righe: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['nome', 'righe'] };
+const ISTRUZIONI_CARTELLO = [
+  "Prepari il cartello da esporre in salone per un'auto usata di Valentino Automobili Roma.",
+  "Ricevi il modello e l'elenco completo delle dotazioni preso dall'annuncio. Regole:",
+  "- 'nome': nome commerciale chiaro, al massimo 38 caratteri, per esempio 'Volkswagen Golf 2.0 TSI GTI 245 CV DSG' o 'Fiat 500 1.0 Hybrid Club'.",
+  "- 'righe': da 4 a 7 righe in MAIUSCOLO, ciascuna di AL MASSIMO 52 caratteri, con 2-4 dotazioni separate da ' - '.",
+  "- Scegli le dotazioni che contano per chi compra: cerchi (con pollici), fari LED o Matrix, navigatore, Apple CarPlay/Android Auto, cockpit digitale, climatizzatore automatico o a zone, sensori di parcheggio, cruise control adattivo, assistenze alla guida, keyless, sedili riscaldati o in pelle, vetri privacy, pacchetti (R-Line, S line, Black), impianto audio di marca, portellone elettrico.",
+  "- Scrivi RETROCAMERA solo se 'telecamera confermata' e TETTO APRIBILE solo se 'tetto confermato'.",
+  "- Non mettere dotazioni ovvie (ABS, ESP, airbag, chiusura centralizzata, alzacristalli, servosterzo, poggiatesta, altoparlanti) e non inventare niente che non sia nell'elenco.",
+  "- Abbrevia senza perdere senso: 'Cerchi in lega da 18 pollici' -> 'CERCHI IN LEGA 18\"'."
+].join('\n');
+
+function cartello_(req) {
+  const dot = (req.dotazioni || []).map(function (x) { return String(x).slice(0, 160); }).slice(0, 250);
+  if (!dot.length) return { errore: 'Nessuna dotazione.' };
+  const p = PropertiesService.getScriptProperties();
+  const chiave = String(p.getProperty('GEMINI_KEY') || '').trim().replace(/^["']+|["']+$/g, '');
+  const modello = p.getProperty('MODELLO') || MODELLO_PREDEFINITO;
+  const testo = 'Auto: ' + String(req.auto || '').slice(0, 160) + (req.telecamera ? ' (telecamera confermata)' : '') + (req.tetto ? ' (tetto confermato)' : '') + '\nDotazioni:\n- ' + dot.join('\n- ');
+  const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modello) + ':generateContent', {
+    method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': chiave }, muteHttpExceptions: true,
+    payload: JSON.stringify({ systemInstruction: { parts: [{ text: ISTRUZIONI_CARTELLO }] }, contents: [{ role: 'user', parts: [{ text: testo }] }],
+      generationConfig: { temperature: 0, seed: 7, maxOutputTokens: 600, responseMimeType: 'application/json', responseSchema: SCHEMA_CARTELLO } })
+  });
+  let j = {};
+  try { j = JSON.parse(r.getContentText()); } catch (e) {}
+  if (r.getResponseCode() !== 200) return { errore: 'Gemini non ha risposto: ' + ((j.error && j.error.message) || r.getResponseCode()) };
+  const out = JSON.parse(((((j.candidates || [])[0] || {}).content || {}).parts || []).map(function (x) { return x.text || ''; }).join('') || '{}');
+  const uso = j.usageMetadata || {};
+  conta_(modello, uso.promptTokenCount || 0, (uso.candidatesTokenCount || 0) + (uso.thoughtsTokenCount || 0));
+  return { nome: String(out.nome || '').slice(0, 60), righe: (out.righe || []).map(function (x) { return String(x).slice(0, 70); }).slice(0, 7) };
 }
 
 /* Telecamera posteriore: l'elenco dotazioni del sito la nomina, ma a volte per errore.
