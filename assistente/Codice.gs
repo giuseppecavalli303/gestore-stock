@@ -145,17 +145,26 @@ function elencoPagina_(html, chiave) {
   for (; j < html.length; j++) { const ch = html[j]; if (ch === '[') prof++; else if (ch === ']' && --prof === 0) break; }
   try { return JSON.parse(html.slice(i + chiave.length + 3, j + 1)).map(function (x) { return typeof x === 'string' ? x : JSON.stringify(x); }); } catch (e) { return []; }
 }
-function dotazioniAnnuncio_(url) {
-  if (!/^https:\/\/www\.valentinoautomobili\.it\/auto\//.test(String(url || ''))) return [];
-  const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
-  if (r.getResponseCode() !== 200) return [];
-  const html = r.getContentText();
-  return elencoPagina_(html, 'equipmentStandardList').concat(elencoPagina_(html, 'equipmentList'), elencoPagina_(html, 'equipmentOptionalList'))
+// dalla pagina dell'annuncio: dotazioni, cilindrata, normativa Euro e riga dell'offerta (come agente/annunci.js)
+function datiPagina_(html, vw) {
+  const dot = elencoPagina_(html, 'equipmentStandardList').concat(elencoPagina_(html, 'equipmentList'), elencoPagina_(html, 'equipmentOptionalList'))
     .map(function (x) { return x.replace(/&amp;/g, '&').trim(); }).filter(String);
+  const cc = (/"displacement":(\d+)/.exec(html) || [])[1];
+  const testo = html.replace(/&#x20ac;/g, '€').replace(/<[^>]+>/g, ' ');
+  const euro = /antinquinamento\s+Euro ?(\d[\w\-]*)/i.exec(testo) || /\bEuro ?(\d[a-zA-Z0-9\-]*)\b/.exec(testo);
+  const off = /valida con progetto valore[^.]*?(\d+) ?mesi/i.exec(testo), fin = /valida con finanziamento/i.test(testo);
+  return { dot: dot, cc: cc ? +cc : 0, euro: euro ? 'Euro ' + euro[1].replace(/[.]$/, '') : '',
+    offerta: off ? 'OFFERTA VALIDA CON PROGETTO VALORE ' + (vw ? 'VOLKSWAGEN ' : '') + off[1] + ' MESI' : fin ? 'OFFERTA VALIDA CON FINANZIAMENTO' : '' };
+}
+function paginaAnnuncio_(url, vw) {
+  if (!/^https:\/\/www\.valentinoautomobili\.it\/auto\//.test(String(url || ''))) return null;
+  const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+  return r.getResponseCode() === 200 ? datiPagina_(r.getContentText(), vw) : null;
 }
 
 function cartello_(req) {
-  if (!(req.dotazioni || []).length && req.url) req.dotazioni = dotazioniAnnuncio_(req.url);
+  const pag = req.url ? paginaAnnuncio_(req.url, /^volkswagen/i.test(String(req.auto || ''))) : null;
+  if (!(req.dotazioni || []).length && pag) req.dotazioni = pag.dot;
   const dot = (req.dotazioni || []).map(function (x) { return String(x).slice(0, 160); }).slice(0, 250);
   if (!dot.length) return { errore: "Nell'annuncio non ho trovato le dotazioni." };
   const p = PropertiesService.getScriptProperties();
@@ -173,7 +182,8 @@ function cartello_(req) {
   const out = JSON.parse(((((j.candidates || [])[0] || {}).content || {}).parts || []).map(function (x) { return x.text || ''; }).join('') || '{}');
   const uso = j.usageMetadata || {};
   conta_(modello, uso.promptTokenCount || 0, (uso.candidatesTokenCount || 0) + (uso.thoughtsTokenCount || 0));
-  return { nome: String(out.nome || '').slice(0, 60), righe: (out.righe || []).map(function (x) { return String(x).slice(0, 70); }).slice(0, 7) };
+  return { nome: String(out.nome || '').slice(0, 60), righe: (out.righe || []).map(function (x) { return String(x).slice(0, 70); }).slice(0, 7),
+    cc: pag ? pag.cc : 0, euro: pag ? pag.euro : '', offerta: pag ? pag.offerta : '' };
 }
 
 /* Telecamera posteriore: l'elenco dotazioni del sito la nomina, ma a volte per errore.

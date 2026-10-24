@@ -6,6 +6,10 @@ const CARTELLO_CAMPI = {
   sel: { nome: 'NOME', dati: ['1', '2', '3', '4', '5', '6', '7', '8'], righe: ['TESTO1', 'TESTO2', 'TESTO3', 'TESTO4', 'TESTO5', 'TESTO6', 'TESTO7'], offerta: 'TESTO8', prezzi: ['prezzo veicolo', 'prezzo veicolo 2', 'prezzo veicolo 3'], file: 'scheda-UsatoSelezionato-2023.pdf' }
 };
 const CARTELLO_ALIM = { Benzina: 'Benzina', Diesel: 'Diesel', GPL: 'Benzina/GPL', Metano: 'Benzina/Metano', Elettrica: 'Elettrica', Ibrida: 'Benzina/Ibrida', 'Plug-in': 'Benzina/Elettrica Plug-in' };
+// cilindrata come la scrivono in salone: 999 -> 1.0, 1498 -> 1.5, 1984 -> 2.0
+const cartelloLitri = cc => (cc > 0 ? (Math.round(cc / 100) / 10).toFixed(1) : '');
+// passaggio: 800 -> 800,00 ; da 1.000 in su 1.000
+const cartelloPassaggio = n => (n > 0 && n < 1000 ? Math.round(n) + ',00' : cartelloNum(n));
 const cartelloNum = n => (n ? String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '');
 const cartelloTitolo = s => String(s || '').toLowerCase().replace(/(^|[\s\-/])([a-zà-ù])/g, (m, a, b) => a + b.toUpperCase())
   .replace(/\b(tsi|tdi|tfsi|gti|gtd|gte|dsg|cv|kw|suv|gpl|led|s line|r line)\b/gi, m => m.toUpperCase());
@@ -16,14 +20,15 @@ function datiCartello(c, scelte) {
   const ps = !!c.spec;   // prezzo speciale del gestionale = bollino PREZZO SPECIALE sulle foto
   const nome = (scelte && scelte.nome) || cartelloTitolo(`${c.brand} ${String(c.modello || '').replace(/\s+\d+KW.*$/i, '')}`);
   const imm = /^\d{4}-\d{2}/.test(c.imm || '') ? `${c.imm.slice(5, 7)}/${c.imm.slice(0, 4)}` : '';
-  const dati = [cartelloNum(w.cc), c.kw && c.cv ? `${c.kw}/${c.cv}` : '', c.cambio && c.cambio !== 'n.d.' ? c.cambio : '', CARTELLO_ALIM[c.fuel] || c.fuel || '',
-    w.euro || '', imm, c.km != null ? cartelloNum(c.km) || '0' : '', `${w.garanzia || 12} mesi`];
+  const s = scelte || {}, cc = w.cc || s.cc, euro = w.euro || s.euro || '', offerta = w.offerta || s.offerta || '';
+  const dati = [cartelloLitri(cc), c.kw && c.cv ? `${c.kw}/${c.cv}` : '', c.cambio && c.cambio !== 'n.d.' ? c.cambio : '', CARTELLO_ALIM[c.fuel] || c.fuel || '',
+    euro, imm, c.km != null ? cartelloNum(c.km) || '0' : '', `${w.garanzia || 12} mesi`];
   const campi = { [M.nome]: nome };
   M.dati.forEach((k, i) => { campi[k] = dati[i]; });
   const righe = ((scelte && scelte.righe) || []).slice(0, M.righe.length);
   M.righe.forEach((k, i) => { campi[k] = righe[i] || ''; });
-  campi[M.offerta] = w.offerta || '';
-  [c.prezzoV, c.pp, c.prezzo].forEach((v, i) => { campi[M.prezzi[i]] = cartelloNum(v); });
+  campi[M.offerta] = offerta;
+  [cartelloNum(c.prezzoV), cartelloPassaggio(c.pp), cartelloNum(c.prezzo)].forEach((v, i) => { campi[M.prezzi[i]] = v; });
   return { vw, ps, file: (ps ? 'PS-' : '') + M.file, campi, nomeFile: `${nome} ${c.targa}.pdf`.replace(/[\\/:*?"<>|]+/g, ' ') };
 }
 

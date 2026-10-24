@@ -922,7 +922,7 @@
         body: JSON.stringify({ token: AI_TOKEN, azione: 'cartello', url: w.url, auto: `${c.brand} ${c.modello}`, telecamera: !!(w.cam && w.cam.esito === 'si'), tetto: !!(w.tetto && w.tetto.esito === 'si') }) });
       const j = await r.json();
       if (j.errore || !Array.isArray(j.righe)) return null;
-      return (righeCartello[c.targa] = { nome: j.nome, righe: j.righe });
+      return (righeCartello[c.targa] = { nome: j.nome, righe: j.righe, cc: j.cc, euro: j.euro, offerta: j.offerta });
     } catch (e) { return null; } finally { clearTimeout(t); }
   }
   async function stampaCartello(c) {
