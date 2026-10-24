@@ -126,7 +126,7 @@ async function leggi(file) {
       fetchAll: rs => rs.map(r => /autoscout/.test(r.url) ? risposta(200, pagina) : /subito/.test(r.url) ? risposta(403, 'bloccato') : risposta(200, '<html></html>')) };
     let uuid = 0; const Utilities = { getUuid: () => 'id-' + (++uuid), formatDate: () => '202610' };
     const codice = fs.readFileSync(path.join(root, 'assistente', 'Codice.gs'), 'utf8') + '\n' + fs.readFileSync(path.join(root, 'assistente', 'Valutatore.gs'), 'utf8');
-    const G = new Function('SpreadsheetApp', 'PropertiesService', 'LockService', 'UrlFetchApp', 'Utilities', 'ContentService', 'CacheService', codice + '\nreturn { doPost };')(SpreadsheetApp, PropertiesService, LockService, UrlFetchApp, Utilities, { createTextOutput: t => ({ setMimeType: () => t }), MimeType: {} }, { getScriptCache: () => { const c = {}; return { get: k => c[k] || null, put: (k, v) => { c[k] = v; } }; } });
+    const G = new Function('SpreadsheetApp', 'PropertiesService', 'LockService', 'UrlFetchApp', 'Utilities', 'ContentService', 'CacheService', codice + '\nreturn { doPost };')(SpreadsheetApp, PropertiesService, LockService, UrlFetchApp, Utilities, { createTextOutput: t => ({ setMimeType: () => t }), MimeType: {} }, (() => { const c = {}; return { getScriptCache: () => ({ get: k => c[k] || null, put: (k, v) => { c[k] = v; } }) }; })());
     const post = o => JSON.parse(G.doPost({ postData: { contents: JSON.stringify(Object.assign({ token: 'FTcdlNGgGU7WXN-L' }, o)) } }));
     ok(post({ azione: 'margini', cfg: CFG }).errore === 'Solo con la chiave di Giuseppe' && post({ azione: 'margini', cfg: CFG, chiave: 'segreta' }).cfg.passaggio === 222, 'servizio: i margini si cambiano solo con la chiave');
     const v = post({ azione: 'valuta', frase: 'Clio GPL Energy 120000 km del 2013' });
@@ -151,6 +151,11 @@ async function leggi(file) {
     const s2 = post({ azione: 'salvaValutazione', frase: 'prova', auto: v.auto, risultato: r2, annunci: [brutto] });
     const a3 = post({ azione: 'apri', id: s2.id }).annunci[0] || {};
     ok(a3.venditore === 'privato' && a3.url === '' && a3.anno === 0 && !('extra' in a3), `servizio: annunci salvati ripuliti (${JSON.stringify(a3)})`);
+    // revisione ChatGPT: anche il controllo delle foto (telecamera, tetto) ha un limite orario, separato dalle domande
+    let ultima = null;
+    for (let i = 0; i < 401; i++) ultima = post({ azione: 'telecamera', foto: [] });
+    ok(/Troppi controlli/.test(ultima.errore || ''), `servizio: controllo foto con limite orario (${ultima.errore})`);
+    ok(!post({ azione: 'valuta', frase: 'Clio GPL Energy 120000 km del 2013' }).errore, 'servizio: il limite delle foto non blocca le valutazioni');
   }
   // revisione finale: vendute solo nella stessa fascia di km, dati mancanti, carburante scritto a mano
   {

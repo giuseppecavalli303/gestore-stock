@@ -16,6 +16,7 @@
 const MODELLO_PREDEFINITO = 'gemini-3.5-flash-lite';   // il 2.5 non e' piu' disponibile per i nuovi utenti
 const TOKEN = 'FTcdlNGgGU7WXN-L';          // lo stesso scritto nel sito: ferma le chiamate a caso
 const MAX_DOMANDE_ORA = 120;               // per tutto il sito, contro gli abusi
+const MAX_FOTO_ORA = 400;                  // controlli delle foto (telecamera, tetto) in un'ora: conto a parte, per non bloccare le domande
 const MAX_ELENCO = 200000;                 // caratteri dell'elenco auto accettati
 // prezzi in dollari per milione di token (ingresso, uscita), per stimare la spesa del mese
 const PREZZI = { 'gemini-3.5-flash-lite': [0.30, 2.50], 'gemini-3.1-flash-lite': [0.25, 1.50], 'gemini-2.5-flash-lite': [0.10, 0.40], 'gemini-2.5-flash': [0.30, 2.50] };
@@ -46,7 +47,7 @@ function doPost(e) {
   try {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (req.token !== TOKEN) return json_({ errore: 'Richiesta non autorizzata.' });
-    if (req.azione === 'telecamera') return json_(telecamera_(req));
+    if (req.azione === 'telecamera') return json_(limite_('f', MAX_FOTO_ORA) ? telecamera_(req) : { errore: "Troppi controlli delle foto in quest'ora: riprova tra poco." });
     if (req.azione === 'codici') return json_({ scelte: scelte_() });
     if (req.azione === 'scegli') return json_(scegli_(req));
     if (['valuta', 'salvaValutazione', 'ultime', 'apri', 'margini'].indexOf(req.azione) >= 0) return json_(valutatore_(req));   // Valutatore.gs
@@ -200,11 +201,12 @@ function scegli_(req) {
   return { ok: true, scelte: scelte_() };
 }
 
-function limite_() {
+// conta le richieste dell'ora in corso: 'n' per domande e valutazioni, 'f' per i controlli delle foto
+function limite_(nome, max) {
   const cache = CacheService.getScriptCache();
-  const k = 'n' + Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyyMMddHH');
+  const k = (nome || 'n') + Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyyMMddHH');
   const n = Number(cache.get(k) || 0);
-  if (n >= MAX_DOMANDE_ORA) return false;
+  if (n >= (max || MAX_DOMANDE_ORA)) return false;
   cache.put(k, String(n + 1), 3700);
   return true;
 }
