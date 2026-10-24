@@ -21,6 +21,20 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  NO   ') + m); if (!c) err
   await p.evaluate(() => { document.getElementById('btnInstall').hidden = true; });
   const riga = await p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { cliente: r('#btnCliente').top, load: r('#btnLoad').top, alto: r('.top').height }; });
   ok(Math.abs(riga.cliente - riga.load) < 4 && riga.alto < 150, `intestazione su due righe: Cliente e carica PDF sulla stessa riga (altezza ${Math.round(riga.alto)} px)`);
+  // vicino all'inizio (si e' scesi di poco) l'intestazione non deve coprire la riga dei numeri
+  for (const y of [15, 40, 70]) {
+    await p.evaluate(y => window.scrollTo(0, y), y); await pausa(450);
+    const s = await p.evaluate(() => ({ testa: document.querySelector('.top').getBoundingClientRect().bottom, numeri: document.querySelector('.kpis').getBoundingClientRect().top }));
+    ok(s.numeri >= s.testa - 1, `sceso di ${y} px: la riga dei numeri non finisce sotto l'intestazione (intestazione fino a ${Math.round(s.testa)}, numeri da ${Math.round(s.numeri)})`);
+  }
+  await p.evaluate(() => window.scrollTo(0, 400)); await pausa(450);
+  for (const y of [60, 30]) {   // piu' giu' la riga dei numeri passa sotto la sola ricerca agganciata, come sotto ogni barra fissa
+    await p.evaluate(y => window.scrollTo(0, y), y); await pausa(450);
+    const s = await p.evaluate(() => ({ testa: document.querySelector('.top').getBoundingClientRect().bottom, numeri: document.querySelector('.kpis').getBoundingClientRect().top }));
+    ok(s.numeri >= s.testa - 1, `risalendo a ${y} px: la riga dei numeri resta visibile (intestazione fino a ${Math.round(s.testa)}, numeri da ${Math.round(s.numeri)})`);
+  }
+  await p.evaluate(() => window.scrollTo(0, 0)); await pausa(450);
+  ok(await p.evaluate(() => { const b = document.querySelector('.top .brand'); return getComputedStyle(b).opacity === '1' && b.getBoundingClientRect().top >= 0; }), "in cima alla pagina l'intestazione si vede tutta");
   const pos = () => p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { brand: r('.top .brand').bottom, search: r('.top .search').top, load: r('#btnLoad').bottom }; });
   const scorri = async y => { await p.evaluate(y => window.scrollTo(0, y), y); await pausa(450); };
   for (const y of [200, 600, 1200]) await scorri(y);

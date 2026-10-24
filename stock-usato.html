@@ -468,7 +468,7 @@ html.locked,html.locked body{overflow:hidden}
   /* scorrendo in giu' resta agganciata solo la ricerca (classe "ridotta", vedi ui.js); scorrendo in su torna tutta l'intestazione */
   .top{grid-template-columns:minmax(0,1fr) auto auto;gap:10px;padding:10px;border-radius:24px;top:calc(env(safe-area-inset-top,0px) + 6px);transition:top .25s ease}
   .top.ridotta{top:calc(env(safe-area-inset-top,0px) - var(--nascondi,58px))}
-  .top>*{transition:opacity .2s} .top.ridotta>:not(.search){opacity:0;pointer-events:none}
+  .top>*{transition:opacity .2s} .top.compatta>:not(.search){opacity:0;pointer-events:none}
   .brand{height:44px;gap:10px}
   .brand>div:last-child{min-width:0}
   .mark{width:36px;height:36px;border-radius:11px}
@@ -2588,22 +2588,25 @@ function montaValutatore(el, opz) {
     if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); const q = $('q'); q.focus(); q.select(); }
   });
 
-  // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta
+  // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta.
+  // Vicino all'inizio della pagina l'intestazione scorre con il resto ("ridotta" senza "compatta"): cosi' non copre la riga dei numeri.
   (() => {
     const top = document.querySelector('.top'), mq = matchMedia('(max-width:980px)');
     const misura = () => top.style.setProperty('--nascondi', Math.max(0, top.querySelector('.search').offsetTop - 8) + 'px');
+    const stato = (ridotta, compatta) => { top.classList.toggle('ridotta', ridotta); top.classList.toggle('compatta', compatta); };
     let ultimoY = scrollY;
-    addEventListener('scroll', () => {
-      if (!mq.matches) { top.classList.remove('ridotta'); return; }
-      const y = scrollY;
-      if (y < 80) top.classList.remove('ridotta');
-      else if (y > ultimoY + 6) { misura(); top.classList.add('ridotta'); }
-      else if (y < ultimoY - 6) top.classList.remove('ridotta');
+    const aggiorna = () => {
+      if (!mq.matches) { stato(false, false); return; }
+      const k = $('kpis'), y = scrollY, alto = k && k.offsetParent ? k.offsetTop : top.offsetHeight;   // dove inizia la riga dei numeri (non cambia scorrendo)
+      if (y <= alto) stato(true, false);
+      else if (y > ultimoY + 6) { misura(); stato(true, true); }
+      else if (y < ultimoY - 6) stato(false, false);
       else return;
       ultimoY = y;
-    }, { passive: true });
-    addEventListener('resize', misura);
-    misura();
+    };
+    addEventListener('scroll', aggiorna, { passive: true });
+    addEventListener('resize', () => { misura(); aggiorna(); });
+    misura(); aggiorna();
   })();
 })();
 

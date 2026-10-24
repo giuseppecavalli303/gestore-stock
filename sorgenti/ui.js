@@ -1101,21 +1101,24 @@
     if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); const q = $('q'); q.focus(); q.select(); }
   });
 
-  // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta
+  // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta.
+  // Vicino all'inizio della pagina l'intestazione scorre con il resto ("ridotta" senza "compatta"): cosi' non copre la riga dei numeri.
   (() => {
     const top = document.querySelector('.top'), mq = matchMedia('(max-width:980px)');
     const misura = () => top.style.setProperty('--nascondi', Math.max(0, top.querySelector('.search').offsetTop - 8) + 'px');
+    const stato = (ridotta, compatta) => { top.classList.toggle('ridotta', ridotta); top.classList.toggle('compatta', compatta); };
     let ultimoY = scrollY;
-    addEventListener('scroll', () => {
-      if (!mq.matches) { top.classList.remove('ridotta'); return; }
-      const y = scrollY;
-      if (y < 80) top.classList.remove('ridotta');
-      else if (y > ultimoY + 6) { misura(); top.classList.add('ridotta'); }
-      else if (y < ultimoY - 6) top.classList.remove('ridotta');
+    const aggiorna = () => {
+      if (!mq.matches) { stato(false, false); return; }
+      const k = $('kpis'), y = scrollY, alto = k && k.offsetParent ? k.offsetTop : top.offsetHeight;   // dove inizia la riga dei numeri (non cambia scorrendo)
+      if (y <= alto) stato(true, false);
+      else if (y > ultimoY + 6) { misura(); stato(true, true); }
+      else if (y < ultimoY - 6) stato(false, false);
       else return;
       ultimoY = y;
-    }, { passive: true });
-    addEventListener('resize', misura);
-    misura();
+    };
+    addEventListener('scroll', aggiorna, { passive: true });
+    addEventListener('resize', () => { misura(); aggiorna(); });
+    misura(); aggiorna();
   })();
 })();
