@@ -36,23 +36,37 @@ function LeggiStato { if (Test-Path $statoF) { try { return Get-Content $statoF 
 function SegnaStato($chiave, $valore) { $s = LeggiStato; $s | Add-Member -NotePropertyName $chiave -NotePropertyValue $valore -Force; $s | ConvertTo-Json | Set-Content $statoF -Encoding UTF8 }
 function GiaFatto($chiave) { $s = LeggiStato; return ($s.$chiave -eq $oggi) }
 
+# coda delle mail: ogni mail resta nel file finche' non e' partita; se Outlook fallisce si riprova al giro dopo (al massimo 5 volte).
+# Stessa regola dell'agente online (agente/coda-posta.js). Prova automatica: agente/prova-coda.ps1 (lanciata da npm test).
+$CodaPosta = Join-Path $PSScriptRoot 'posta-da-inviare.json'
+function SalvaCoda($resto) {
+    if ($resto.Count) { [IO.File]::WriteAllText($CodaPosta, (ConvertTo-Json -InputObject @($resto) -Depth 6), (New-Object System.Text.UTF8Encoding $false)) }
+    elseif (Test-Path $CodaPosta) { Remove-Item $CodaPosta -Force }
+}
 function InviaPosta {
-    $f = Join-Path $PSScriptRoot 'posta-da-inviare.json'
+    $f = $CodaPosta
     if (-not (Test-Path $f)) { return }
     $lista = @()
     # in PowerShell 5.1 ConvertFrom-Json in una pipeline consegna l'elenco intero come un solo oggetto: lo converto a parte e poi lo scorro
     try { $dati = ConvertFrom-Json (Get-Content $f -Raw -Encoding UTF8); foreach ($x in $dati) { $lista += $x } } catch { Scrivi "Coda mail illeggibile, la scarto." }
-    Remove-Item $f -Force
-    foreach ($m in $lista) {
-        if (-not $m -or -not $m.to) { continue }                     # coda vuota o mail senza destinatario: niente da spedire
-        if ($NonInviare) { Scrivi "Prova, non inviata a $($m.to): $($m.subject)"; continue }
+    $resto = New-Object System.Collections.ArrayList
+    foreach ($x in $lista) { if ($x -and $x.to) { [void]$resto.Add($x) } }    # coda vuota o mail senza destinatario: niente da spedire
+    foreach ($m in @($resto)) {
+        if ($NonInviare) { Scrivi "Prova, non inviata a $($m.to): $($m.subject)"; [void]$resto.Remove($m); SalvaCoda $resto; continue }
         try {
             $it = $outlook.CreateItem(0)
             $it.To = $m.to; $it.Subject = $m.subject; $it.HTMLBody = $m.html
             foreach ($a in @($m.allegati)) { if ($a -and (Test-Path $a)) { [void]$it.Attachments.Add([string]$a) } }
             $it.Send()
             Scrivi "Mail inviata a $($m.to): $($m.subject)"
-        } catch { Scrivi "Mail non inviata a $($m.to): $($_.Exception.Message)" }
+            [void]$resto.Remove($m)
+        } catch {
+            $n = 1 + [int]$m.tentativi
+            $m | Add-Member -NotePropertyName tentativi -NotePropertyValue $n -Force
+            if ($n -ge 5) { [void]$resto.Remove($m); Scrivi "Mail NON inviata a $($m.to) dopo 5 tentativi, la abbandono: $($m.subject) ($($_.Exception.Message))" }
+            else { Scrivi "Mail non inviata a $($m.to) (tentativo $n di 5, la riprovo al prossimo giro): $($_.Exception.Message)" }
+        }
+        SalvaCoda $resto
     }
 }
 

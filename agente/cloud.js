@@ -8,6 +8,7 @@ const fs = require('fs'), path = require('path'), { execFileSync } = require('ch
 const { ImapFlow } = require('imapflow');
 const nodemailer = require('nodemailer');
 const MailComposer = require('nodemailer/lib/mail-composer');
+const { svuotaCoda } = require('./coda-posta.js');
 
 const root = path.join(__dirname, '..');
 const qui = f => path.join(__dirname, f);
@@ -117,33 +118,26 @@ async function cartellaInviata() {
   return c && c.path;
 }
 
+// la coda si svuota solo delle mail partite davvero: le altre si riprovano al giro dopo (agente/coda-posta.js)
 async function inviaPosta() {
-  const f = qui('posta-da-inviare.json');
-  if (!fs.existsSync(f)) return;
-  let lista = leggi(f, []);
-  fs.rmSync(f, { force: true });
-  if (!Array.isArray(lista)) lista = [lista];
   const da = `"${MAIL.nome}" <${MAIL.user}>`;
   let smtp = null, inviata;
-  for (const m of lista) {
-    if (!m || !m.to) continue;
+  await svuotaCoda(qui('posta-da-inviare.json'), async m => {
     if (PROVA) {
       const reg = leggi(qui('prova-posta.json'), []);
       reg.push({ quando: `${T.giorno} ${T.ora}:${T.minuti}`, a: m.to, oggetto: m.subject, allegati: (m.allegati || []).map(a => path.basename(a)) });
       fs.writeFileSync(qui('prova-posta.json'), JSON.stringify(reg.slice(-400), null, 1));
       scrivi(`Non inviata (prova) a ${m.to}: ${m.subject}`);
-      continue;
+      return;
     }
-    try {
-      if (!smtp) smtp = nodemailer.createTransport({ ...MAIL.smtp, auth: { user: MAIL.user, pass: MAIL.pass } });
-      const allegati = (m.allegati || []).map(p => (path.isAbsolute(p) ? p : path.join(root, p))).filter(p => fs.existsSync(p)).map(p => ({ filename: path.basename(p), path: p }));
-      const grezzo = await new MailComposer({ from: da, to: m.to, subject: m.subject, html: m.html, attachments: allegati }).compile().build();
-      await smtp.sendMail({ envelope: { from: MAIL.user, to: m.to }, raw: grezzo });
-      scrivi(`Mail inviata a ${m.to}: ${m.subject}`);
-      // copia nella Posta inviata, come faceva Outlook
-      try { if (inviata === undefined) inviata = await cartellaInviata(); if (inviata) await imap.append(inviata, grezzo, ['\\Seen']); } catch (e) {}
-    } catch (e) { scrivi(`Mail non inviata a ${m.to}: ${e.message}`); }
-  }
+    if (!smtp) smtp = nodemailer.createTransport({ ...MAIL.smtp, auth: { user: MAIL.user, pass: MAIL.pass } });
+    const allegati = (m.allegati || []).map(p => (path.isAbsolute(p) ? p : path.join(root, p))).filter(p => fs.existsSync(p)).map(p => ({ filename: path.basename(p), path: p }));
+    const grezzo = await new MailComposer({ from: da, to: m.to, subject: m.subject, html: m.html, attachments: allegati }).compile().build();
+    await smtp.sendMail({ envelope: { from: MAIL.user, to: m.to }, raw: grezzo });
+    scrivi(`Mail inviata a ${m.to}: ${m.subject}`);
+    // copia nella Posta inviata, come faceva Outlook
+    try { if (inviata === undefined) inviata = await cartellaInviata(); if (inviata) await imap.append(inviata, grezzo, ['\\Seen']); } catch (e) {}
+  }, scrivi);
 }
 
 /* ---------- giro dell'agente ---------- */

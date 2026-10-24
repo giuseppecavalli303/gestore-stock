@@ -180,6 +180,25 @@ async function leggi(file) {
     ok(qv.chips.includes('Tetto apribile confermato') && matchQuery(apribile, qv) && !matchQuery(panorama, qv), 'tetto: anche "tetto panoramico" vale solo se fotografato aperto (il resto si ignora)');
     ok(!matchQuery(auto('Tetto apribile anteriore di vetro', 'no'), qa) && !matchQuery(auto('Tetto apribile anteriore di vetro', null), qa), 'tetto: senza conferma dalle foto non compare');
   }
+  // coda delle mail: una mail resta in coda finche' non parte; se fallisce si riprova al giro dopo (al massimo 5 volte)
+  {
+    const { svuotaCoda } = require('./coda-posta.js');
+    const os = require('os'), fc = path.join(os.tmpdir(), 'prova-coda-posta.json'), log = [];
+    fs.writeFileSync(fc, JSON.stringify([{ to: 'a@x.it', subject: 'uno' }, { to: 'rotta@x.it', subject: 'due' }, { to: 'c@x.it', subject: 'tre' }]));
+    const invia = async m => { if (/rotta/.test(m.to)) throw new Error('SMTP giu'); };
+    const e1 = await svuotaCoda(fc, invia, t => log.push(t));
+    const resto = JSON.parse(fs.readFileSync(fc, 'utf8'));
+    ok(e1.inviate === 2 && resto.length === 1 && resto[0].to === 'rotta@x.it' && resto[0].tentativi === 1, `coda mail: quella non partita resta in coda per il giro dopo (${JSON.stringify(e1)})`);
+    for (let i = 0; i < 4; i++) await svuotaCoda(fc, invia, t => log.push(t));
+    ok(!fs.existsSync(fc) && log.some(t => /abbandono/.test(t)), 'coda mail: dopo 5 tentativi la abbandona e lo scrive nel registro');
+    fs.writeFileSync(fc, JSON.stringify([{ to: 'rotta@x.it', subject: 'x', tentativi: 1 }]));
+    const e2 = await svuotaCoda(fc, async () => {}, () => {});
+    ok(e2.inviate === 1 && !fs.existsSync(fc), 'coda mail: al giro dopo parte e la coda si svuota');
+    if (process.platform === 'win32') {
+      const r = require('child_process').spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'prova-coda.ps1')], { encoding: 'utf8' });
+      ok(r.status === 0 && /TUTTO OK/.test(r.stdout), `coda mail del PC (Outlook): stessa regola ${(r.stdout + r.stderr).trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
   //__VALUTATORE__
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
   process.exit(errori ? 1 : 0);
