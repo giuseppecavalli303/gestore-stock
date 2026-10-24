@@ -1,10 +1,10 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f1011"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Stock Usato"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" href="icone/icona-192.png"><link rel="apple-touch-icon" href="icone/apple-touch-icon.png"></head><body><title>Stock Usato</title>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#182236"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Stock Usato"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" href="icone/icona-192.png"><link rel="apple-touch-icon" href="icone/apple-touch-icon.png"></head><body><title>Stock Usato</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap">
 <style>
 /* Stile "Linear" (scelto da Giuseppe il 24/10/2026): superfici piene, bordi sottili, poche scatole, gerarchia fatta col testo,
-   colore solo come segnale: grafite neutro, indaco per le azioni (versione 3 dell'anteprima). */
+   colore solo come segnale, indaco per le azioni (versione 3 dell'anteprima); tema scuro in blu ardesia (scelto il 24/10). */
 :root{
   --bg:#f7f8f8; --solid:#ffffff; --glass:#ffffff; --glass-hi:#ffffff; --raised:#eef0f2;
   --edge:rgba(0,0,0,.09); --edge-hi:rgba(0,0,0,.18); --hair:rgba(0,0,0,.06); --spec:transparent;
@@ -22,10 +22,10 @@
   --r-lg:10px; --r-md:10px; --r-sm:6px;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#08090a; --solid:#0f1011; --glass:#0f1011; --glass-hi:#0f1011; --raised:#1c1d21;
-  --edge:rgba(255,255,255,.08); --edge-hi:rgba(255,255,255,.16); --hair:rgba(255,255,255,.06); --spec:transparent;
-  --field:rgba(255,255,255,.04); --menu:#16171a; --hover:rgba(255,255,255,.05); --mute-soft:rgba(255,255,255,.04);
-  --ink:#f7f8f8; --ink2:#b4b8bf; --ink3:#8a8f98;
+  --bg:#121a2b; --solid:#182236; --glass:#182236; --glass-hi:#182236; --raised:#222d46;
+  --edge:rgba(170,190,230,.13); --edge-hi:rgba(170,190,230,.24); --hair:rgba(170,190,230,.08); --spec:transparent;
+  --field:rgba(190,210,245,.06); --menu:#222d46; --hover:rgba(190,210,245,.08); --mute-soft:rgba(190,210,245,.06);
+  --ink:#f2f5fb; --ink2:#c0cadb; --ink3:#97a4bb;
   --brand:#5e6ad2; --accent:#828fff; --accent-ink:#ffffff; --accent-soft:rgba(94,106,210,.18);
   --ok:#4cb782; --ok-soft:rgba(76,183,130,.12); --warn:#f0bf00; --warn-soft:rgba(240,191,0,.12);
   --bad:#eb5757; --bad-soft:rgba(235,87,87,.12); --info:#9b8afb; --info-soft:rgba(155,138,251,.12);
@@ -34,10 +34,10 @@
   --s1:#828fff; --s2:#e07a3e;
   color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#08090a; --solid:#0f1011; --glass:#0f1011; --glass-hi:#0f1011; --raised:#1c1d21;
-  --edge:rgba(255,255,255,.08); --edge-hi:rgba(255,255,255,.16); --hair:rgba(255,255,255,.06); --spec:transparent;
-  --field:rgba(255,255,255,.04); --menu:#16171a; --hover:rgba(255,255,255,.05); --mute-soft:rgba(255,255,255,.04);
-  --ink:#f7f8f8; --ink2:#b4b8bf; --ink3:#8a8f98;
+  --bg:#121a2b; --solid:#182236; --glass:#182236; --glass-hi:#182236; --raised:#222d46;
+  --edge:rgba(170,190,230,.13); --edge-hi:rgba(170,190,230,.24); --hair:rgba(170,190,230,.08); --spec:transparent;
+  --field:rgba(190,210,245,.06); --menu:#222d46; --hover:rgba(190,210,245,.08); --mute-soft:rgba(190,210,245,.06);
+  --ink:#f2f5fb; --ink2:#c0cadb; --ink3:#97a4bb;
   --brand:#5e6ad2; --accent:#828fff; --accent-ink:#ffffff; --accent-soft:rgba(94,106,210,.18);
   --ok:#4cb782; --ok-soft:rgba(76,183,130,.12); --warn:#f0bf00; --warn-soft:rgba(240,191,0,.12);
   --bad:#eb5757; --bad-soft:rgba(235,87,87,.12); --info:#9b8afb; --info-soft:rgba(155,138,251,.12);

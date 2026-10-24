@@ -24,7 +24,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  NO   ') + m); if (!c) err
     await pausa(800);
     const t = await p.evaluate(() => ({ sky: !!document.querySelector('.sky'), font: getComputedStyle(document.body).fontFamily, bg: getComputedStyle(document.body).backgroundColor, kbd: (() => { const k = document.querySelector('.kbd-k'); return k ? getComputedStyle(k).display : 'manca'; })() }));
     ok(!t.sky && /Inter/.test(t.font), `${nome}: niente fondo animato, carattere Inter`);
-    ok(schema === 'dark' ? t.bg === 'rgb(8, 9, 10)' : t.bg === 'rgb(247, 248, 248)', `${nome}: fondo ${t.bg}`);
+    ok(schema === 'dark' ? t.bg === 'rgb(18, 26, 43)' : t.bg === 'rgb(247, 248, 248)', `${nome}: fondo ${t.bg}`);
     if (nome.startsWith('pc')) {
       ok(t.kbd !== 'none' && t.kbd !== 'manca', `${nome}: segnale "Ctrl K" nella ricerca`);
       await p.keyboard.down('Control'); await p.keyboard.press('KeyK'); await p.keyboard.up('Control');
