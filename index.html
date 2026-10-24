@@ -1,54 +1,49 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a5cf5"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Stock Usato"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" href="icone/icona-192.png"><link rel="apple-touch-icon" href="icone/apple-touch-icon.png"></head><body><title>Stock Usato</title>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f1011"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Stock Usato"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" href="icone/icona-192.png"><link rel="apple-touch-icon" href="icone/apple-touch-icon.png"></head><body><title>Stock Usato</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap">
 <style>
-/* Layout: barra di vetro in alto con ricerca, riga KPI, filtri a sinistra e griglia di schede a destra; tutto galleggia su un fondo di luce diffusa */
+/* Stile "Linear" (scelto da Giuseppe il 24/10/2026): superfici piene, bordi sottili, poche scatole, gerarchia fatta col testo,
+   colore solo come segnale: grafite neutro, indaco per le azioni (versione 3 dell'anteprima). */
 :root{
-  --bg:#e6ecf4; --ink:#0c1a2b; --ink2:#44556a; --ink3:#73829a;
-  --glass:rgba(255,255,255,.46); --glass-hi:rgba(255,255,255,.74); --solid:rgba(255,255,255,.82);
-  --edge:rgba(255,255,255,.95); --hair:rgba(12,26,43,.09); --spec:rgba(255,255,255,.9);
-  --field:rgba(255,255,255,.6); --menu:#ffffff; --hover:rgba(12,26,43,.05);
-  --accent:#0a5cf5; --accent-ink:#ffffff; --accent-soft:rgba(10,92,245,.11);
-  --ok:#0b7f57; --ok-soft:rgba(11,127,87,.13); --warn:#a85f00; --warn-soft:rgba(214,138,0,.17);
-  --bad:#c2332a; --bad-soft:rgba(194,51,42,.12); --info:#5a45d6; --info-soft:rgba(90,69,214,.12); --mute-soft:rgba(12,26,43,.07);
-  --b1:#8fc2ff; --b2:#aef0dd; --b3:#ffd2ad; --b4:#cbbcff;
-  --shadow:0 18px 50px -18px rgba(22,44,88,.28), 0 2px 6px rgba(22,44,88,.06);
-  --shadow-sm:0 8px 24px -14px rgba(22,44,88,.3);
-  --plate:#fbfcfe; --plate-ink:#10151c; --plate-band:#0b46b8; --scrim:rgba(10,20,36,.34);
-  --s1:#2a78d6; --s2:#eb6834;
-  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
-  --f-body:"Onest","Segoe UI",system-ui,sans-serif;
+  --bg:#f7f8f8; --solid:#ffffff; --glass:#ffffff; --glass-hi:#ffffff; --raised:#eef0f2;
+  --edge:rgba(0,0,0,.09); --edge-hi:rgba(0,0,0,.18); --hair:rgba(0,0,0,.06); --spec:transparent;
+  --field:rgba(0,0,0,.03); --menu:#ffffff; --hover:rgba(0,0,0,.045); --mute-soft:rgba(0,0,0,.04);
+  --ink:#16171a; --ink2:#3c4049; --ink3:#6b6f76;
+  --brand:#5e6ad2; --accent:#4f5bc4; --accent-ink:#ffffff; --accent-soft:rgba(94,106,210,.11);
+  --ok:#1f8a5b; --ok-soft:rgba(31,138,91,.10); --warn:#a87400; --warn-soft:rgba(168,116,0,.10);
+  --bad:#c83a3a; --bad-soft:rgba(200,58,58,.10); --info:#6a55d6; --info-soft:rgba(106,85,214,.10);
+  --shadow:0 1px 2px rgba(0,0,0,.05); --shadow-sm:0 1px 2px rgba(0,0,0,.05); --scrim:rgba(0,0,0,.45);
+  --plate:#fbfcfe; --plate-ink:#10151c; --plate-band:#0b46b8;
+  --s1:#5e6ad2; --s2:#e0702e;
+  --f-display:"Inter","Segoe UI",system-ui,sans-serif;
+  --f-body:"Inter","Segoe UI",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
-  --r-lg:26px; --r-md:18px; --r-sm:12px;
+  --r-lg:10px; --r-md:10px; --r-sm:6px;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#060b13; --ink:#edf2f9; --ink2:#a8b5c8; --ink3:#72819a;
-  --glass:rgba(28,40,62,.44); --glass-hi:rgba(52,68,98,.5); --solid:rgba(22,31,48,.86);
-  --edge:rgba(255,255,255,.16); --hair:rgba(255,255,255,.08); --spec:rgba(255,255,255,.22);
-  --field:rgba(255,255,255,.07); --menu:#172236; --hover:rgba(255,255,255,.07);
-  --accent:#62a4ff; --accent-ink:#04101f; --accent-soft:rgba(98,164,255,.16);
-  --ok:#55d9a6; --ok-soft:rgba(85,217,166,.14); --warn:#f3b750; --warn-soft:rgba(243,183,80,.15);
-  --bad:#ff8077; --bad-soft:rgba(255,128,119,.15); --info:#ab9dff; --info-soft:rgba(171,157,255,.16); --mute-soft:rgba(255,255,255,.08);
-  --b1:#12408c; --b2:#0b5c57; --b3:#6a3210; --b4:#40288a;
-  --shadow:0 22px 60px -20px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.3);
-  --shadow-sm:0 10px 26px -14px rgba(0,0,0,.7);
-  --plate:#f3f5f9; --plate-ink:#10151c; --plate-band:#0b46b8; --scrim:rgba(0,0,0,.55);
-  --s1:#3987e5; --s2:#d95926;
+  --bg:#08090a; --solid:#0f1011; --glass:#0f1011; --glass-hi:#0f1011; --raised:#1c1d21;
+  --edge:rgba(255,255,255,.08); --edge-hi:rgba(255,255,255,.16); --hair:rgba(255,255,255,.06); --spec:transparent;
+  --field:rgba(255,255,255,.04); --menu:#16171a; --hover:rgba(255,255,255,.05); --mute-soft:rgba(255,255,255,.04);
+  --ink:#f7f8f8; --ink2:#b4b8bf; --ink3:#8a8f98;
+  --brand:#5e6ad2; --accent:#828fff; --accent-ink:#ffffff; --accent-soft:rgba(94,106,210,.18);
+  --ok:#4cb782; --ok-soft:rgba(76,183,130,.12); --warn:#f0bf00; --warn-soft:rgba(240,191,0,.12);
+  --bad:#eb5757; --bad-soft:rgba(235,87,87,.12); --info:#9b8afb; --info-soft:rgba(155,138,251,.12);
+  --shadow:none; --shadow-sm:none; --scrim:rgba(0,0,0,.62);
+  --plate:#f3f5f9; --plate-ink:#10151c; --plate-band:#0b46b8;
+  --s1:#828fff; --s2:#e07a3e;
   color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#060b13; --ink:#edf2f9; --ink2:#a8b5c8; --ink3:#72819a;
-  --glass:rgba(28,40,62,.44); --glass-hi:rgba(52,68,98,.5); --solid:rgba(22,31,48,.86);
-  --edge:rgba(255,255,255,.16); --hair:rgba(255,255,255,.08); --spec:rgba(255,255,255,.22);
-  --field:rgba(255,255,255,.07); --menu:#172236; --hover:rgba(255,255,255,.07);
-  --accent:#62a4ff; --accent-ink:#04101f; --accent-soft:rgba(98,164,255,.16);
-  --ok:#55d9a6; --ok-soft:rgba(85,217,166,.14); --warn:#f3b750; --warn-soft:rgba(243,183,80,.15);
-  --bad:#ff8077; --bad-soft:rgba(255,128,119,.15); --info:#ab9dff; --info-soft:rgba(171,157,255,.16); --mute-soft:rgba(255,255,255,.08);
-  --b1:#12408c; --b2:#0b5c57; --b3:#6a3210; --b4:#40288a;
-  --shadow:0 22px 60px -20px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.3);
-  --shadow-sm:0 10px 26px -14px rgba(0,0,0,.7);
-  --plate:#f3f5f9; --plate-ink:#10151c; --plate-band:#0b46b8; --scrim:rgba(0,0,0,.55);
-  --s1:#3987e5; --s2:#d95926;
+  --bg:#08090a; --solid:#0f1011; --glass:#0f1011; --glass-hi:#0f1011; --raised:#1c1d21;
+  --edge:rgba(255,255,255,.08); --edge-hi:rgba(255,255,255,.16); --hair:rgba(255,255,255,.06); --spec:transparent;
+  --field:rgba(255,255,255,.04); --menu:#16171a; --hover:rgba(255,255,255,.05); --mute-soft:rgba(255,255,255,.04);
+  --ink:#f7f8f8; --ink2:#b4b8bf; --ink3:#8a8f98;
+  --brand:#5e6ad2; --accent:#828fff; --accent-ink:#ffffff; --accent-soft:rgba(94,106,210,.18);
+  --ok:#4cb782; --ok-soft:rgba(76,183,130,.12); --warn:#f0bf00; --warn-soft:rgba(240,191,0,.12);
+  --bad:#eb5757; --bad-soft:rgba(235,87,87,.12); --info:#9b8afb; --info-soft:rgba(155,138,251,.12);
+  --shadow:none; --shadow-sm:none; --scrim:rgba(0,0,0,.62);
+  --plate:#f3f5f9; --plate-ink:#10151c; --plate-band:#0b46b8;
+  --s1:#828fff; --s2:#e07a3e;
   color-scheme:dark }
 
 *{box-sizing:border-box}
@@ -60,14 +55,6 @@ button{cursor:pointer;border:0;background:none;padding:0}
 h1,h2,h3,p{margin:0}
 .num{font-variant-numeric:tabular-nums}
 
-/* fondo di luce */
-.sky{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
-.sky i{position:absolute;border-radius:50%;filter:blur(80px);opacity:.85;animation:drift 38s ease-in-out infinite alternate}
-.sky i:nth-child(1){width:46vw;height:46vw;left:-10vw;top:-14vw;background:var(--b1)}
-.sky i:nth-child(2){width:38vw;height:38vw;right:-8vw;top:8vh;background:var(--b2);animation-duration:46s;animation-delay:-8s}
-.sky i:nth-child(3){width:34vw;height:34vw;left:22vw;bottom:-16vw;background:var(--b3);animation-duration:52s;animation-delay:-20s}
-.sky i:nth-child(4){width:30vw;height:30vw;right:10vw;bottom:-6vw;background:var(--b4);animation-duration:44s;animation-delay:-14s}
-@keyframes drift{to{transform:translate3d(6vw,5vh,0) scale(1.12)}}
 @media (prefers-reduced-motion:reduce){.sky i{animation:none}*{transition:none!important}}
 
 .glass{background:linear-gradient(140deg,var(--glass-hi),var(--glass));-webkit-backdrop-filter:blur(26px) saturate(175%);backdrop-filter:blur(26px) saturate(175%);border:1px solid var(--edge);box-shadow:var(--shadow),inset 0 1px 0 var(--spec),inset 0 -1px 0 var(--hair);border-radius:var(--r-lg)}
@@ -281,7 +268,7 @@ html.cliente .col-gg,html.cliente [data-tab="stat"]{display:none}
 .val-chips{display:flex;flex-wrap:wrap;gap:6px}
 .val-chip{background:var(--mute-soft);border:1px solid var(--hair);border-radius:999px;padding:4px 10px;font-size:12.5px;color:var(--ink)}
 .val-chip.manca{border-style:dashed;color:var(--warn)}
-.val-lab{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.val-lab{font-size:12px;letter-spacing:0;text-transform:none;color:var(--ink3);font-weight:500}
 .val-big{background:var(--accent-soft);border:1px solid var(--hair);border-radius:var(--r-md);padding:14px;text-align:center}
 .val-valore{font-size:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:2px 0}
 .val-fonti{font-size:12.5px;color:var(--ink2)}
@@ -545,9 +532,112 @@ html.locked,html.locked body{overflow:hidden}
   .bar .tools{grid-template-columns:auto minmax(0,1fr)}
   .bar .tools .seg{display:none}
 }
+
+/* ---------- stile Linear: ultimo strato, vale sopra le regole precedenti ---------- */
+body{font-size:13.5px;letter-spacing:-.006em}
+.glass,.top,.card,.drawer,.filters,.lista-bar{background:var(--solid);-webkit-backdrop-filter:none;backdrop-filter:none;border:1px solid var(--edge);box-shadow:var(--shadow)}
+.top{border-radius:10px;padding:10px 12px}
+.mark{width:28px;height:28px;border-radius:6px;background:var(--brand);color:#fff;box-shadow:none}
+.mark svg{width:16px;height:16px}
+.brand h1{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.brand small{font-size:12px;color:var(--ink3)}
+
+/* ricerca: campo semplice; sul PC Ctrl+K la apre da qualsiasi punto */
+.search input{height:36px;border-radius:6px;background:var(--field);border:1px solid var(--edge);box-shadow:none;font-size:13.5px}
+.search input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--accent-soft)}
+.kbd-k{position:absolute;right:10px;top:50%;transform:translateY(-50%);font:500 11px/1 var(--f-body);color:var(--ink3);border:1px solid var(--edge);border-radius:4px;padding:3px 5px;pointer-events:none}
+.search:focus-within .kbd-k,.search:has(#qClear:not([hidden])) .kbd-k{display:none}
+@media (max-width:980px),(pointer:coarse){ .kbd-k{display:none} }
+
+/* tasti: bassi, angoli piccoli, un solo colore per l'azione principale */
+.btn{height:32px;border-radius:6px;padding:0 12px;font-size:13px;font-weight:500;box-shadow:none;gap:6px}
+.btn-primary{background:var(--brand);color:#fff;border:0;box-shadow:none}
+.btn-primary:hover{filter:brightness(1.12)}
+.btn-ghost{background:transparent;border:1px solid var(--edge);color:var(--ink)}
+.btn-ghost:hover{background:var(--hover)}
+#btnCliente[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+
+/* numeri in alto: una fascia unica divisa da linee sottili */
+.kpis{gap:0;border:1px solid var(--edge);border-radius:10px;background:var(--solid);overflow:hidden}
+.kpi,.kpi.glass{background:transparent;border:0;border-right:1px solid var(--hair);border-radius:0;padding:12px 16px;box-shadow:none}
+.kpi:hover{background:var(--hover);transform:none}
+.kpi[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--hair);box-shadow:none}
+.kpi .v{font-size:22px;font-weight:600;letter-spacing:-.02em}
+.kpi .l{font-size:12px;color:var(--ink3)}
+.kpi .dot{width:6px;height:6px}
+
+/* etichette di sezione: frase normale, non maiuscolo spaziato */
+.strip .lab,.drawer h4{font-size:12px;letter-spacing:0;text-transform:none;font-weight:500;color:var(--ink3)}
+.chip{min-height:28px;padding:2px 10px;border-radius:6px;background:transparent;border:1px solid var(--edge);font-size:12.5px;font-weight:500;color:var(--ink2)}
+.chip:hover{background:var(--hover);color:var(--ink)}
+.chip .n{color:var(--ink3);font-size:12px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip[aria-pressed="true"] .n{color:var(--ink2);opacity:1}
+.chip.x{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
+.seg{background:transparent;border:1px solid var(--edge);border-radius:8px;padding:2px}
+.seg button{height:28px;border-radius:6px;font-size:12.5px;font-weight:500;color:var(--ink3)}
+.seg button[aria-pressed="true"]{background:var(--raised);color:var(--ink);box-shadow:none}
+.sel{height:32px;border-radius:6px;background:var(--field);border:1px solid var(--edge);font-size:13px}
+
+/* schede auto: foto, poi testo; niente riquadri dentro la scheda */
+.grid{gap:12px}
+.card{--cp:14px;border-radius:10px;gap:8px}
+.card:hover{transform:none;border-color:var(--edge-hi);box-shadow:var(--shadow)}
+.card .ph{border-radius:9px 9px 0 0}
+.card h3{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card h3 span{color:var(--ink2);font-weight:500}
+.card .mod{font-size:12.5px;color:var(--ink3);min-height:0}
+.specs{gap:8px 12px;border-top:1px solid var(--hair);padding:10px 0 4px}
+.specs div{background:none;padding:0}
+.specs b{font-size:13px;font-weight:500;color:var(--ink)}
+.specs span{font-size:11.5px;text-transform:none;letter-spacing:0;color:var(--ink3)}
+.price{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.age{font-size:12px;font-weight:500;color:var(--ink3)}
+
+/* stato: pallino colorato e testo neutro */
+.pill,.s-free,.s-booked,.s-7,.s-6,.s-4,.s-9{background:none;padding:0;font-size:12.5px;font-weight:500;color:var(--ink2);gap:6px;border-radius:0}
+.pill::before{width:8px;height:8px}
+.s-free::before{background:var(--ok)} .s-booked::before{background:var(--warn)} .s-7::before{background:var(--info)} .s-6::before{background:var(--bad)} .s-4::before,.s-9::before{background:var(--ink3)}
+.pill.km0{background:#f0bf00;color:#111;padding:1px 6px;border-radius:4px;font-weight:600;font-size:11.5px}
+.pill.km0::before{display:none}
+.tag,.tag.as,.tag.new{background:transparent;border:1px solid var(--edge);color:var(--ink3);font-size:11px;font-weight:500;border-radius:4px;padding:1px 6px}
+.tag.new{color:var(--ok)}
+
+/* bollini sulla foto: piccoli e netti */
+.bollo-km0{left:8px;bottom:8px;font:600 11.5px/1.2 var(--f-body);letter-spacing:0;padding:3px 7px;border-radius:4px;background:#f0bf00;color:#111;box-shadow:none}
+.card .nfoto{border-radius:4px;font-size:11px;font-weight:500;padding:2px 6px;background:rgba(0,0,0,.6);right:8px;bottom:8px}
+.stella{width:30px;height:30px;top:8px;left:8px;background:rgba(0,0,0,.5);-webkit-backdrop-filter:none;backdrop-filter:none}
+.stella svg{width:15px;height:15px}
+
+/* scheda dell'auto: elenco con linee sottili invece di riquadri */
+.drawer{border-radius:12px}
+.drawer header h2{font-size:20px;font-weight:600;letter-spacing:-.015em}
+.dl{gap:0 20px}
+.dl div{background:none;border-radius:0;padding:8px 0;border-bottom:1px solid var(--hair)}
+.dl dt{font-size:12px;color:var(--ink3)}
+.dl dd{font-weight:500;font-size:13.5px}
+.bigprice .price{font-size:26px}
+.cand li,.fin{background:var(--field);border:1px solid var(--hair);border-radius:8px}
+.val-big{background:var(--solid);border:1px solid var(--edge)}
+.val-valore{font-weight:600;letter-spacing:-.02em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:6px}
+@media (min-width:981px){ #btnLoad,#btnInstall{justify-self:start;width:auto} }
+
+/* telefono: testo un po' piu' grande per la lettura in mano, tasti alti 40 */
+@media (max-width:980px){
+  body{font-size:15px}
+  .btn{height:40px}
+  .search input{height:40px;font-size:15px}
+  .kpis{margin-inline:0;padding:0;align-items:flex-start;gap:0}
+  .kpi,.kpi.glass{flex:0 0 118px;min-height:0;height:auto;padding:10px 12px;box-shadow:none}
+  .kpi .v{font-size:20px}
+  .card h3{font-size:16.5px}
+  .specs b{font-size:14.5px}
+  .bar .tools{background:var(--solid);-webkit-backdrop-filter:none;backdrop-filter:none;border:1px solid var(--edge);border-radius:12px;box-shadow:0 12px 32px -12px rgba(0,0,0,.6)}
+  .filters-btn{background:var(--brand);color:#fff;border-radius:6px;height:40px}
+}
 </style>
 
-<div class="sky" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <div class="barra-stato" aria-hidden="true"></div>
 
 <div class="app" id="app">
@@ -560,6 +650,7 @@ html.locked,html.locked body{overflow:hidden}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Cerca o chiedi: golf diesel automatica sotto 25.000 libera, oppure: cliente con 18 mila e due figli?" aria-label="Ricerca intelligente">
       <button class="clear" id="qClear" hidden aria-label="Cancella ricerca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <kbd class="kbd-k" aria-hidden="true">Ctrl K</kbd>
     </div>
     <button class="btn btn-ghost" id="btnCliente" aria-pressed="false" title="Modalità cliente: nasconde da quanto tempo le auto sono in stock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.9-3.6 3.9-5.6 7.5-5.6s6.6 2 7.5 5.6"/></svg><span>Cliente</span></button>
     <button class="btn btn-ghost" id="btnInstall" hidden>Installa app</button>
@@ -2491,6 +2582,11 @@ function montaValutatore(el, opz) {
       setData(shared, prev);
     } catch (e) { /* nessuno stock condiviso qui: restano i dati locali */ }
   })();
+
+  // PC: Ctrl+K (Cmd+K sul Mac) porta nella ricerca da qualsiasi punto, come nelle app professionali
+  addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); const q = $('q'); q.focus(); q.select(); }
+  });
 
   // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta
   (() => {

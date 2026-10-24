@@ -9,25 +9,25 @@
 <link rel="icon" type="image/png" href="icone/icona-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Onest:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* Pagina per il cliente: preventivo (#p=...) o lista di auto (#l=TARGA,TARGA). Solo dati da dare al cliente. */
-:root{--bg:#f3f5f9;--card:#fff;--ink:#0c1a2b;--ink2:#4a5a70;--ink3:#7a889c;--line:#e3e8ef;--accent:#0a5cf5;--navy:#0a2a5c;--ok:#0b7a55;--soft:#eef3fb}
+:root{--bg:#f3f5f9;--card:#fff;--ink:#0c1a2b;--ink2:#4a5a70;--ink3:#7a889c;--line:#e3e8ef;--accent:#5e6ad2;--navy:#0f1011;--ok:#0b7a55;--soft:#f3f4f6}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Onest,"Segoe UI",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,"Segoe UI",system-ui,sans-serif;-webkit-text-size-adjust:100%}
 a{color:var(--accent)}
 .wrap{max-width:980px;margin:0 auto;padding:0 16px 40px}
 header.top{background:var(--navy);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 16px) 0 18px}
 header.top .wrap{padding-bottom:0;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.marca{font-family:"Bricolage Grotesque","Segoe UI",sans-serif;font-weight:700;font-size:22px;letter-spacing:-.02em;line-height:1.1}
-.marca small{display:block;font:500 13px Onest,sans-serif;color:#b8c7e0;letter-spacing:0;margin-top:2px}
+.marca{font-family:"Inter","Segoe UI",sans-serif;font-weight:700;font-size:22px;letter-spacing:-.02em;line-height:1.1}
+.marca small{display:block;font:500 13px Inter,sans-serif;color:#b8c7e0;letter-spacing:0;margin-top:2px}
 .quando{font-size:13px;color:#b8c7e0}
-h1,h2{font-family:"Bricolage Grotesque","Segoe UI",sans-serif;letter-spacing:-.02em;line-height:1.15;margin:0}
+h1,h2{font-family:"Inter","Segoe UI",sans-serif;letter-spacing:-.02em;line-height:1.15;margin:0}
 h1{font-size:30px} h2{font-size:21px}
 .sub{color:var(--ink2);margin:4px 0 0}
-.bollo-km0{position:absolute;left:10px;top:10px;z-index:2;font-style:normal;font-weight:800;font-size:13px;padding:4px 11px;border-radius:999px;background:#ffd23f;color:#14181f;box-shadow:0 4px 14px -4px rgba(0,0,0,.45)}
-.auto{position:relative} .k0{display:inline-block;margin-left:8px;vertical-align:middle;font-size:13px;font-weight:800;padding:3px 10px;border-radius:999px;background:#ffd23f;color:#14181f}
-.box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
+.bollo-km0{position:absolute;left:10px;top:10px;z-index:2;font-style:normal;font-weight:600;font-size:12.5px;padding:3px 8px;border-radius:4px;background:#f0bf00;color:#14181f;box-shadow:0 4px 14px -4px rgba(0,0,0,.45)}
+.auto{position:relative} .k0{display:inline-block;margin-left:8px;vertical-align:middle;font-size:13px;font-weight:600;padding:2px 8px;border-radius:4px;background:#f0bf00;color:#14181f}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
 .gal{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:16px -16px 0;padding:0 16px;scrollbar-width:none}
 .gal img{flex:0 0 86%;max-width:620px;aspect-ratio:4/3;object-fit:cover;border-radius:16px;scroll-snap-align:center;background:#dde3ec}
 .galwrap{position:relative}
@@ -38,17 +38,17 @@ h1{font-size:30px} h2{font-size:21px}
 .dati{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:14px}
 .dati div{background:var(--soft);border-radius:12px;padding:9px 12px}
 .dati dt{font-size:11.5px;color:var(--ink3)} .dati dd{margin:0;font-weight:600}
-.prezzo{font-family:"Bricolage Grotesque",sans-serif;font-size:30px;font-weight:700;margin-top:14px}
-.prezzo small{font:500 13px Onest,sans-serif;color:var(--ink2);margin-left:6px}
+.prezzo{font-family:Inter,sans-serif;font-size:30px;font-weight:600;letter-spacing:-.02em;margin-top:14px}
+.prezzo small{font:500 13px Inter,sans-serif;color:var(--ink2);margin-left:6px}
 .rata{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:6px}
-.rata b{font-family:"Bricolage Grotesque",sans-serif;font-size:40px;letter-spacing:-.02em;color:var(--navy)}
+.rata b{font-family:Inter,sans-serif;font-size:38px;font-weight:600;letter-spacing:-.02em;color:var(--navy)}
 .rata span{color:var(--ink2)}
 .voci{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
 .voci td{padding:8px 0;border-bottom:1px solid var(--line)} .voci td:last-child{text-align:right;font-weight:600}
 .serv{margin:10px 0 0;padding-left:18px;color:var(--ink2)}
 .nota{font-size:12px;color:var(--ink3);margin-top:12px;line-height:1.5}
 .azioni{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
-.btn{display:inline-flex;align-items:center;justify-content:center;height:46px;padding:0 20px;border-radius:999px;font:600 15px Onest,sans-serif;text-decoration:none;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border-radius:8px;font:500 15px Inter,sans-serif;text-decoration:none;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 .auto{display:grid;grid-template-columns:minmax(0,1fr);gap:0;padding:0;overflow:hidden}
 .auto img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#dde3ec}

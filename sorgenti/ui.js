@@ -1096,6 +1096,11 @@
     } catch (e) { /* nessuno stock condiviso qui: restano i dati locali */ }
   })();
 
+  // PC: Ctrl+K (Cmd+K sul Mac) porta nella ricerca da qualsiasi punto, come nelle app professionali
+  addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); const q = $('q'); q.focus(); q.select(); }
+  });
+
   // telefono: scorrendo in giu' resta agganciata solo la ricerca, scorrendo un po' in su torna tutta l'intestazione e ci resta
   (() => {
     const top = document.querySelector('.top'), mq = matchMedia('(max-width:980px)');

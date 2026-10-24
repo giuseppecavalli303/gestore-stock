@@ -11,7 +11,7 @@ fs.writeFileSync(path.join(root, 'stock-usato.html'), page);
 const testa = [
   '<meta charset="utf-8">',
   '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">',
-  '<meta name="theme-color" content="#0a5cf5">',
+  '<meta name="theme-color" content="#0f1011">',
   '<meta name="apple-mobile-web-app-capable" content="yes">',
   '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
   '<meta name="apple-mobile-web-app-title" content="Stock Usato">',
