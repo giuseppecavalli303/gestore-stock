@@ -82,8 +82,29 @@ footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
   const riga = (k, v) => (v === '' || v == null ? '' : `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`);
   const azioni = url => `<div class="azioni">${url ? `<a class="btn pri" href="${esc(url)}" target="_blank" rel="noopener">Foto e dettagli sul sito</a>` : ''}<a class="btn" href="tel:+3906415351">Chiama</a><button class="btn" onclick="print()">Salva in PDF</button></div>`;
 
+  // il preventivo arriva tutto dal link, che chiunque puo' modificare: i numeri devono essere numeri,
+  // il link solo verso il sito di Valentino, le foto solo dal sito delle foto degli annunci
+  const num = x => (typeof x === 'number' && isFinite(x) ? x : Number.isFinite(Number(x)) && String(x).trim() !== '' ? Number(x) : 0);
+  const testo = x => (typeof x === 'string' || typeof x === 'number' ? String(x).slice(0, 200) : '');
+  function pulito(p) {
+    p = p && typeof p === 'object' ? p : {};
+    const f = p.f && typeof p.f === 'object' ? p.f : {};
+    const sito = u => (/^https:\/\/(www\.)?valentinoautomobili\.it\//i.test(String(u || '')) ? String(u) : '');
+    return {
+      n: testo(p.n), m: testo(p.m), d: /^\d{4}-\d{2}-\d{2}/.test(String(p.d || '')) ? String(p.d) : '', imm: testo(p.imm), fu: testo(p.fu), ca: testo(p.ca), co: testo(p.co),
+      km: num(p.km), pr: num(p.pr), cv: num(p.cv), kw: num(p.kw), ga: num(p.ga), url: sito(p.url),
+      foto: (Array.isArray(p.foto) ? p.foto : []).filter(u => /^https:\/\/cdn\.dealerk\.it\//.test(String(u))).slice(0, 60),
+      f: {
+        t: testo(f.t), rata: num(f.rata), nr: num(f.nr), dur: num(f.dur), ant: num(f.ant), vfg: num(f.vfg), km: num(f.km), fin: num(f.fin),
+        tan: num(f.tan), taeg: f.taeg == null ? null : num(f.taeg), prima: num(f.prima), ist: num(f.ist), inc: num(f.inc), bol: num(f.bol),
+        serv: (Array.isArray(f.serv) ? f.serv : []).map(testo).slice(0, 20)
+      }
+    };
+  }
+
   function preventivo(p) {
-    const f = p.f || {};
+    p = pulito(p);
+    const f = p.f;
     document.title = `Preventivo ${p.n} · Valentino Automobili`;
     $('quando').textContent = 'Preventivo del ' + dIt(p.d);
     const palla = f.vfg > 0;

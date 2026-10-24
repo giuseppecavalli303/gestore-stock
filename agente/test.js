@@ -199,6 +199,23 @@ async function leggi(file) {
       ok(r.status === 0 && /TUTTO OK/.test(r.stdout), `coda mail del PC (Outlook): stessa regola ${(r.stdout + r.stderr).trim().split('\n').slice(-3).join(' | ')}`);
     }
   }
+  // carburante: "E- HYBRID" con lo spazio (stampa troncata) e' un'ibrida plug-in, non un'elettrica
+  {
+    const { describe } = new Function(['parser.js', 'norm.js'].map(src).join('\n') + '\nreturn { describe };')();
+    const f = describe('FORMENTOR 1.4 ELECTRIC/TSI E- HYBRID 150KW 6- SPEED', 'CUPRA', '');
+    ok(f.fuel === 'Plug-in', `carburante: Formentor "E- HYBRID" riconosciuta plug-in (${f.fuel})`);
+    ok(describe('GOLF GTE 1.4 TSI', 'VW', '').fuel === 'Plug-in' && describe('ID.3 PRO 58 KWH', 'VW', '').fuel === 'Elettrica', 'carburante: GTE e ID.3 come prima');
+  }
+  // AutoScout: se restano due annunci possibili, si guarda il modello; se il dubbio resta, nessun abbinamento
+  {
+    const { abbinaAutoscout } = require('./mercato.js');
+    const auto = [{ targa: 'AA111AA', brand: 'Volkswagen', family: 'T-Roc', km: 30000, imm: '2023-03', prezzo: 25000, as: true }];
+    const ann = (id, modello) => ({ id, url: 'https://www.autoscout24.it/a/' + id, marca: 'Volkswagen', modello, km: 30000, imm: '2023-03', prezzo: 25000, giudizio: 'fair-price', contatti: 'Some' });
+    const r1 = abbinaAutoscout(auto, [], { annunci: [ann('g', 'Golf'), ann('t', 'T-Roc')] });
+    ok(r1.get('AA111AA') && r1.get('AA111AA').id === 't', 'AutoScout: tra due annunci uguali vince quello dello stesso modello');
+    const r2 = abbinaAutoscout(auto, [], { annunci: [ann('x', 'T-Roc'), ann('y', 'T-Roc')] });
+    ok(!r2.has('AA111AA'), 'AutoScout: due annunci indistinguibili, nessun abbinamento');
+  }
   //__VALUTATORE__
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
   process.exit(errori ? 1 : 0);

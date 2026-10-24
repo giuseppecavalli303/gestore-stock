@@ -55,7 +55,7 @@ function describe(modello, marcaRaw, section) {
   if (cv && kw && cv < kw) cv = Math.round(kw * 1.35962);   // testo troncato tipo "110 KW/ 15"
 
   let fuel;
-  if (/E-?HYBRID|\bGTE\b|PLUG|PHEV/.test(M)) fuel = 'Plug-in';
+  if (/E-? ?HYBRID|\bGTE\b|PLUG|PHEV/.test(M)) fuel = 'Plug-in';   // anche "E- HYBRID" con lo spazio della stampa troncata
   else if (/\bID\.|\bE-UP|ELECTRIC|ELETTRIC|\bBORN\b|KWH|\bBEV\b|E-BOOST/.test(M)) fuel = 'Elettrica';
   else if (/\bTDI\b|\bGTD\b|DIESEL|HDI\b|MJT|MULTIJET|\bCDI\b|\bDCI\b|CRDI|\b\d{3}D\b/.test(M) || /DIESEL/.test(section)) fuel = 'Diesel';
   else if (/\bTGI\b|METANO|\bCNG\b/.test(M) || /METANO/.test(section)) fuel = 'Metano';

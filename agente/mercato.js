@@ -69,7 +69,8 @@ function abbinaAutoscout(cs, annunci, as) {
     let l = k.get(m4(c.brand) + '|' + c.km + '|' + c.imm) || [];
     if (l.length !== 1) { const l2 = k.get(m4(c.brand) + '|' + s.km + '|' + s.imm) || []; if (l2.length) l = l2; }
     if (l.length > 1) { const p = l.filter(a => a.prezzo === c.prezzo || a.prezzo === c.prezzoV); if (p.length) l = p; }
-    if (l.length && l.every(a => a.giudizio === l[0].giudizio && a.contatti === l[0].contatti)) per.set(c.targa, l[0]);
+    if (l.length > 1) { const p = l.filter(a => m4(a.modello) === m4(c.family)); if (p.length) l = p; }
+    if (l.length === 1) per.set(c.targa, l[0]);   // se il dubbio resta, nessun abbinamento (il link porterebbe all'annuncio sbagliato)
   }
   return per;
 }
