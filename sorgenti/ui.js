@@ -132,7 +132,7 @@
     if (F.preset === 'priceDiff' && !prezzoDiverso(c)) return false;
     return matchQuery(c, S.Q);
   }
-  const prezzoDiverso = c => !!(c.web && c.web.prezzo && c.prezzoV && c.web.prezzo !== c.prezzoV);
+  const prezzoDiverso = c => !!sitoDiverso(c);
   // consigliato: prima le libere con foto, poi le altre libere, poi in arrivo e il resto, poi le prenotate; a parita' le piu' recenti
   const rango = c => (c.free ? (c.web ? 0 : 1) : c.booked ? 3 : 2);
   const SORTS = {
@@ -287,6 +287,7 @@
       <div class="specs"><div><b>${N(c.km)}</b><span>km</span></div><div><b>${immIt(c)}</b><span>immatr.</span></div><div><b>${c.cv ? c.cv + ' CV' : 'n.d.'}</b><span>potenza</span></div><div><b>${esc(c.fuel)}</b><span>alim.</span></div><div><b>${esc(c.cambio)}</b><span>cambio</span></div><div><b><i class="sw" style="background:${COLOR_HEX[c.colorG] || '#9aa3b2'}"></i>${esc(c.colorG)}</b><span>colore</span></div></div>
       <div class="r3">${plate(c.targa)}${tags}</div>
       ${c.acq ? `<div class="who">${esc(c.acq)}${c.dataPren ? ' · ' + dIt(c.dataPren) : ''}${c.vend ? ' · vend. ' + esc(c.vend) : ''}</div>` : ''}
+      ${!S.cliente && sitoDiverso(c) ? `<div class="sito-diff">${esc(sitoDiverso(c).breve)}</div>` : ''}
       <div class="foot"><div class="price${c.prezzo ? '' : ' nd'}">${c._dp ? `<s>era ${eur(c._dp) || 'n.d.'}</s>` : ''}${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div><div class="loc"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.800 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><b>${esc(c.ubic || 'n.d.')}</b></div></div>
     </button>`;
   }
@@ -325,7 +326,7 @@
         <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${c.web && c.web.vin ? `<div class="wide"><dt>Telaio</dt><dd><span class="mono">${esc(c.web.vin)}</span> <button class="linkbtn" id="dVin">Copia</button></dd></div>` : ''}${row('Categoria del listino', c.section, true)}</dl></section>
         ${camOk(c) && c.web.cam.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.cam.url)}" target="_blank" rel="noopener">Vedi la foto della retrocamera</a>` : ''}
         ${tettoOk(c) && c.web.tetto.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.tetto.url)}" target="_blank" rel="noopener">Vedi la foto del tetto</a>` : ''}
-        ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', eur(c.web.prezzo) + (prezzoDiverso(c) ? ` (gestionale ${eur(c.prezzoV)})` : ''), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${row('Tetto apribile', tettoTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
+        ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', prezzoDiverso(c) ? sitoDiverso(c).testo : eur(c.web.prezzo), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${row('Tetto apribile', tettoTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
         <section id="dStoria" hidden><h4>Storia nelle stampe</h4><div class="timeline" id="dStoriaBody"></div></section>
         <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${ggVisibili() ? row('Data di ingresso', dIt(c.ingr)) : ''}${row('Anticipata', c.antic)}</dl></section>
         ${c.acq || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', c.acq)}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
@@ -965,6 +966,11 @@
     try {
       if (!window.XLSX) await loadScript(XLSXJS);
       const righe = S.list.map(c => ({ Stato: stLabel(c), Targa: c.targa, Marca: c.brand, Modello: c.family, Allestimento: c.modello, Immatricolazione: immIt(c), Km: c.km, CV: c.cv || null, Alimentazione: c.fuel, Cambio: c.cambio, Colore: c.colore, 'Prezzo totale': c.prezzo || null, 'Prezzo veicolo': c.prezzoV || null, Ubicazione: c.ubic, 'Data ingresso': dIt(c.ingr), 'Giorni in stock': c.giorni, AutoScout: c.as ? 'Sì' : 'No', 'Annuncio sito': c.web ? c.web.url : '', Acquirente: c.acq, Venditore: c.vend, Note: c.note }));
+      // prezzo del sito e in cosa differisce dal gestionale (non per il cliente)
+      S.list.forEach((c, i) => { const d = sitoDiverso(c), r = righe[i], ord = {};
+        for (const [k, v] of Object.entries(r)) { ord[k] = v; if (k === 'Prezzo veicolo') Object.assign(ord, { 'Prezzo sul sito': (c.web && c.web.prezzo) || null, 'Differenza sito - gestionale': d ? d.diff : null, 'Differenza con il sito': d ? d.testo : '' }); }
+        righe[i] = ord; });
+      if (S.cliente) righe.forEach(r => { delete r['Prezzo sul sito']; delete r['Differenza sito - gestionale']; delete r['Differenza con il sito']; });
       if (!ggVisibili()) righe.forEach(r => { delete r['Data ingresso']; delete r['Giorni in stock']; });
       const ws = XLSX.utils.json_to_sheet(righe), wb = XLSX.utils.book_new();
       ws['!cols'] = Object.keys(righe[0] || {}).map(k => ({ wch: Math.min(40, Math.max(k.length + 2, ...righe.slice(0, 200).map(r => String(r[k] ?? '').length))) }));

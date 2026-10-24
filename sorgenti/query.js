@@ -25,6 +25,18 @@ function buildVocab(cars) {
 // Km 0: la stampa le mette in sezioni apposite (VW KM0, REMARKETING EUROPA-500 KM0...); il sito le segna come KM0
 const km0 = c => /KM\s?0\b|KM\s?ZERO/i.test(c.section || '') || !!(c.web && c.web.km0);
 
+// prezzo del sito diverso da quello del veicolo nel gestionale: in cosa differisce.
+// Spesso sul sito c'e' il prezzo con il passaggio incluso al posto del prezzo del veicolo.
+function sitoDiverso(c) {
+  const sito = c.web && c.web.prezzo, gest = c.prezzoV;
+  if (!sito || !gest || sito === gest) return null;
+  const eu = n => String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+  const diff = sito - gest, passaggio = !!(c.pp && sito === gest + c.pp);
+  return passaggio
+    ? { sito, gest, diff, passaggio, breve: `Sito ${eu(sito)}: c'è il passaggio incluso (+${eu(diff)})`, testo: `Sul sito c'è il prezzo con il passaggio: ${eu(sito)} invece del prezzo del veicolo ${eu(gest)}` }
+    : { sito, gest, diff, passaggio, breve: `Sito ${eu(sito)}: ${diff > 0 ? '+' : '−'}${eu(diff)} rispetto al gestionale`, testo: `Sul sito ${eu(sito)}, nel gestionale ${eu(gest)}: il sito è ${eu(diff)} più ${diff > 0 ? 'alto' : 'basso'}` };
+}
+
 function parseQuery(raw, vocab) {
   const Q = { r: {}, st: new Set(), fuel: new Set(), cambio: new Set(), color: new Set(), brand: new Set(), family: new Set(), vend: new Set(), ubic: [], terms: [], chips: [] };
   let t = ' ' + deacc((raw || '').toLowerCase()).replace(/[€]/g, ' euro ').replace(/[,;:]+/g, ' ') + ' ';

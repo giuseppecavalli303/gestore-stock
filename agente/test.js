@@ -210,6 +210,7 @@ async function leggi(file) {
     const f = describe('FORMENTOR 1.4 ELECTRIC/TSI E- HYBRID 150KW 6- SPEED', 'CUPRA', '');
     ok(f.fuel === 'Plug-in', `carburante: Formentor "E- HYBRID" riconosciuta plug-in (${f.fuel})`);
     ok(describe('GOLF GTE 1.4 TSI', 'VW', '').fuel === 'Plug-in' && describe('ID.3 PRO 58 KWH', 'VW', '').fuel === 'Elettrica', 'carburante: GTE e ID.3 come prima');
+    ok(describe('500 MY22 1.0 GSE HYBRID CLUB 5', 'FIAT', '').fuel === 'Ibrida' && describe('PANDA 1.0 FIREFLY S&S HYBRID', 'FIAT', '').fuel === 'Ibrida', 'carburante: Fiat 500 e Panda "GSE HYBRID" sono ibride leggere, non plug-in');
   }
   // AutoScout: se restano due annunci possibili, si guarda il modello; se il dubbio resta, nessun abbinamento
   {
@@ -238,6 +239,15 @@ async function leggi(file) {
     const Q0 = pq('polo km0', bv([])), Q1 = pq('km 0', bv([]));
     ok(Q0.chips.includes('Km 0') && Q1.chips.includes('Km 0') && mq(a('VW KM0'), Q1) && !mq(a('POLO BENZINA'), Q1), `km0: la ricerca "km0" o "km 0" trova solo le Km 0 (${Q0.chips.join(' · ')})`);
     ok(!pq('golf meno di 40.000 km', bv([])).chips.includes('Km 0'), 'km0: "meno di 40.000 km" non diventa Km 0');
+  }
+  // prezzo diverso dal sito: in cosa differisce (passaggio incluso per sbaglio, oppure prezzo proprio diverso)
+  {
+    const { sitoDiverso } = new Function(['parser.js', 'norm.js', 'query.js'].map(src).join('\n') + '\nreturn { sitoDiverso };')();
+    const conPass = sitoDiverso({ prezzoV: 19540, pp: 560, prezzo: 20100, web: { prezzo: 20100 } });
+    ok(conPass && conPass.passaggio && conPass.diff === 560 && /passaggio/.test(conPass.testo) && /20\.100/.test(conPass.testo) && /19\.540/.test(conPass.testo), `sito: prezzo con il passaggio riconosciuto (${conPass && conPass.testo})`);
+    const piuBasso = sitoDiverso({ prezzoV: 19540, pp: 700, prezzo: 20240, web: { prezzo: 18540 } });
+    ok(piuBasso && !piuBasso.passaggio && piuBasso.diff === -1000 && /1\.000 € piu' basso|1\.000 € più basso/.test(piuBasso.testo), `sito: prezzo piu' basso spiegato (${piuBasso && piuBasso.testo})`);
+    ok(sitoDiverso({ prezzoV: 19540, web: { prezzo: 19540 } }) === null && sitoDiverso({ prezzoV: 19540 }) === null, 'sito: stesso prezzo o senza annuncio, niente differenza');
   }
   //__VALUTATORE__
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
