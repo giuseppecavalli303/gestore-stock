@@ -221,6 +221,15 @@ async function leggi(file) {
     const r2 = abbinaAutoscout(auto, [], { annunci: [ann('x', 'T-Roc'), ann('y', 'T-Roc')] });
     ok(!r2.has('AA111AA'), 'AutoScout: due annunci indistinguibili, nessun abbinamento');
   }
+  // revisione ChatGPT: la stessa auto su piu' portali conta una volta; qualita' del confronto dichiarata
+  {
+    const copie = ['autoscout', 'subito', 'automobile', 'autoscout', 'subito'].map((p, i) => A(6300, 120000, 2013, { portale: p, id: p + i }));
+    const cp = valuta(CLIO, copie, CFG, null);
+    ok(!cp.ok && cp.n === 1, `valutatore: 5 copie della stessa auto contano come 1 (${cp.n})`);
+    ok(rv.qualita === 'indicativo' && rv.note.some(n => /Confronto indicativo/.test(n)), `valutatore: con 7 auto il confronto e' dichiarato indicativo (${rv.qualita})`);
+    const tante = Array.from({ length: 16 }, (_, i) => A(6000 + i * 37, 110000 + i * 1500, 2013));
+    ok(valuta(CLIO, tante, CFG, null).qualita === 'buono', 'valutatore: con 15 o piu\' auto il confronto e\' buono');
+  }
   //__VALUTATORE__
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
   process.exit(errori ? 1 : 0);

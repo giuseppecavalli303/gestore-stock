@@ -49,7 +49,7 @@ function montaValutatore(el, opz) {
     const r = st.r, ps = Object.keys(VAL_PORTALI);
     const conti = ps.filter(p => r.perPortale && r.perPortale[p]).map(p => `${VAL_PORTALI[p]} ${r.perPortale[p]}`).join(' · ');
     const giu = ps.filter(p => st.portali[p] === 'errore').map(p => VAL_PORTALI[p]);
-    return `da ${r.n} auto simili in vendita${conti ? ' · ' + conti : ''}${giu.length ? ` · <span class="val-warn">${giu.join(' e ')} non ${giu.length > 1 ? 'hanno' : 'ha'} risposto</span>` : ''}`;
+    return `da ${r.n} auto simili in vendita${r.qualita ? ` · confronto ${r.qualita}` : ''}${conti ? ' · ' + conti : ''}${giu.length ? ` · <span class="val-warn">${giu.join(' e ')} non ${giu.length > 1 ? 'hanno' : 'ha'} risposto</span>` : ''}`;
   }
 
   function note() {
@@ -85,7 +85,7 @@ function montaValutatore(el, opz) {
     const k0 = Math.min(...kms) - dk, k1 = Math.max(...kms) + dk, p0 = Math.min(...ps) - dp, p1 = Math.max(...ps) + dp;
     const x = k => L + (k1 > k0 ? (k - k0) / (k1 - k0) : 0.5) * (W - L - R), y = p => T + (p1 > p0 ? 1 - (p - p0) / (p1 - p0) : 0.5) * (H - T - B);
     const tua = st.auto.km ? `<rect x="${x(st.auto.km * 0.9)}" y="${T}" width="${Math.max(2, x(st.auto.km * 1.1) - x(st.auto.km * 0.9))}" height="${H - T - B}" class="val-fascia"/><line x1="${x(st.auto.km)}" x2="${x(st.auto.km)}" y1="${T}" y2="${H - B}" class="val-tua"/>` : '';
-    const punto = (a, v) => `<circle cx="${x(a.km).toFixed(1)}" cy="${y(a.prezzo).toFixed(1)}" r="${v ? 5.5 : 3.6}" ${v ? `fill="none" stroke="${VAL_COLORI[a.portale]}" stroke-width="2"` : `fill="${VAL_COLORI[a.portale]}"`}><title>${valEsc(a.titolo)} · ${valEuro(a.prezzo)} · ${valKm(a.km)}${v ? ' · venduta' : ''}</title></circle>`;
+    const punto = (a, v) => `<circle cx="${x(a.km).toFixed(1)}" cy="${y(a.prezzo).toFixed(1)}" r="${v ? 5.5 : 3.6}" ${v ? `fill="none" stroke="${VAL_COLORI[a.portale]}" stroke-width="2"` : `fill="${VAL_COLORI[a.portale]}"`}><title>${valEsc(a.titolo)} · ${valEuro(a.prezzo)} · ${valKm(a.km)}${v ? ' · annuncio non più presente' : ''}</title></circle>`;
     return `<div class="val-graf"><div class="val-lab">Le auto simili, per km e prezzo</div>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafico km e prezzo delle auto simili">
         <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" class="val-asse"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" class="val-asse"/>
@@ -93,7 +93,7 @@ function montaValutatore(el, opz) {
         <text x="${L - 4}" y="${T + 8}" text-anchor="end" class="val-t">${Math.round(p1 / 1000)}k</text><text x="${L - 4}" y="${H - B}" text-anchor="end" class="val-t">${Math.round(p0 / 1000)}k</text>
         ${tua}${pts.map(a => punto(a, false)).join('')}${vend.map(a => punto(a, true)).join('')}
       </svg>
-      <div class="val-leg">${Object.keys(VAL_PORTALI).map(p => `<span><i style="background:${VAL_COLORI[p]}"></i>${VAL_PORTALI[p]}</span>`).join('')}<span><i class="anello"></i>${vend.length ? 'già vendute' : 'vendute: compaiono rifacendo la stessa ricerca nei prossimi giorni'}</span></div></div>`;
+      <div class="val-leg">${Object.keys(VAL_PORTALI).map(p => `<span><i style="background:${VAL_COLORI[p]}"></i>${VAL_PORTALI[p]}</span>`).join('')}<span><i class="anello"></i>${vend.length ? 'annunci non più presenti (di solito vendute)' : 'annunci non più presenti: compaiono rifacendo la stessa ricerca nei prossimi giorni'}</span></div></div>`;
   }
 
   function elenco() {

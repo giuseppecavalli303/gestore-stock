@@ -28,7 +28,16 @@ function margine(prezzo, fasce) {
 function simili(auto, annunci) {
   const marca = valNorm(auto.marca), modello = valNorm(auto.modello), alim = valAlim(auto.alimentazione);
   const vers = valNorm(auto.versione);
-  return (annunci || []).filter(a => {
+  // la stessa auto pubblicata su piu' portali (stesso anno, stessi km, stesso prezzo) conta una volta sola
+  const viste = new Set(), ordine = { autoscout: 0, automobile: 1, subito: 2 };
+  const uniche = (annunci || []).slice().sort((a, b) => (ordine[a && a.portale] || 0) - (ordine[b && b.portale] || 0)).filter(a => {
+    if (!a) return false;
+    const k = [a.anno, Math.round((a.km || 0) / 1000), a.prezzo].join('|');
+    if (viste.has(k)) return false;
+    viste.add(k);
+    return true;
+  });
+  return uniche.filter(a => {
     if (!a || !(a.prezzo >= 500)) return false;
     if (VAL_SCARTO.test((a.titolo || '') + ' ' + (a.versione || ''))) return false;
     if (valNorm(a.marca) !== marca || valNorm(a.modello) !== modello) return false;
@@ -81,9 +90,11 @@ function valuta(auto, annunci, cfg, ripristino) {
   const teniamo = { offerta: cinquanta(rivendita - rip - cfg.passaggio - mN), margine: mN };
   const commerciante = { offerta: cinquanta(mercato - rip - cfg.passaggio - mC), margine: mC };
   const conviene = teniamo.offerta >= commerciante.offerta ? 'teniamo' : 'commerciante';
+  const qualita = n >= 15 ? 'buono' : n >= 8 ? 'discreto' : 'indicativo';
   const scarto = Math.abs(teniamo.offerta - commerciante.offerta);
   const note = [
-    auto.km ? `Valore di mercato: mediana delle ${n} auto simili, corrette per i km (3% ogni 10.000 km).` : `Valore di mercato: mediana delle ${n} auto simili.`,
+    (auto.km ? `Valore di mercato: mediana delle ${n} auto simili, corrette per i km (3% ogni 10.000 km).` : `Valore di mercato: mediana delle ${n} auto simili.`) +
+      ` Confronto ${qualita}${qualita === 'indicativo' ? ': poche auto, prendi il numero come orientamento' : ''}. Sono prezzi chiesti negli annunci, non prezzi di vendita.`,
     `Se la teniamo noi: offri fino a ${valEuro(teniamo.offerta)}. La rivendete a ${valEuro(rivendita)}, meno ripristino ${valEuro(rip)}, passaggio e vostro margine ${valEuro(mN)}.`,
     `Se la diamo al commerciante: offri fino a ${valEuro(commerciante.offerta)}. Lui la rivende al valore di mercato, ${valEuro(mercato)}, meno ripristino ${valEuro(rip)}, passaggio e il suo margine ${valEuro(mC)}.`,
     scarto ? (conviene === 'teniamo' ? `Conviene tenerla: puoi offrire ${valEuro(scarto)} in più al cliente.` : `Conviene darla al commerciante: puoi offrire ${valEuro(scarto)} in più al cliente.`) : 'Le due strade si equivalgono.'
@@ -91,5 +102,5 @@ function valuta(auto, annunci, cfg, ripristino) {
   if (rivenditaStimata) note.splice(2, 0, 'Pochi annunci di concessionari: rivendita stimata dal mercato +8%.');
   if (!auto.km) note.splice(1, 0, 'Mancano i km: il valore non tiene conto dei chilometri, è meno preciso. Aggiungili in "Ho capito così".');
   if (!valAlim(auto.alimentazione)) note.splice(1, 0, 'Manca il carburante: sto mescolando benzina, diesel, GPL e gli altri. Aggiungilo in "Ho capito così".');
-  return { ok: true, n, perPortale, simili: buoni, mercato, rivendita, rivenditaStimata, ripristino: rip, teniamo, commerciante, conviene, scarto, note };
+  return { ok: true, n, qualita, perPortale, simili: buoni, mercato, rivendita, rivenditaStimata, ripristino: rip, teniamo, commerciante, conviene, scarto, note };
 }
