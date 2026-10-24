@@ -129,7 +129,7 @@ const SCHEMA_CARTELLO = { type: 'OBJECT', properties: { nome: { type: 'STRING' }
 const ISTRUZIONI_CARTELLO = [
   "Prepari il cartello da esporre in salone per un'auto usata di Valentino Automobili Roma.",
   "Ricevi il modello e l'elenco completo delle dotazioni preso dall'annuncio. Regole:",
-  "- 'nome': nome commerciale chiaro, al massimo 38 caratteri, per esempio 'Volkswagen Golf 2.0 TSI GTI 245 CV DSG' o 'Fiat 500 1.0 Hybrid Club'.",
+  "- 'nome': nome commerciale chiaro, al massimo 38 caratteri, con le iniziali maiuscole e non tutto maiuscolo (sigle come TSI, TDI, DSG in maiuscolo), per esempio 'Volkswagen T-Roc 1.0 TSI Style 110 CV', 'Volkswagen Golf 2.0 TSI GTI 245 CV DSG' o 'Fiat 500 1.0 Hybrid Club'.",
   "- 'righe': da 4 a 7 righe in MAIUSCOLO, ciascuna di AL MASSIMO 52 caratteri, con 2-4 dotazioni separate da ' - '.",
   "- Scegli le dotazioni che contano per chi compra: cerchi (con pollici), fari LED o Matrix, navigatore, Apple CarPlay/Android Auto, cockpit digitale, climatizzatore automatico o a zone, sensori di parcheggio, cruise control adattivo, assistenze alla guida, keyless, sedili riscaldati o in pelle, vetri privacy, pacchetti (R-Line, S line, Black), impianto audio di marca, portellone elettrico.",
   "- Scrivi RETROCAMERA solo se 'telecamera confermata' e TETTO APRIBILE solo se 'tetto confermato'.",
@@ -137,9 +137,27 @@ const ISTRUZIONI_CARTELLO = [
   "- Abbrevia senza perdere senso: 'Cerchi in lega da 18 pollici' -> 'CERCHI IN LEGA 18\"'."
 ].join('\n');
 
+// elenco dotazioni dalla pagina dell'annuncio (stessa lettura di agente/annunci.js)
+function elencoPagina_(html, chiave) {
+  const i = html.indexOf('"' + chiave + '":[');
+  if (i < 0) return [];
+  let j = i + chiave.length + 3, prof = 0;
+  for (; j < html.length; j++) { const ch = html[j]; if (ch === '[') prof++; else if (ch === ']' && --prof === 0) break; }
+  try { return JSON.parse(html.slice(i + chiave.length + 3, j + 1)).map(function (x) { return typeof x === 'string' ? x : JSON.stringify(x); }); } catch (e) { return []; }
+}
+function dotazioniAnnuncio_(url) {
+  if (!/^https:\/\/www\.valentinoautomobili\.it\/auto\//.test(String(url || ''))) return [];
+  const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+  if (r.getResponseCode() !== 200) return [];
+  const html = r.getContentText();
+  return elencoPagina_(html, 'equipmentStandardList').concat(elencoPagina_(html, 'equipmentList'), elencoPagina_(html, 'equipmentOptionalList'))
+    .map(function (x) { return x.replace(/&amp;/g, '&').trim(); }).filter(String);
+}
+
 function cartello_(req) {
+  if (!(req.dotazioni || []).length && req.url) req.dotazioni = dotazioniAnnuncio_(req.url);
   const dot = (req.dotazioni || []).map(function (x) { return String(x).slice(0, 160); }).slice(0, 250);
-  if (!dot.length) return { errore: 'Nessuna dotazione.' };
+  if (!dot.length) return { errore: "Nell'annuncio non ho trovato le dotazioni." };
   const p = PropertiesService.getScriptProperties();
   const chiave = String(p.getProperty('GEMINI_KEY') || '').trim().replace(/^["']+|["']+$/g, '');
   const modello = p.getProperty('MODELLO') || MODELLO_PREDEFINITO;

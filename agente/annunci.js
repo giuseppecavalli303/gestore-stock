@@ -98,10 +98,6 @@ function elenco(html, chiave) {
   try { return JSON.parse(html.slice(i + chiave.length + 3, j + 1)).map(x => (typeof x === 'string' ? x : JSON.stringify(x))); } catch (e) { return []; }
 }
 const dotazioni = html => elenco(html, 'equipmentStandardList').concat(elenco(html, 'equipmentList'), elenco(html, 'equipmentOptionalList'));
-// elenco completo delle dotazioni (per il cartello salone: resta nella memoria locale, non si pubblica)
-function dotazioniDaPagina(html) {
-  return dotazioni(html).map(x => x.replace(/&amp;/g, '&').trim()).filter(Boolean);
-}
 function telecameraDaPagina(html) {
   return dotazioni(html).filter(x => RE_CAM.test(x)).map(x => x.replace(/&amp;/g, '&')).join(' · ');
 }
@@ -117,13 +113,13 @@ async function galleriaCompleta(annunci) {
   let lette = 0, errori = 0;
   for (const a of annunci) {
     const c = cache[a.id];
-    if (c && c.cam != null && c.tetto != null && c.dot && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; a.tettoLista = c.tetto; continue; }
+    if (c && c.cam != null && c.tetto != null && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; a.tettoLista = c.tetto; continue; }
     try {
       await pausa(400);
       const r = await fetch(a.url, { headers: { 'User-Agent': 'Mozilla/5.0 (Gestore stock Valentino)' } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const html = await r.text(), foto = fotoDaPagina(html), cam = telecameraDaPagina(html), tetto = tettoDaPagina(html);
-      cache[a.id] = { t: Date.now(), foto, cam, tetto, dot: dotazioniDaPagina(html) };
+      cache[a.id] = { t: Date.now(), foto, cam, tetto };
       if (foto.length > a.foto.length) a.foto = foto;
       a.camLista = cam; a.tettoLista = tetto;
       lette++;
@@ -136,7 +132,7 @@ async function galleriaCompleta(annunci) {
   if (lette || errori) console.log(`Gallerie lette: ${lette}${errori ? `, non lette: ${errori}` : ''}.`);
 }
 
-module.exports = { scarica, tettoDaPagina, dettagliAnnuncio, dotazioniDaPagina };
+module.exports = { scarica, tettoDaPagina, dettagliAnnuncio };
 
 if (require.main === module) {
   scarica().then(d => {

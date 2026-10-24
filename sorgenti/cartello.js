@@ -10,16 +10,17 @@ const cartelloNum = n => (n ? String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d)
 const cartelloTitolo = s => String(s || '').toLowerCase().replace(/(^|[\s\-/])([a-zà-ù])/g, (m, a, b) => a + b.toUpperCase())
   .replace(/\b(tsi|tdi|tfsi|gti|gtd|gte|dsg|cv|kw|suv|gpl|led|s line|r line)\b/gi, m => m.toUpperCase());
 
-function datiCartello(c) {
+// scelte = { nome, righe } preparate dall'assistente quando si preme il tasto (senza, righe vuote da scrivere a mano)
+function datiCartello(c, scelte) {
   const w = c.web || {}, vw = c.brand === 'Volkswagen', M = CARTELLO_CAMPI[vw ? 'vw' : 'sel'];
-  const ps = w.ps ? w.ps.esito === 'si' : !!c.spec;
-  const nome = (w.cartello && w.cartello.nome) || cartelloTitolo(`${c.brand} ${String(c.modello || '').replace(/\s+\d+KW.*$/i, '')}`);
+  const ps = !!c.spec;   // prezzo speciale del gestionale = bollino PREZZO SPECIALE sulle foto
+  const nome = (scelte && scelte.nome) || cartelloTitolo(`${c.brand} ${String(c.modello || '').replace(/\s+\d+KW.*$/i, '')}`);
   const imm = /^\d{4}-\d{2}/.test(c.imm || '') ? `${c.imm.slice(5, 7)}/${c.imm.slice(0, 4)}` : '';
   const dati = [cartelloNum(w.cc), c.kw && c.cv ? `${c.kw}/${c.cv}` : '', c.cambio && c.cambio !== 'n.d.' ? c.cambio : '', CARTELLO_ALIM[c.fuel] || c.fuel || '',
     w.euro || '', imm, c.km != null ? cartelloNum(c.km) || '0' : '', `${w.garanzia || 12} mesi`];
   const campi = { [M.nome]: nome };
   M.dati.forEach((k, i) => { campi[k] = dati[i]; });
-  const righe = ((w.cartello && w.cartello.righe) || []).slice(0, M.righe.length);
+  const righe = ((scelte && scelte.righe) || []).slice(0, M.righe.length);
   M.righe.forEach((k, i) => { campi[k] = righe[i] || ''; });
   campi[M.offerta] = w.offerta || '';
   [c.prezzoV, c.pp, c.prezzo].forEach((v, i) => { campi[M.prezzi[i]] = cartelloNum(v); });

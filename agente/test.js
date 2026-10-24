@@ -251,41 +251,33 @@ async function leggi(file) {
   }
   // cartello salone: dati dall'annuncio (cilindrata, Euro, riga dell'offerta, dotazioni)
   {
-    const { dettagliAnnuncio, dotazioniDaPagina } = require('./annunci.js');
+    const { dettagliAnnuncio } = require('./annunci.js');
     const vw = dettagliAnnuncio({ displacement: 1984, make: 'Volkswagen', description: 'Propone VW GOLF.<br/>La vettura rispetta la normativa antinquinamento Euro6.Vettura in offerta a soli &#x20ac;38.450,00 valida con progetto valore della durata di 36 Mesi.<br/>La rata comprende' });
     ok(vw.cc === 1984 && vw.euro === 'Euro 6' && vw.offerta === 'OFFERTA VALIDA CON PROGETTO VALORE VOLKSWAGEN 36 MESI', `cartello: dati VW dall'annuncio (${JSON.stringify(vw)})`);
     const fiat = dettagliAnnuncio({ displacement: 999, make: 'Fiat', description: 'normativa antinquinamento Euro 6d-TEMP. Vettura in offerta a soli 13.450,00 valida con finanziamento.<br></p>' });
     ok(fiat.euro === 'Euro 6d-TEMP' && fiat.offerta === 'OFFERTA VALIDA CON FINANZIAMENTO', `cartello: dati altre marche (${JSON.stringify(fiat)})`);
     ok(dettagliAnnuncio({}).cc === 0 && dettagliAnnuncio({}).offerta === '', 'cartello: annuncio senza dati, campi vuoti');
-    ok(dotazioniDaPagina('"equipmentStandardList":["ABS","Navigatore"],"equipmentOptionalList":["Tetto apribile"]').join('|') === 'ABS|Navigatore|Tetto apribile', 'cartello: elenco dotazioni dalla pagina');
-  }
-  // cartello salone: quali auto preparare (una volta sola, di nuovo solo se cambiano dotazioni o conferme dalle foto)
-  {
-    const { daPreparare } = require('./cartelli.js');
-    const auto = id => ({ targa: 'T' + id, brand: 'Volkswagen', modello: 'GOLF', web: { url: 'https://www.valentinoautomobili.it/auto/usate/x/' + id, cam: { esito: 'si' } } });
-    const foto = { 1: { dot: ['Navigatore', 'Cerchi 18'] }, 2: { dot: ['Climatronic'] }, 3: { dot: [] } };
-    const l1 = daPreparare([auto(1), auto(2), auto(3), { targa: 'X' }], foto, {});
-    ok(l1.length === 2 && l1[0].id === '1' && l1[0].richiesta.telecamera === true && l1[0].richiesta.dotazioni.length === 2, `cartello: si preparano solo le auto con annuncio e dotazioni (${l1.length})`);
-    const fatti = {}; l1.forEach(x => { fatti[x.id] = { firma: x.firma }; });
-    ok(daPreparare([auto(1), auto(2)], foto, fatti).length === 0, 'cartello: gia\' preparati, non si rifanno');
-    const cambiata = auto(1); cambiata.web.tetto = { esito: 'si' };
-    ok(daPreparare([cambiata], foto, fatti).length === 1, 'cartello: se cambia una conferma dalle foto si rifa\'');
+    // il servizio Google legge le dotazioni dalla pagina dell'annuncio (assistente/Codice.gs)
+    const gs = fs.readFileSync(path.join(root, 'assistente', 'Codice.gs'), 'utf8'), da = gs.indexOf('function elencoPagina_'), a = gs.indexOf('function dotazioniAnnuncio_');
+    const { elencoPagina_ } = new Function(gs.slice(da, a) + ';return { elencoPagina_ };')();
+    ok(elencoPagina_('x"equipmentStandardList":["ABS",["a"],"Navigatore"],"y":1', 'equipmentStandardList').join('|') === 'ABS|["a"]|Navigatore' && elencoPagina_('niente', 'equipmentList').length === 0, 'cartello: il servizio legge l\'elenco dotazioni dalla pagina');
   }
   // cartello salone: modello giusto, campi compilati come i cartelli di Valentino, testo che entra negli spazi
   {
     const { datiCartello, compilaCartello } = new Function(src('cartello.js') + '\nreturn { datiCartello, compilaCartello };')();
     const golf = { targa: 'GP327AA', brand: 'Volkswagen', family: 'Golf', modello: 'GOLF 8 GTI 2.0 TSI 245CV DSG', imm: '2021-07', km: 44592, kw: 180, cv: 245, cambio: 'Automatico', fuel: 'Benzina', prezzoV: 31950, pp: 1000, prezzo: 32950, spec: false,
-      web: { cc: 1984, euro: 'Euro 6', garanzia: 12, offerta: 'OFFERTA VALIDA CON PROGETTO VALORE VOLKSWAGEN 36 MESI', cartello: { nome: 'Volkswagen Golf 2.0 TSI GTI 245 CV DSG', righe: ['CERCHI IN LEGA 19" - FARI LED MATRIX - NAVIGATORE', 'DIGITAL COCKPIT PRO - CLIMATRONIC 3 ZONE', 'PARK PILOT - RETROCAMERA - KEYLESS'] } } };
-    const g = datiCartello(golf);
+      web: { cc: 1984, euro: 'Euro 6', garanzia: 12, offerta: 'OFFERTA VALIDA CON PROGETTO VALORE VOLKSWAGEN 36 MESI' } };
+    const scelte = { nome: 'Volkswagen Golf 2.0 TSI GTI 245 CV DSG', righe: ['CERCHI IN LEGA 19" - FARI LED MATRIX - NAVIGATORE', 'DIGITAL COCKPIT PRO - CLIMATRONIC 3 ZONE', 'PARK PILOT - RETROCAMERA - KEYLESS'] };
+    const g = datiCartello(golf, scelte);
     ok(g.file === 'schedaVW-UsatoCertificato-2023.pdf' && !g.ps, `cartello: VW -> Usato Certificato (${g.file})`);
     ok(g.campi['NOME 2'] === 'Volkswagen Golf 2.0 TSI GTI 245 CV DSG' && g.campi['9'] === '1.984' && g.campi['10'] === '180/245' && g.campi['11'] === 'Automatico' && g.campi['12'] === 'Benzina' && g.campi['13'] === 'Euro 6' && g.campi['14'] === '07/2021' && g.campi['15'] === '44.592' && g.campi['16'] === '12 mesi', `cartello: dati tecnici (${JSON.stringify(g.campi).slice(0, 200)})`);
-    ok(g.campi.TESTO10 === golf.web.cartello.righe[0] && g.campi.TESTO11 === golf.web.cartello.righe[1] && g.campi.TESTO12 === golf.web.cartello.righe[2] && g.campi.TESTO16 === golf.web.offerta, 'cartello: righe delle dotazioni nell\'ordine del modello VW, offerta in fondo');
+    ok(g.campi.TESTO10 === scelte.righe[0] && g.campi.TESTO11 === scelte.righe[1] && g.campi.TESTO12 === scelte.righe[2] && g.campi.TESTO16 === golf.web.offerta, 'cartello: righe delle dotazioni nell\'ordine del modello VW, offerta in fondo');
     ok(g.campi['prezzo veicolo 4'] === '31.950' && g.campi['prezzo veicolo 5'] === '1.000' && g.campi['prezzo veicolo 6'] === '32.950', 'cartello: prezzo veicolo, passaggio, totale');
     ok(g.nomeFile === 'Volkswagen Golf 2.0 TSI GTI 245 CV DSG GP327AA.pdf', `cartello: nome del file (${g.nomeFile})`);
-    const fiat = { targa: 'GH268NJ', brand: 'Fiat', family: '500', modello: '500 1.0 HYBRID SPORT', imm: '2021-01', km: 30274, kw: 51, cv: 70, cambio: 'Manuale', fuel: 'Ibrida', prezzoV: 13950, pp: 500, prezzo: 14450, spec: false, web: { ps: { esito: 'si' }, cc: 999, garanzia: 12 } };
+    const fiat = { targa: 'GH268NJ', brand: 'Fiat', family: '500', modello: '500 1.0 HYBRID SPORT', imm: '2021-01', km: 30274, kw: 51, cv: 70, cambio: 'Manuale', fuel: 'Ibrida', prezzoV: 13950, pp: 500, prezzo: 14450, spec: true, web: { cc: 999, garanzia: 12 } };
     const f = datiCartello(fiat);
-    ok(f.file === 'PS-scheda-UsatoSelezionato-2023.pdf' && f.ps && f.campi.NOME === 'Fiat 500 1.0 Hybrid Sport' && f.campi['4'] === 'Benzina/Ibrida' && f.campi['prezzo veicolo 2'] === '500', `cartello: altre marche col bollino nella foto -> PS Usato Selezionato (${f.file}, ${f.campi.NOME})`);
-    ok(datiCartello(Object.assign({}, fiat, { web: { cc: 999 }, spec: true })).ps && !datiCartello(Object.assign({}, fiat, { web: { ps: { esito: 'no' } }, spec: true })).ps, 'cartello: senza foto controllata vale il prezzo speciale del gestionale, con la foto vale la foto');
+    ok(f.file === 'PS-scheda-UsatoSelezionato-2023.pdf' && f.ps && f.campi.NOME === 'Fiat 500 1.0 Hybrid Sport' && f.campi['4'] === 'Benzina/Ibrida' && f.campi['prezzo veicolo 2'] === '500', `cartello: altre marche a prezzo speciale -> PS Usato Selezionato (${f.file}, ${f.campi.NOME})`);
+    ok(!datiCartello(Object.assign({}, fiat, { spec: false })).ps && datiCartello(fiat).campi.TESTO1 === '', 'cartello: senza prezzo speciale niente PS; senza scelte dell\'assistente righe vuote');
     // compilazione vera del PDF con pdf-lib, come fa l'app
     const PDFLib = require('pdf-lib');
     const pdf = await compilaCartello(PDFLib, fs.readFileSync(path.join(root, 'cartelli', g.file)), g);

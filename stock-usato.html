@@ -1514,16 +1514,17 @@ const cartelloNum = n => (n ? String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d)
 const cartelloTitolo = s => String(s || '').toLowerCase().replace(/(^|[\s\-/])([a-zà-ù])/g, (m, a, b) => a + b.toUpperCase())
   .replace(/\b(tsi|tdi|tfsi|gti|gtd|gte|dsg|cv|kw|suv|gpl|led|s line|r line)\b/gi, m => m.toUpperCase());
 
-function datiCartello(c) {
+// scelte = { nome, righe } preparate dall'assistente quando si preme il tasto (senza, righe vuote da scrivere a mano)
+function datiCartello(c, scelte) {
   const w = c.web || {}, vw = c.brand === 'Volkswagen', M = CARTELLO_CAMPI[vw ? 'vw' : 'sel'];
-  const ps = w.ps ? w.ps.esito === 'si' : !!c.spec;
-  const nome = (w.cartello && w.cartello.nome) || cartelloTitolo(`${c.brand} ${String(c.modello || '').replace(/\s+\d+KW.*$/i, '')}`);
+  const ps = !!c.spec;   // prezzo speciale del gestionale = bollino PREZZO SPECIALE sulle foto
+  const nome = (scelte && scelte.nome) || cartelloTitolo(`${c.brand} ${String(c.modello || '').replace(/\s+\d+KW.*$/i, '')}`);
   const imm = /^\d{4}-\d{2}/.test(c.imm || '') ? `${c.imm.slice(5, 7)}/${c.imm.slice(0, 4)}` : '';
   const dati = [cartelloNum(w.cc), c.kw && c.cv ? `${c.kw}/${c.cv}` : '', c.cambio && c.cambio !== 'n.d.' ? c.cambio : '', CARTELLO_ALIM[c.fuel] || c.fuel || '',
     w.euro || '', imm, c.km != null ? cartelloNum(c.km) || '0' : '', `${w.garanzia || 12} mesi`];
   const campi = { [M.nome]: nome };
   M.dati.forEach((k, i) => { campi[k] = dati[i]; });
-  const righe = ((w.cartello && w.cartello.righe) || []).slice(0, M.righe.length);
+  const righe = ((scelte && scelte.righe) || []).slice(0, M.righe.length);
   M.righe.forEach((k, i) => { campi[k] = righe[i] || ''; });
   campi[M.offerta] = w.offerta || '';
   [c.prezzoV, c.pp, c.prezzo].forEach((v, i) => { campi[M.prezzi[i]] = cartelloNum(v); });
@@ -2466,18 +2467,35 @@ async function compilaCartello(PDFLib, modello, dati) {
   /* ---------- caricamento PDF ---------- */
   // cartello salone: compila il modello giusto (sorgenti/cartello.js) e lo apre pronto da stampare; i campi restano modificabili
   const PDFLIBJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
-  async function stampaCartello(c) {
-    const b = $('dCartello'), dati = datiCartello(c);
-    const finestra = window.open('', '_blank');   // aperta subito, cosi' il browser non la blocca
-    if (b) { b.disabled = true; b.textContent = 'Preparo il cartello…'; }
+  // l'automazione parte solo qui, per l'auto aperta: il servizio Google legge l'annuncio e Gemini sceglie le dotazioni
+  const righeCartello = {};
+  async function chiediRigheCartello(c) {
+    const w = c.web;
+    if (!w || !w.url || !aiAttivo()) return null;
+    if (righeCartello[c.targa]) return righeCartello[c.targa];
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 45000);
     try {
-      if (!window.PDFLib) await loadScript(PDFLIBJS);
+      const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctl.signal,
+        body: JSON.stringify({ token: AI_TOKEN, azione: 'cartello', url: w.url, auto: `${c.brand} ${c.modello}`, telecamera: !!(w.cam && w.cam.esito === 'si'), tetto: !!(w.tetto && w.tetto.esito === 'si') }) });
+      const j = await r.json();
+      if (j.errore || !Array.isArray(j.righe)) return null;
+      return (righeCartello[c.targa] = { nome: j.nome, righe: j.righe });
+    } catch (e) { return null; } finally { clearTimeout(t); }
+  }
+  async function stampaCartello(c) {
+    const b = $('dCartello');
+    const finestra = window.open('', '_blank');   // aperta subito, cosi' il browser non la blocca
+    if (b) { b.disabled = true; b.textContent = 'Scelgo le dotazioni…'; }
+    try {
+      const [scelte] = await Promise.all([chiediRigheCartello(c), window.PDFLib ? null : loadScript(PDFLIBJS)]);
+      if (b) b.textContent = 'Preparo il cartello…';
+      const dati = datiCartello(c, scelte);
       const modello = await (await fetch('cartelli/' + dati.file)).arrayBuffer();
       const pdf = await compilaCartello(window.PDFLib, modello, dati);
       const url = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
       if (finestra) finestra.location.href = url;
       const a = document.createElement('a'); a.href = url; a.download = dati.nomeFile; if (!finestra) a.click();
-      const manca = !(c.web && c.web.cartello) ? ' (dotazioni da scrivere a mano: non ancora preparate)' : '';
+      const manca = scelte ? '' : ' (dotazioni da scrivere a mano: l\u2019assistente non ha risposto)';
       toast(`Cartello ${dati.vw ? 'Usato Certificato' : 'Usato Selezionato'}${dati.ps ? ' prezzo speciale' : ''} pronto${manca}`);
     } catch (e) { if (finestra) finestra.close(); toast('Cartello non creato: controlla la connessione e riprova', true); }
     if (b) { b.disabled = false; b.textContent = 'Cartello salone'; }
