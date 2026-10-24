@@ -34,3 +34,6 @@ agente/prova-posta.json
 # progetti interni (margini, logica): il repo e' pubblico
 docs/superpowers/
 .superpowers/
+
+# moduli vuoti dei cartelli salone (servono all app)
+!cartelli/*.pdf
