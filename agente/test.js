@@ -289,6 +289,19 @@ async function leggi(file) {
     ok(Object.entries(g.campi).every(([k, v]) => (letto.getTextField(k).getText() || '') === v), 'cartello: PDF compilato, ogni campo contiene il suo valore');
     ok(pdf.misure.every(m => m.larghezza <= m.spazio + 0.5), `cartello: ogni testo entra nel suo spazio (${pdf.misure.filter(m => m.ridotto).map(m => m.campo + ' ' + m.dimensione + 'pt').join(', ') || 'nessuno ridotto'})`);
   }
+  // nomi dei clienti: cifrati nello stock pubblico, leggibili solo con la chiave del link
+  {
+    const { cifra, nuovaChiave } = require('./nomi.js');
+    const { decifraClienti } = new Function(src('clienti.js') + '\nreturn { decifraClienti };')();
+    const k = nuovaChiave(), x = cifra('Mario Rossi', k);
+    ok(!x.includes('Mario') && x !== cifra('Mario Rossi', k), 'clienti: il nome pubblicato non si legge e cambia a ogni giro');
+    const dati = () => ({ cars: [{ targa: 'A', acq: '', acqX: x }, { targa: 'B', acq: '' }] });
+    const giusta = dati(), n = await decifraClienti(giusta, k, require('crypto').webcrypto.subtle);
+    ok(n === 1 && giusta.cars[0].acq === 'Mario Rossi' && giusta.cars[1].acq === '', 'clienti: con la chiave del link il nome si legge');
+    const sbagliata = dati(); await decifraClienti(sbagliata, nuovaChiave(), require('crypto').webcrypto.subtle);
+    const senza = dati(); await decifraClienti(senza, null, require('crypto').webcrypto.subtle);
+    ok(sbagliata.cars[0].acq === '' && senza.cars[0].acq === '', 'clienti: senza chiave o con una chiave sbagliata niente nome');
+  }
   //__VALUTATORE__
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
   process.exit(errori ? 1 : 0);

@@ -1,7 +1,7 @@
 // Ricompone l'app dai sorgenti: node sorgenti/build.js
 const fs = require('fs'), path = require('path');
 const src = f => fs.readFileSync(path.join(__dirname, f), 'utf8');
-const core = ['parser.js', 'norm.js', 'query.js', 'finanza.js', 'valuta.js', 'valutatore-ui.js', 'cartello.js'].map(src).join('\n');
+const core = ['parser.js', 'norm.js', 'query.js', 'finanza.js', 'valuta.js', 'valutatore-ui.js', 'cartello.js', 'clienti.js'].map(src).join('\n');
 const page = src('page.html').replace('/*__CORE__*/', () => core).replace('/*__UI__*/', () => src('ui.js'));
 const root = path.join(__dirname, '..');
 // versione per l'Artifact di claude.ai (senza scheletro HTML)

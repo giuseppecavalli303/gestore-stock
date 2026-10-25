@@ -35,3 +35,4 @@ docs/superpowers/
 
 # moduli vuoti dei cartelli salone (servono all app)
 !cartelli/*.pdf
+agente/chiave-clienti.txt

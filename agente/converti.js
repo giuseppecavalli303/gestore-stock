@@ -31,8 +31,9 @@ if (!pdfPath || !fs.existsSync(pdfPath)) { console.error('PDF non trovato: ' + p
     console.error(`Conteggi non verificati: letti ${m.count}, dichiarati ${m.expected}; sezioni che non tornano: ${m.badSec.join(', ') || 'nessuna'}. Non pubblico.`);
     process.exit(2);
   }
-  // i nomi dei clienti non escono dal PC, a meno di richiesta esplicita
-  if (!conClienti) data.cars.forEach(c => { c.acq = ''; });
+  // i nomi dei clienti non escono dal PC in chiaro: con la chiave (agente/nomi.js) viaggiano cifrati e li legge solo chi ha il link
+  const chiaveNomi = require('./nomi.js').leggiChiave();
+  if (!conClienti) data.cars.forEach(c => { if (c.acq && chiaveNomi) c.acqX = require('./nomi.js').cifra(c.acq, chiaveNomi); c.acq = ''; });
   m.shared = true;
   // foto, link e dati in piu' dal sito, se gli annunci sono freschi
   const ann = caricaAnnunci(root);
@@ -50,5 +51,5 @@ if (!pdfPath || !fs.existsSync(pdfPath)) { console.error('PDF non trovato: ' + p
     } catch (e) { /* file precedente illeggibile: lo sovrascrivo */ }
   }
   fs.writeFileSync(curFile, JSON.stringify(data));
-  console.log(`OK: stampa del ${m.printDate}, ${m.count} veicoli, totale verificato${conClienti ? '' : ', nomi dei clienti rimossi'}${m.annunci ? `, ${m.annunci.abbinati} abbinati agli annunci del sito` : ''}.`);
+  console.log(`OK: stampa del ${m.printDate}, ${m.count} veicoli, totale verificato${conClienti ? '' : chiaveNomi ? ', nomi dei clienti cifrati' : ', nomi dei clienti rimossi'}${m.annunci ? `, ${m.annunci.abbinati} abbinati agli annunci del sito` : ''}.`);
 })().catch(e => { console.error('Errore di lettura: ' + e.message); process.exit(1); });

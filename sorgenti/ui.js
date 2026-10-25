@@ -61,6 +61,7 @@
   const S = { cars: [], meta: {}, prev: null, vocab: [], Q: parseQuery('', []), view: 'cards', shown: 60, list: [], delta: null, prevMap: null, gone: [], cliente: false };
   // modalita' cliente: si puo' girare il telefono al cliente, l'app nasconde da quanto tempo le auto sono in stock
   const ggVisibili = () => !S.cliente;
+  const acqV = c => (S.cliente ? '' : c.acq || '');   // nome del cliente: solo in modalita' venditore
   let F;
   const resetF = () => { F = { disp: 'all', sets: {}, r: {}, tri: {}, delta: null, preset: null }; FACETS.forEach(f => { F.sets[f.k] = new Set(); }); };
   resetF();
@@ -145,7 +146,7 @@
   const stLabel = c => (c._gone ? 'Uscita' : c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato);
   const TCOLS = [['Stato', stLabel], ['Targa', c => c.targa], ['Veicolo', c => c.brand + ' ' + c.family], ['Allestimento', c => c.modello], ['Imm.', c => c.imm],
     ['Km', c => c.km, 1], ['CV', c => c.cv || null, 1], ['Alim.', c => c.fuel], ['Cambio', c => c.cambio], ['Colore', c => c.colore], ['Prezzo', c => c.prezzo || null, 1],
-    ['Ubicazione', c => c.ubic], ['Giorni', c => c.giorni, 1], ['AutoScout', c => (c.as ? 'Sì' : 'No')], ['Acquirente', c => c.acq], ['Venditore', c => c.vend]];
+    ['Ubicazione', c => c.ubic], ['Giorni', c => c.giorni, 1], ['AutoScout', c => (c.as ? 'Sì' : 'No')], ['Acquirente', c => acqV(c)], ['Venditore', c => c.vend]];
   function colCmp({ i, dir }) {
     const get = TCOLS[i][1], num = TCOLS[i][2];
     return (a, b) => {
@@ -286,13 +287,13 @@
       <div><h3><span>${esc(c.brand)}</span> ${esc(c.family)}</h3><p class="mod">${esc(c.modello)}</p></div>
       <div class="specs"><div><b>${N(c.km)}</b><span>km</span></div><div><b>${immIt(c)}</b><span>immatr.</span></div><div><b>${c.cv ? c.cv + ' CV' : 'n.d.'}</b><span>potenza</span></div><div><b>${esc(c.fuel)}</b><span>alim.</span></div><div><b>${esc(c.cambio)}</b><span>cambio</span></div><div><b><i class="sw" style="background:${COLOR_HEX[c.colorG] || '#9aa3b2'}"></i>${esc(c.colorG)}</b><span>colore</span></div></div>
       <div class="r3">${plate(c.targa)}${tags}</div>
-      ${c.acq ? `<div class="who">${esc(c.acq)}${c.dataPren ? ' · ' + dIt(c.dataPren) : ''}${c.vend ? ' · vend. ' + esc(c.vend) : ''}</div>` : ''}
+      ${acqV(c) ? `<div class="who">${esc(acqV(c))}${c.dataPren ? ' · ' + dIt(c.dataPren) : ''}${c.vend ? ' · vend. ' + esc(c.vend) : ''}</div>` : ''}
       ${!S.cliente && sitoDiverso(c) ? `<div class="sito-diff">${esc(sitoDiverso(c).breve)}</div>` : ''}
       <div class="foot"><div class="price${c.prezzo ? '' : ' nd'}">${c._dp ? `<s>era ${eur(c._dp) || 'n.d.'}</s>` : ''}${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div><div class="loc"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.800 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><b>${esc(c.ubic || 'n.d.')}</b></div></div>
     </button>`;
   }
   function rowHtml(c, i) {
-    return `<tr data-i="${i}"><td>${stPill(c)}${km0(c) ? ' <span class="pill km0">Km 0</span>' : ''}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r"><b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(c.acq)}</td><td>${esc(c.vend)}</td></tr>`;
+    return `<tr data-i="${i}"><td>${stPill(c)}${km0(c) ? ' <span class="pill km0">Km 0</span>' : ''}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r"><b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(acqV(c))}</td><td>${esc(c.vend)}</td></tr>`;
   }
   function renderList() {
     const cards = S.view === 'cards', part = S.list.slice(0, S.shown);
@@ -329,7 +330,7 @@
         ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', prezzoDiverso(c) ? sitoDiverso(c).testo : eur(c.web.prezzo), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${row('Tetto apribile', tettoTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
         <section id="dStoria" hidden><h4>Storia nelle stampe</h4><div class="timeline" id="dStoriaBody"></div></section>
         <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${ggVisibili() ? row('Data di ingresso', dIt(c.ingr)) : ''}${row('Anticipata', c.antic)}</dl></section>
-        ${c.acq || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', c.acq)}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
+        ${acqV(c) || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', acqV(c))}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
         <section><h4>Pubblicazione e pratiche</h4><dl class="dl">${row('AutoScout', c.as ? 'Sì' + (c.asDate ? ', dal ' + dIt(c.asDate) : '') : 'No')}${row('Check list', c.check ? 'Sì' + (c.checkDate ? ', il ' + dIt(c.checkDate) : '') : 'No')}${row('Prezzo speciale', yn(c.spec))}${row('IVA esposta', yn(c.iva))}${row('Mini PP', yn(c.mini))}${row('Foglio verde', yn(c.fv))}${row('Note', c.note, true)}${S.cliente ? '' : '<div class="wide" id="dAS"></div>'}</dl></section>
         </div>
       </div>`;
@@ -1001,7 +1002,7 @@
   async function scaricaExcel() {
     try {
       if (!window.XLSX) await loadScript(XLSXJS);
-      const righe = S.list.map(c => ({ Stato: stLabel(c), Targa: c.targa, Marca: c.brand, Modello: c.family, Allestimento: c.modello, Immatricolazione: immIt(c), Km: c.km, CV: c.cv || null, Alimentazione: c.fuel, Cambio: c.cambio, Colore: c.colore, 'Prezzo totale': c.prezzo || null, 'Prezzo veicolo': c.prezzoV || null, Ubicazione: c.ubic, 'Data ingresso': dIt(c.ingr), 'Giorni in stock': c.giorni, AutoScout: c.as ? 'Sì' : 'No', 'Annuncio sito': c.web ? c.web.url : '', Acquirente: c.acq, Venditore: c.vend, Note: c.note }));
+      const righe = S.list.map(c => ({ Stato: stLabel(c), Targa: c.targa, Marca: c.brand, Modello: c.family, Allestimento: c.modello, Immatricolazione: immIt(c), Km: c.km, CV: c.cv || null, Alimentazione: c.fuel, Cambio: c.cambio, Colore: c.colore, 'Prezzo totale': c.prezzo || null, 'Prezzo veicolo': c.prezzoV || null, Ubicazione: c.ubic, 'Data ingresso': dIt(c.ingr), 'Giorni in stock': c.giorni, AutoScout: c.as ? 'Sì' : 'No', 'Annuncio sito': c.web ? c.web.url : '', Acquirente: acqV(c), Venditore: c.vend, Note: c.note }));
       // prezzo del sito e in cosa differisce dal gestionale (non per il cliente)
       S.list.forEach((c, i) => { const d = sitoDiverso(c), r = righe[i], ord = {};
         for (const [k, v] of Object.entries(r)) { ord[k] = v; if (k === 'Prezzo veicolo') Object.assign(ord, { 'Prezzo sul sito': (c.web && c.web.prezzo) || null, 'Differenza sito - gestionale': d ? d.diff : null, 'Differenza con il sito': d ? d.testo : '' }); }
@@ -1041,7 +1042,7 @@
   addEventListener('hashchange', () => { linkFatto = false; apriDaLink(); });
   $('btnCopy').onclick = () => {
     const head = ['Stato', 'Targa', 'Marca', 'Modello', 'Allestimento', 'Immatricolazione', 'Km', 'CV', 'Alimentazione', 'Cambio', 'Colore', 'Prezzo', 'Ubicazione', 'Ingresso', 'Giorni in stock', 'AutoScout', 'Acquirente', 'Venditore', 'Note'];
-    const rows = S.list.map(c => [c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato, c.targa, c.brand, c.family, c.modello, immIt(c), c.km, c.cv || '', c.fuel, c.cambio, c.colore, c.prezzo || '', c.ubic, dIt(c.ingr), c.giorni ?? '', c.as ? 'Sì' : 'No', c.acq, c.vend, c.note].join('\t'));
+    const rows = S.list.map(c => [c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato, c.targa, c.brand, c.family, c.modello, immIt(c), c.km, c.cv || '', c.fuel, c.cambio, c.colore, c.prezzo || '', c.ubic, dIt(c.ingr), c.giorni ?? '', c.as ? 'Sì' : 'No', acqV(c), c.vend, c.note].join('\t'));
     const via = ggVisibili() ? [] : [head.indexOf('Ingresso'), head.indexOf('Giorni in stock')];
     const tieni = r => r.filter((x, i) => !via.includes(i));
     copy([tieni(head).join('\t'), ...rows.map(r => tieni(r.split('\t')).join('\t'))].join('\n'), `${N(S.list.length)} veicoli copiati: incollali in Excel`);
@@ -1121,6 +1122,11 @@
     const mk = location.hash.match(/^#chiave=([\w-]{12,})$/);
     if (mk) { localStorage.setItem('su.chiaveCodici', mk[1]); history.replaceState(null, '', location.pathname + location.search); setTimeout(() => toast('Da questo telefono puoi scegliere i codici modello'), 900); }
   } catch (e) {}
+  try {
+    const mc = location.hash.match(/^#clienti=([\w-]{40,})$/);
+    if (mc) { localStorage.setItem('su.chiaveClienti', mc[1]); history.replaceState(null, '', location.pathname + location.search); setTimeout(() => toast('Da questo dispositivo vedi i nomi dei clienti (non in modalità cliente)'), 900); }
+  } catch (e) {}
+  const chiaveClienti = () => { try { return localStorage.getItem('su.chiaveClienti'); } catch (e) { return null; } };
   try { const v = localStorage.getItem('su.view'); if (v === 'table') { S.view = 'table'; $('vCards').setAttribute('aria-pressed', 'false'); $('vTable').setAttribute('aria-pressed', 'true'); } } catch (e) {}
   try { const q0 = new URLSearchParams(location.search).get('q'); if (q0) { $('q').value = q0; $('qClear').hidden = false; } } catch (e) {}
   const cur = store.get('su.cur');
@@ -1134,6 +1140,8 @@
       if (S.meta.printDate && !S.meta.demo && S.meta.printDate > shared.meta.printDate) return;
       let prev = null;
       try { prev = await get('data/prev.json'); } catch (e) {}
+      const k = chiaveClienti(), sub = window.crypto && crypto.subtle;
+      await decifraClienti(shared, k, sub); if (prev) await decifraClienti(prev, k, sub);
       setData(shared, prev);
     } catch (e) { /* nessuno stock condiviso qui: restano i dati locali */ }
   })();
