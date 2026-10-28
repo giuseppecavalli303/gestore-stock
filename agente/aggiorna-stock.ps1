@@ -113,7 +113,7 @@ try {
                 continue
             }
             if ($trovato) { continue }
-            $daChi = "$($mail.SenderName) $($mail.SenderEmailAddress)"
+            $daChi = [string]$mail.SenderName   # solo il nome: leggere l indirizzo fa chiedere conferma a Outlook ogni volta
             if (-not ($Mittenti | Where-Object { $daChi -match $_ })) { continue }
             foreach ($att in $mail.Attachments) {
                 if ($att.FileName -like $Allegato) { $trovato = @{ Quando = $mail.ReceivedTime; Allegato = $att; Mittente = $mail.SenderName }; break }
