@@ -99,6 +99,8 @@ try {
     $limite  = (Get-Date).AddDays(-$GiorniMax)
     $trovato = $null
     $richieste = @()
+    # richieste gia' gestite: non rileggerle ogni giro (leggere l'indirizzo del mittente fa chiedere conferma a Outlook)
+    $gestite = @(); try { $gestite = @((Get-Content (Join-Path $PSScriptRoot 'ricerche.json') -Raw -Encoding UTF8 | ConvertFrom-Json).gestite) } catch {}
 
     # una sola passata sulla posta recente: stampe dello stock e richieste di avviso
     foreach ($store in $mapi.Stores) {
@@ -109,6 +111,7 @@ try {
             if ($mail.Class -ne 43) { continue }                      # solo messaggi di posta
             if ($mail.ReceivedTime -lt $limite) { break }
             if ($mail.Subject -match '^\s*((r|re|i|fw|fwd)\s*:\s*)*(stop\s+avviso|avviso\s+stock)') {
+                if ($gestite -contains $mail.EntryID) { continue }
                 $richieste += [pscustomobject]@{ id = $mail.EntryID; email = $mail.SenderEmailAddress; nome = $mail.SenderName; oggetto = $mail.Subject; corpo = ($mail.Body -replace '\s+$', '').Substring(0, [Math]::Min(300, $mail.Body.Length)) }
                 continue
             }
