@@ -263,6 +263,10 @@ async function leggi(file) {
     const pg = datiPagina_('"displacement":999,"equipmentList":["Navigatore"] <p>La vettura rispetta la normativa antinquinamento Euro6.Vettura in offerta a soli &#x20ac;13.450,00 valida con progetto valore della durata di 36 Mesi.</p>', true);
     ok(pg.cc === 999 && pg.euro === 'Euro 6' && pg.offerta === 'OFFERTA VALIDA CON PROGETTO VALORE VOLKSWAGEN 36 MESI' && pg.dot.join() === 'Navigatore', `cartello: il servizio legge cilindrata, Euro e offerta dalla pagina (${JSON.stringify(pg)})`);
     ok(elencoPagina_('x"equipmentStandardList":["ABS",["a"],"Navigatore"],"y":1', 'equipmentStandardList').join('|') === 'ABS|["a"]|Navigatore' && elencoPagina_('niente', 'equipmentList').length === 0, 'cartello: il servizio legge l\'elenco dotazioni dalla pagina');
+    const dl = gs.indexOf('function limiteMese_'), al = gs.indexOf('// tiene il conto');
+    const mk = (spesa, lim) => new Function('PropertiesService', 'Utilities', 'LIMITE_MESE_USD', gs.slice(dl, al) + ';return limiteMese_;')(
+      { getScriptProperties: () => ({ getProperty: k => (/^MESE_/.test(k) ? JSON.stringify({ domande: 3, spesa }) : k === 'LIMITE_MESE' ? lim : null) }) }, { formatDate: () => '202610' }, 5)();
+    ok(!mk(2.19, null).superato && mk(5, null).superato && mk(5.4, null).superato && mk(5.4, '8,5').superato === false && mk(9, '8,5').superato, 'assistente: il tetto di spesa del mese ferma Gemini (5 $, o la proprietà LIMITE_MESE)');
   }
   // cartello salone: modello giusto, campi compilati come i cartelli di Valentino, testo che entra negli spazi
   {

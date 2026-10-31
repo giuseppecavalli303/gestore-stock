@@ -67,7 +67,7 @@ async function controlla(opz) {
         cache[id] = { esito: esito.si ? 'si' : 'no', foto: esito.foto, url: esito.foto ? tutte[esito.foto - 1] : '', indizio: esito.indizio, nFoto: tutte.length, t: new Date().toISOString().slice(0, 10) };
         fatte++;
         if (fatte % 10 === 0) fs.writeFileSync(opz.cache, JSON.stringify(cache));
-      } catch (e) { errori++; if (errori <= 3) console.error(`Errore su ${c.targa}: ${e.message}`); if (errori >= 6) { console.error('Troppi errori dal servizio, mi fermo.'); break; } }
+      } catch (e) { if (/Limite di spesa|Credito Gemini/i.test(e.message)) { console.error(`Gemini non disponibile: ${e.message} Le auto restano da controllare, riprovo al giro dopo.`); break; } errori++; if (errori <= 3) console.error(`Errore su ${c.targa}: ${e.message}`); if (errori >= 6) { console.error('Troppi errori dal servizio, mi fermo.'); break; } }
     }
     if (cache[id]) w[opz.esito] = cache[id];
   }

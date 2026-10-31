@@ -17,6 +17,7 @@ const MODELLO_PREDEFINITO = 'gemini-3.5-flash-lite';   // il 2.5 non e' piu' dis
 const TOKEN = 'FTcdlNGgGU7WXN-L';          // lo stesso scritto nel sito: ferma le chiamate a caso
 const MAX_DOMANDE_ORA = 120;               // per tutto il sito, contro gli abusi
 const MAX_FOTO_ORA = 400;                  // controlli delle foto (telecamera, tetto) in un'ora: conto a parte, per non bloccare le domande
+const LIMITE_MESE_USD = 5;                 // tetto di spesa stimata al mese: oltre, Gemini non viene piu' chiamato (si cambia con la proprieta' LIMITE_MESE)
 const MAX_ELENCO = 200000;                 // caratteri dell'elenco auto accettati
 // prezzi in dollari per milione di token (ingresso, uscita), per stimare la spesa del mese
 const PREZZI = { 'gemini-3.5-flash-lite': [0.30, 2.50], 'gemini-3.1-flash-lite': [0.25, 1.50], 'gemini-2.5-flash-lite': [0.10, 0.40], 'gemini-2.5-flash': [0.30, 2.50] };
@@ -47,6 +48,10 @@ function doPost(e) {
   try {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (req.token !== TOKEN) return json_({ errore: 'Richiesta non autorizzata.' });
+    if (['cartello', 'telecamera'].indexOf(req.azione) >= 0 || !['codici', 'scegli', 'valuta', 'salvaValutazione', 'ultime', 'apri', 'margini'].some(function (a) { return a === req.azione; })) {
+      const lm = limiteMese_();
+      if (lm.superato) return json_({ errore: 'Limite di spesa del mese raggiunto (' + lm.spesa + ' $ su ' + lm.limite + ' $): riprende il mese prossimo.', limite: true });
+    }
     if (req.azione === 'cartello') return json_(limite_('c', MAX_FOTO_ORA) ? cartello_(req) : { errore: "Troppi cartelli in quest'ora: riprova tra poco." });
     if (req.azione === 'telecamera') return json_(limite_('f', MAX_FOTO_ORA) ? telecamera_(req) : { errore: "Troppi controlli delle foto in quest'ora: riprova tra poco." });
     if (req.azione === 'codici') return json_({ scelte: scelte_() });
@@ -105,6 +110,14 @@ function chiedi_(domanda, elenco, opz) {
   const tin = uso.promptTokenCount || 0, tout = (uso.candidatesTokenCount || 0) + (uso.thoughtsTokenCount || 0);
   out.uso = { ingresso: tin, uscita: tout, modello: modello, mese: conta_(modello, tin, tout) };
   return out;
+}
+
+// spesa stimata del mese contro il tetto: protegge il credito, che pagano in pochi per tutti
+function limiteMese_() {
+  const p = PropertiesService.getScriptProperties();
+  const mese = JSON.parse(p.getProperty('MESE_' + Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyyMM')) || '{"domande":0,"spesa":0}');
+  const limite = parseFloat(String(p.getProperty('LIMITE_MESE') || '').replace(',', '.')) || LIMITE_MESE_USD;
+  return { spesa: Math.round(mese.spesa * 100) / 100, limite: limite, superato: mese.spesa >= limite };
 }
 
 // tiene il conto delle domande e della spesa stimata del mese corrente
