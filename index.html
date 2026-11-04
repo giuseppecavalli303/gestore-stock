@@ -2021,7 +2021,10 @@ async function decifraClienti(data, chiave, subtle) {
     if (uso && uso.prezzo) q.set('nuovo', uso.prezzo);
     $('dSimBtn').innerHTML = `<a class="btn btn-ghost btn-sm" id="dSimUff" href="${FIN.portale}" target="_blank" rel="noopener">Simulatore ufficiale</a><a class="btn btn-ghost btn-sm" href="simulatore.html?${esc(q.toString())}" target="_blank" rel="noopener">Mio simulatore</a>`;
     $('dSimUff').onclick = () => copiaSubito(datiPortale(c, uso), 'Dati copiati: incollali nel portale VW FS');
-    rata(c, uso);
+    // il simulatore resta chiuso finche' non si preme il tasto (poi resta aperto per quell'auto)
+    if (FS[c.targa]) return rata(c, uso);
+    $('dRata').innerHTML = '<button class="btn btn-ghost btn-sm" id="dRataApri">Simula la rata</button>';
+    $('dRataApri').onclick = () => rata(c, uso);
   }
   async function scegliCodice(c, k) {
     const chiave = chiaveCodici();
