@@ -2044,7 +2044,7 @@ async function decifraClienti(data, chiave, subtle) {
     const tipi = (isVW(c) ? ['pvv'] : []).concat(['multimake', 'classico']);
     // manutenzione come nel simulatore: per metano, plug-in e up! la tariffa dedicata, per le altre 1 tagliando (si puo' cambiare)
     const manIniz = /Plug-in|Metano/.test(c.fuel) || /^up/i.test(c.family || '') ? 'plugin' : 'tagliando1';
-    const st = FS[c.targa] || (FS[c.targa] = { tipo: tipi[0], ant: 0, dur: 36, km: FIN.kmAnnui, vfg: FIN.vfg.iniziale, mm: 0, man: true, manTipo: manIniz, furto: '', furtoMesi: 0, gap: false, ego: false, safe: false });
+    const st = FS[c.targa] || (FS[c.targa] = { tipo: 'multimake', ant: 0, dur: 48, km: FIN.kmAnnui, vfg: FIN.vfg.max, mm: 0, man: true, manTipo: manIniz, furto: '', furtoMesi: 0, gap: false, ego: false, safe: false });
     // furto e incendio: copertura da 12 a 84 mesi, qualunque sia la durata del finanziamento; si parte dalla durata, arrotondata all'anno
     const SV = FIN.servizi, mesiFi = d => Math.min(84, Math.max(12, Math.ceil(d / 12) * 12));
     if (!FIN.mesiFurto.includes(st.furtoMesi)) st.furtoMesi = mesiFi(st.dur);
