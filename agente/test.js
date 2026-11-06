@@ -211,6 +211,8 @@ async function leggi(file) {
     ok(f.fuel === 'Plug-in', `carburante: Formentor "E- HYBRID" riconosciuta plug-in (${f.fuel})`);
     ok(describe('GOLF GTE 1.4 TSI', 'VW', '').fuel === 'Plug-in' && describe('ID.3 PRO 58 KWH', 'VW', '').fuel === 'Elettrica', 'carburante: GTE e ID.3 come prima');
     ok(describe('500 MY22 1.0 GSE HYBRID CLUB 5', 'FIAT', '').fuel === 'Ibrida' && describe('PANDA 1.0 FIREFLY S&S HYBRID', 'FIAT', '').fuel === 'Ibrida', 'carburante: Fiat 500 e Panda "GSE HYBRID" sono ibride leggere, non plug-in');
+    ok(describe('COMPASS SUMMIT 1.5 TURBO T4 130 CH BVR7 E- HYBRID', 'JEEP', '').fuel === 'Ibrida' && describe('COMPASS 1.3 T4 4XE PHEV 190 CV', 'JEEP', '').fuel === 'Plug-in', 'carburante: Jeep Compass E-Hybrid 130 è ibrida leggera, la 4xe è plug-in');
+    ok(describe('A3 SPORTBACK S LINE 1.5 35 ELECTRIC/TFSI DSG', 'AUDI', '').fuel === 'Ibrida' && describe('A3 SPORTBACK 40 TFSI E S TRONIC', 'AUDI', '').fuel === 'Plug-in', 'carburante: Audi A3 35 ELECTRIC/TFSI è ibrida leggera, non elettrica; 40 TFSI e è plug-in');
   }
   // AutoScout: se restano due annunci possibili, si guarda il modello; se il dubbio resta, nessun abbinamento
   {

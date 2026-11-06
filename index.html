@@ -890,7 +890,10 @@ function describe(modello, marcaRaw, section) {
 
   let fuel;
   // "E-HYBRID" anche con lo spazio della stampa troncata ("E- HYBRID"), ma solo come parola a se': "GSE HYBRID" della Fiat 500 e' un'ibrida leggera
-  if (/\bE-? ?HYBRID|\bGTE\b|PLUG|PHEV/.test(M)) fuel = 'Plug-in';
+  // Jeep Compass/Renegade/Avenger "E-HYBRID" e' ibrida leggera (la plug-in e' la 4xe); Audi "35 ELECTRIC/TFSI" e' ibrida leggera, "TFSI E" e' plug-in
+  if (/COMPAS|RENEGADE|AVENGER/.test(M) && /HYBRID/.test(M) && !/4XE|PLUG|PHEV/.test(M)) fuel = 'Ibrida';
+  else if (/\bE-? ?HYBRID|\bGTE\b|PLUG|PHEV|\b4XE\b|\bT[SF]SI E\b/.test(M)) fuel = 'Plug-in';
+  else if (/ELECTRIC\/T[SF]SI/.test(M)) fuel = 'Ibrida';
   else if (/\bID\.|\bE-UP|ELECTRIC|ELETTRIC|\bBORN\b|KWH|\bBEV\b|E-BOOST/.test(M)) fuel = 'Elettrica';
   else if (/\bTDI\b|\bGTD\b|DIESEL|HDI\b|MJT|MULTIJET|\bCDI\b|\bDCI\b|CRDI|\b\d{3}D\b/.test(M) || /DIESEL/.test(section)) fuel = 'Diesel';
   else if (/\bTGI\b|METANO|\bCNG\b/.test(M) || /METANO/.test(section)) fuel = 'Metano';
