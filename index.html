@@ -1626,7 +1626,7 @@ async function decifraClienti(data, chiave, subtle) {
   const tettoNome = () => 'Tetto apribile';
   const tettoTesto = w => (!w.tettoLista ? '' : `${w.tettoLista}. ` + (!w.tetto ? 'Controllo delle foto in attesa' : w.tetto.esito === 'si' ? `Confermato: in foto${w.tetto.foto ? ' ' + w.tetto.foto : ''} è aperto` : "Nessuna foto con il tetto aperto: da verificare sull'auto"));
   const camTesto = w => (!w.camLista ? '' : !w.cam ? "Nelle dotazioni c'è scritta: controllo delle foto in attesa" : w.cam.esito === 'si' ? `Confermata: c'è la foto dello schermo con la retrocamera${w.cam.foto ? ` (foto ${w.cam.foto})` : ''}` : "Nelle dotazioni c'è scritta, ma tra le foto non c'è quella della retrocamera: da verificare sull'auto");
-  let PROMO = new Set();   // targhe delle vetture in PROMO - NO SCONTO (data/promo.json): solo per i venditori
+  let PROMO = new Set();   // targhe delle vetture in PROMO - NO SCONTO (data/promo.json)
   const TRIS = [
     { k: 'as', label: 'Su AutoScout' }, { k: 'hasPrice', label: 'Con prezzo', get: c => c.prezzo > 0 }, { k: 'check', label: 'Check list fatta' },
     { k: 'spec', label: 'Prezzo speciale' }, { k: 'iva', label: 'IVA esposta' }, { k: 'mini', label: 'Mini PP' }, { k: 'fv', label: 'Foglio verde' },
@@ -1782,7 +1782,7 @@ async function decifraClienti(data, chiave, subtle) {
     $('kpis').innerHTML = tiles.join('');
   }
   function renderViews() {
-    $('views').innerHTML = '<span class="lab">Viste rapide</span>' + (PROMO.size && !S.cliente ? ['promo'] : []).concat(['km0', 'noWeb', 'priceDiff', 'noAs', 'noPrice', 'recentBooked', 'neo', 'spec', 'check']).map(id => `<button class="chip" data-preset="${id}" aria-pressed="false">${PRESETS[id].label} <span class="n">${N(countPreset(id))}</span></button>`).join('');
+    $('views').innerHTML = '<span class="lab">Viste rapide</span>' + (PROMO.size ? ['promo'] : []).concat(['km0', 'noWeb', 'priceDiff', 'noAs', 'noPrice', 'recentBooked', 'neo', 'spec', 'check']).map(id => `<button class="chip" data-preset="${id}" aria-pressed="false">${PRESETS[id].label} <span class="n">${N(countPreset(id))}</span></button>`).join('');
   }
   function renderDelta() {
     const d = S.delta; $('delta').hidden = !d; if (!d) return;
@@ -1803,7 +1803,7 @@ async function decifraClienti(data, chiave, subtle) {
     const facet = f => `<details class="fg" ${f.open ? 'open' : ''} data-fk="${f.k}"><summary><span>${f.label}<span class="cnt" hidden></span></span></summary><div class="body" id="f_${f.k}"></div></details>`;
     const range = r => { const v = F.r[r.k] || [null, null]; return `<details class="fg" ${r.open ? 'open' : ''}><summary><span>${r.label}</span></summary><div class="body"><div class="range"><label for="r_${r.k}_0">Da<input id="r_${r.k}_0" type="number" inputmode="numeric" min="0" step="${r.step}" data-r="${r.k}" data-i="0" value="${v[0] ?? ''}"></label><label for="r_${r.k}_1">A<input id="r_${r.k}_1" type="number" inputmode="numeric" min="0" step="${r.step}" data-r="${r.k}" data-i="1" value="${v[1] ?? ''}"></label></div>${(r.quick || []).map(q => `<button class="chip" data-q="${r.k}" data-lo="${q[0] ?? ''}" data-hi="${q[1] ?? ''}" aria-pressed="${v[0] === q[0] && v[1] === q[1]}">${q[2]}</button>`).join('')}</div></details>`; };
     h += facet(FACETS[0]) + facet(FACETS[1]) + facet(FACETS[2]) + range(RANGES[0]) + range(RANGES[1]) + range(RANGES[2]) + range(RANGES[3]) + facet(FACETS[3]) + facet(FACETS[4]) + (ggVisibili() ? range(RANGES[4]) : '') + FACETS.slice(5).map(facet).join('');
-    h += `<details class="fg" open><summary><span>Altro</span></summary><div class="body">${TRIS.filter(t => t.k !== 'promo' || (PROMO.size && !S.cliente)).map(t => `<div class="tri"><span>${t.label}</span>${seg('tri:' + t.k, [['', 'Tutte'], ['true', 'Sì'], ['false', 'No']], F.tri[t.k] == null ? '' : F.tri[t.k])}</div>`).join('')}</div></details>`;
+    h += `<details class="fg" open><summary><span>Altro</span></summary><div class="body">${TRIS.filter(t => t.k !== 'promo' || PROMO.size).map(t => `<div class="tri"><span>${t.label}</span>${seg('tri:' + t.k, [['', 'Tutte'], ['true', 'Sì'], ['false', 'No']], F.tri[t.k] == null ? '' : F.tri[t.k])}</div>`).join('')}</div></details>`;
     h += `<div class="fdone"><button class="btn btn-primary" id="fClose2">Mostra <span id="fCount" class="num"></span></button></div>`;
     pendingScroll = $('filters').scrollTop;
     $('filters').innerHTML = h;
@@ -2680,7 +2680,6 @@ async function decifraClienti(data, chiave, subtle) {
       if (!['cons', 'ingr', 'pa', 'pd', 'km', 'anno', 'cv', 'col'].includes($('sort').value)) $('sort').value = 'cons';
       delete F.r.giorni;
       if (activePreset === 'old') activePreset = 'all';
-      delete F.tri.promo; if (activePreset === 'promo') activePreset = 'all';
       if (!$('stats').hidden) setTab('auto');
     } else if (!ORD_GG[0].parentNode) ORD_GG.forEach((o, i) => $('sort').options.add(o, 2 + i));
     if (S.Q && S.Q.r && S.Q.r.giorni) S.Q = capisci($('q').value.trim());
