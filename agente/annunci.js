@@ -113,7 +113,10 @@ async function galleriaCompleta(annunci) {
   let lette = 0, errori = 0;
   for (const a of annunci) {
     const c = cache[a.id];
-    if (c && c.cam != null && c.tetto != null && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; a.tettoLista = c.tetto; continue; }
+    // se il sito ha cambiato le foto (es. bollini promo), quelle dell'elenco non sono piu' nella galleria ricordata: la rileggo
+    const nome = f => String(f).split('/').pop();
+    const fresca = c && a.foto.every(f => c.foto.some(g => nome(g) === nome(f)));
+    if (c && fresca && c.cam != null && c.tetto != null && Date.now() - c.t < SETTE_GIORNI) { if (c.foto.length > a.foto.length) a.foto = c.foto; a.camLista = c.cam; a.tettoLista = c.tetto; continue; }
     try {
       await pausa(400);
       const r = await fetch(a.url, { headers: { 'User-Agent': 'Mozilla/5.0 (Gestore stock Valentino)' } });
