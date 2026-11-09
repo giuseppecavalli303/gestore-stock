@@ -37,3 +37,4 @@ docs/superpowers/
 !cartelli/*.pdf
 agente/chiave-clienti.txt
 agente/link-clienti.txt
+agente/promo-vendute.json

@@ -57,8 +57,8 @@ function InviaPosta {
             $it = $outlook.CreateItem(0)
             $it.To = $m.to; $it.Subject = $m.subject; $it.HTMLBody = $m.html
             foreach ($a in @($m.allegati)) { if ($a -and (Test-Path $a)) { [void]$it.Attachments.Add([string]$a) } }
-            $it.Send()
-            Scrivi "Mail inviata a $($m.to): $($m.subject)"
+            if ($m.bozza) { $it.Save(); Scrivi "Bozza pronta in Outlook per $($m.to): $($m.subject)" }   # la controlla e la invia Giuseppe
+            else { $it.Send(); Scrivi "Mail inviata a $($m.to): $($m.subject)" }
             [void]$resto.Remove($m)
         } catch {
             $n = 1 + [int]$m.tentativi
@@ -175,6 +175,12 @@ try {
             if ($nuova -and (LeggiStato).riepilogo -ne $giorno) {
                 $p = Esegui 'node agente\posta.js riepilogo avvisi'
                 if ($p.Codice -ne 0) { Scrivi $p.Testo } else { InviaPosta; SegnaStato 'riepilogo' $giorno }
+            }
+            # promo PROMO - NO SCONTO: bozza del riepilogo vendute per Sfregola e Valentino (una al giorno)
+            if ($nuova -and (LeggiStato).promo -ne $giorno -and (Test-Path (Join-Path $repo 'data\promo.json'))) {
+                $p = Esegui 'node agente\posta.js promo'
+                Scrivi $p.Testo
+                if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'promo' $giorno }
             }
             if ($nuova -and (LeggiStato).rapporto -ne $giorno) {
                 SegnaStato 'rapporto' $giorno                            # una sola presentazione al giorno, anche se qualcosa va storto

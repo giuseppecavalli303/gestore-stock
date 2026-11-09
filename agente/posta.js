@@ -1,6 +1,6 @@
 // Prepara le mail che l'agente spedisce da Outlook: riepilogo del giorno, avvisi delle ricerche salvate,
 // conferme di iscrizione e allarmi. Scrive tutto in agente/posta-da-inviare.json; l'invio lo fa aggiorna-stock.ps1.
-// Uso: node agente/posta.js riepilogo | avvisi | richieste | allarme <mancante|errore> [testo]
+// Uso: node agente/posta.js riepilogo | avvisi | richieste | promo | allarme <mancante|errore> [testo]
 const fs = require('fs'), path = require('path');
 
 const root = path.join(__dirname, '..');
@@ -157,6 +157,88 @@ function avvisi() {
 }
 
 /* ---------- allarmi a te ---------- */
+/* ---------- promo PROMO - NO SCONTO: riepilogo delle vendute per la proprieta' ----------
+   Diventa una BOZZA in Outlook (non parte da sola): Giuseppe la controlla e la invia lui.
+   Lo sconto e' il confronto tra il prezzo in stampa e il prezzo promo del giorno di partenza:
+   il prezzo del contratto non e' nella stampa, quindi uno sconto fatto solo a contratto qui non si vede. */
+const PROMO_A = 'matteo.sfregola@valentinoautomobili.it; giuseppe.valentino@valentinoautomobili.it';
+function promo() {
+  const pr = leggi(dati('promo.json'), null);
+  if (!pr || !Array.isArray(pr.targhe) || !pr.targhe.length) { console.log('Nessuna promo attiva.'); return; }
+  const { cur, sto } = caricaStock();
+  const day = cur.meta.day, inizio = pr.aggiornato, P = new Set(pr.targhe);
+  const memF = qui('promo-vendute.json'), primoGiro = !fs.existsSync(memF), mem = leggi(memF, {});
+  const storia = (sto && (sto.auto || sto)) || {};
+  const prezzoPromo = t => {
+    const p = (storia[t] && storia[t].p) || [];
+    const fino = p.filter(x => x[0] <= inizio);
+    return (fino.length ? fino[fino.length - 1] : p[0] || [])[1] || 0;
+  };
+  const presenti = new Map(cur.cars.map(c => [c.targa, c]));
+  // prenotate o vendute dalla partenza della promo: le ricordo, cosi' restano in elenco anche quando escono dallo stock
+  for (const c of cur.cars) {
+    if (!P.has(c.targa) || !(c.booked || c.st >= 1)) continue;
+    if (c.dataPren && c.dataPren < inizio) continue;
+    // "dal" = primo giorno in cui la stampa la mostra prenotata dopo la partenza della promo (dallo storico)
+    const s = ((storia[c.targa] && storia[c.targa].s) || []).filter(x => x[0] >= inizio && x[1] !== 'Libera');
+    const m = mem[c.targa] || (mem[c.targa] = { dal: s.length ? s[0][0] : primoGiro ? c.dataPren || inizio : day });
+    Object.assign(m, { auto: `${c.brand} ${c.family}`, modello: c.modello, vend: c.vend || m.vend || '', pren: c.dataPren || m.pren || '', prezzo: c.prezzo, stato: etichetta(c), promo: prezzoPromo(c.targa) });
+  }
+  for (const t of Object.keys(mem)) {
+    const c = presenti.get(t);
+    if (!c) mem[t].stato = 'Uscita dallo stock (consegnata)';
+    else if (c.free) delete mem[t];                     // prenotazione annullata: torna libera
+  }
+  fs.writeFileSync(memF, JSON.stringify(mem, null, 1));
+  const righe = Object.entries(mem).sort((a, b) => ((a[1].pren || a[1].dal) < (b[1].pren || b[1].dal) ? -1 : 1));
+  coda.push({ to: PROMO_A, subject: `Promo No Sconto | Situazione vendite al ${dIt(day)}`, html: mailPromo(righe, pr.targhe.length, inizio, day), bozza: true });
+}
+
+/* Mail per la proprieta': impaginazione sobria e compatibile con Outlook (solo tabelle, colori pieni, niente immagini esterne). */
+function mailPromo(righe, totPromo, inizio, day) {
+  const F = 'font-family:Segoe UI,Calibri,Arial,sans-serif;';
+  const BLU = '#0b2545', GRIGIO = '#5b6675', RIGA = '#e3e7ed', CHIARO = '#f4f6f9';
+  const lungo = iso => new Date(iso + 'T12:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const scontato = m => m.promo && m.prezzo && m.prezzo < m.promo;
+  const tot = righe.reduce((s, [, m]) => s + (m.prezzo || 0), 0);
+  const nuove = righe.filter(([, m]) => m.dal === day).length, sconti = righe.filter(([, m]) => scontato(m)).length;
+  const pct = totPromo ? Math.round((righe.length / totPromo) * 100) : 0;
+  const kpi = (val, lab) => `<td width="25%" align="center" bgcolor="${CHIARO}" style="${F}padding:14px 6px;border:4px solid #ffffff">
+<div style="font-size:22px;font-weight:bold;color:${BLU}">${val}</div><div style="font-size:11px;color:${GRIGIO};text-transform:uppercase;letter-spacing:.5px;padding-top:2px">${lab}</div></td>`;
+  const th = (s, al) => `<td align="${al || 'left'}" bgcolor="${BLU}" style="${F}padding:8px 10px;font-size:11px;font-weight:bold;color:#ffffff;text-transform:uppercase;letter-spacing:.4px">${s}</td>`;
+  const td = (s, al, extra) => `<td align="${al || 'left'}" valign="top" style="${F}padding:9px 10px;font-size:13px;color:#1d2733;border-bottom:1px solid ${RIGA};${extra || ''}">${s}</td>`;
+  const stato = m => (/uscita/i.test(m.stato) ? 'Consegnata' : esc(m.stato || ''));
+  const tab = righe.map(([t, m], i) => `<tr${i % 2 ? ` bgcolor="${CHIARO}"` : ''}>
+${td(esc(dIt(m.pren || m.dal).slice(0, 5)), 'left', 'white-space:nowrap')}
+${td(`<b>${esc(m.auto)}</b>${m.dal === day ? ` &nbsp;<span style="font-size:10px;font-weight:bold;color:#0a7a3d">NUOVA</span>` : ''}<br><span style="font-size:11px;color:${GRIGIO}">${esc(t)} · ${esc(m.modello)}</span>`)}
+${td(esc(m.vend || 'n.d.'))}
+${td(stato(m), 'left', `font-size:12px;color:${GRIGIO}`)}
+${td(eur(m.prezzo), 'right', 'white-space:nowrap')}
+${td(scontato(m) ? `<b style="color:#b42318">−${eur(m.promo - m.prezzo)}</b>` : m.promo ? '<span style="color:#0a7a3d">Nessuno</span>' : 'n.d.', 'center', 'white-space:nowrap')}</tr>`).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#ffffff">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:16px 8px">
+<table role="presentation" width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;border:1px solid ${RIGA}">
+<tr><td bgcolor="${BLU}" style="${F}padding:20px 24px">
+<div style="font-size:11px;color:#a9b8cc;letter-spacing:2px;text-transform:uppercase">Valentino Automobili · Vendite Usato</div>
+<div style="font-size:21px;font-weight:bold;color:#ffffff;padding-top:4px">Promo No Sconto · Situazione vendite</div>
+<div style="font-size:13px;color:#d5deea;padding-top:2px">Aggiornamento di ${lungo(day)}</div></td></tr>
+<tr><td style="${F}padding:22px 24px 6px;font-size:14px;color:#1d2733;line-height:1.5">
+Buongiorno,<br>di seguito la situazione aggiornata delle vetture in promozione <b>PROMO - NO SCONTO</b>, attiva dal ${dIt(inizio)}, sulla base della stampa stock di questa mattina.</td></tr>
+<tr><td style="padding:10px 20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+${kpi(`${righe.length}<span style="font-size:13px;color:${GRIGIO};font-weight:normal"> / ${totPromo}</span>`, `Vendute (${pct}%)`)}${kpi(nuove, 'Nuove da ieri')}${kpi(eur(tot), 'Valore a listino')}${kpi(sconti, 'Sconti rilevati')}
+</tr></table></td></tr>
+<tr><td style="padding:8px 24px 4px">${righe.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+<tr>${th('Data')}${th('Vettura')}${th('Venditore')}${th('Stato')}${th('Prezzo', 'right')}${th('Sconto', 'center')}</tr>${tab}
+<tr><td colspan="4" style="${F}padding:10px;font-size:13px;font-weight:bold;color:${BLU};border-top:2px solid ${BLU}">Totale ${righe.length} vetture</td>
+<td align="right" style="${F}padding:10px;font-size:13px;font-weight:bold;color:${BLU};border-top:2px solid ${BLU};white-space:nowrap">${eur(tot)}</td><td style="border-top:2px solid ${BLU}"></td></tr></table>`
+    : `<p style="${F}font-size:14px;color:${GRIGIO}">Al momento nessuna vettura della promozione risulta prenotata.</p>`}</td></tr>
+<tr><td style="${F}padding:10px 24px 0;font-size:11px;color:${GRIGIO};line-height:1.5">
+Prezzi e venditori come da stampa stock del ${dIt(day)}. Lo sconto è la differenza tra il prezzo in stampa e il prezzo di promozione del ${dIt(inizio)}. Le prenotazioni registrate dopo l'emissione della stampa saranno riportate nell'aggiornamento successivo.</td></tr>
+<tr><td style="${F}padding:20px 24px 24px;font-size:14px;color:#1d2733;line-height:1.5">
+Cordiali saluti,<br><b>Giuseppe Cavalli</b><br><span style="font-size:12px;color:${GRIGIO}">Vendite Usato · Valentino Automobili</span></td></tr>
+</table></td></tr></table></body></html>`;
+}
+
 function allarme(tipo, testo) {
   if (tipo === 'mancante') accoda(IO, 'Stock usato: la stampa di oggi non è ancora arrivata', `<p>Alle ${new Date().toTimeString().slice(0, 5)} non ho ancora trovato in Outlook la mail con <b>stock_auto_usato….pdf</b> di oggi da Muschitiello o Quartieri.</p><p>Il sito mostra ancora la stampa precedente. Continuo a controllare ogni 10 minuti fino alle 20.</p>`);
   else accoda(IO, "Stock usato: l'agente ha un problema", `<p>L'ultimo controllo si è fermato con questo messaggio:</p><pre style="white-space:pre-wrap;background:#fff;padding:10px;border-radius:8px">${esc(testo || 'errore sconosciuto')}</pre><p>Il sito mostra l'ultima stampa pubblicata correttamente. Il registro completo è in agente\\agente.log.</p>`);
@@ -168,6 +250,7 @@ try {
     if (c === 'riepilogo') riepilogo();
     else if (c === 'avvisi') avvisi();
     else if (c === 'richieste') richieste();
+    else if (c === 'promo') promo();
   }
   if (cmd === 'allarme') allarme(arg[0], arg.slice(1).join(' '));
   salvaCoda();
