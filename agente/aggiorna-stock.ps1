@@ -22,6 +22,7 @@ $statoF = Join-Path $PSScriptRoot 'stato.json'
 New-Item -ItemType Directory -Force $arrivi | Out-Null
 Set-Location $repo
 $env:GIT_TERMINAL_PROMPT = '0'
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}   # lettere accentate giuste nel registro
 $oggi = (Get-Date).ToString('yyyy-MM-dd')
 
 # un solo agente alla volta: se ne sta gia' girando uno (programmato o lanciato a mano) esco subito

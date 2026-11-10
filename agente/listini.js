@@ -5,7 +5,11 @@
 // Scrive data/codici.json, che l'app legge quando apri la scheda di un'auto.
 // Uso: node agente/listini.js
 const fs = require('fs'), path = require('path');
+// fuori dal browser la libreria stampa avvisi sul disegno delle pagine, che qui non serve: non devono riempire il registro
+const _warn = console.warn, _log = console.log;
+console.warn = console.log = () => {};
 const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
+console.warn = _warn; console.log = _log;
 
 const root = path.join(__dirname, '..');
 const CASA = process.env.USERPROFILE || 'C:/Users/Venditore32';
@@ -223,11 +227,14 @@ async function main() {
   const sezioni = Object.values(nuova).flatMap(x => x.sezioni.map(s => ({ ...s, file: x.file })));
   const stock = leggi(path.join(root, 'data', 'stock.json'), null);
   if (!stock) throw new Error('data/stock.json mancante');
+  // il cambio ricavato dai listini al giro prima si ricalcola da capo, cosi' il risultato e' sempre lo stesso
+  const stockPrima = JSON.stringify(stock.cars);
+  for (const c of stock.cars) if (c._cambioListino) { c.cambio = 'n.d.'; delete c._cambioListino; }
   const auto = abbina(stock.cars, sezioni);
-  // il cambio ricavato dai listini entra nello stock, cosi' il filtro lo trova (il valore della stampa resta in _cambioPdf, come per gli annunci)
+  // il cambio ricavato dai listini entra nello stock, cosi' il filtro lo trova (segnato con _cambioListino)
   let cambi = 0;
-  for (const c of stock.cars) { const a = auto[c.targa]; if (a && a.cambio && c.cambio === 'n.d.') { c._cambioPdf = c.cambio; c.cambio = a.cambio; cambi++; } }
-  if (cambi) fs.writeFileSync(path.join(root, 'data', 'stock.json'), JSON.stringify(stock));
+  for (const c of stock.cars) { const a = auto[c.targa]; if (a && a.cambio && c.cambio === 'n.d.') { c.cambio = a.cambio; c._cambioListino = 1; cambi++; } }
+  if (JSON.stringify(stock.cars) !== stockPrima) fs.writeFileSync(path.join(root, 'data', 'stock.json'), JSON.stringify(stock));
   const date = [...new Set(sezioni.map(s => s.validita))].sort();
   // riscrivo il file solo se cambia qualcosa, cosi' l'agente non pubblica a vuoto
   const dest = path.join(root, 'data', 'codici.json'), prima = leggi(dest, {});
