@@ -47,6 +47,23 @@ async function leggi(file) {
   }
   // rata: valori calcolati con il simulatore di Giuseppe (Documents\simulatore vw), manutenzione 1 tagliando nei PVV
   const { FIN, finCalcola } = new Function(src('finanza.js') + '\nreturn { FIN, finCalcola };')();
+  // tassi e spese sono scritti in due posti (app e simulatore): devono restare uguali
+  {
+    const fSim = path.join(root, 'simulatore.html');
+    const m = (fs.existsSync(fSim) ? fs.readFileSync(fSim, 'utf8') : '').match(/const CONFIG = (\{[\s\S]*?\n\s{8}\});/);
+    if (!m) ok(false, 'tassi: non trovo le impostazioni dentro simulatore.html');
+    else {
+      const C = new Function('return ' + m[1])(), Z = C.servizi, diversi = [];
+      const pari = (nome, a, b) => { if (JSON.stringify(a) !== JSON.stringify(b)) diversi.push(`${nome}: app ${JSON.stringify(a)}, simulatore ${JSON.stringify(b)}`); };
+      pari('spese di istruttoria', FIN.speseIstruttoria, C.speseIstruttoria); pari('spese di incasso', FIN.speseIncasso, C.speseIncasso); pari('imposta di bollo', FIN.bolloPercent, C.bolloPercent);
+      pari('TAN PVV', FIN.pvv.tan, C.pvv.tan); pari('anticipo massimo PVV', FIN.pvv.maxAnticipo, C.pvv.maxAnticipoPercent);
+      pari('TAN Multimake', FIN.multimake.tassi.map(t => t.tan), C.multimake.tassi.map(t => t.tan)); pari('anticipo massimo Multimake', FIN.multimake.maxAnticipo, C.multimake.maxAnticipoPercent);
+      pari('TAN Classico', FIN.classico.tan, C.classico.tan);
+      pari('furto e incendio', FIN.servizi.furtoPerMille, Z.furtoPerMilleAnnuo); pari('GAP', FIN.servizi.gap, Z.gapMensile); pari('Alter Ego', FIN.servizi.alterEgo, Z.alterEgoMensile); pari('Personal Safe', FIN.servizi.personalSafe, Z.personalSafeMensile);
+      pari('manutenzione', [FIN.manutenzione.tagliando1, FIN.manutenzione.tagliando2, FIN.manutenzione.plugin], [Z.tagliando1Mensile, Z.tagliando2Mensile, Z.pluginMensile]);
+      ok(!diversi.length, `tassi e spese uguali nell'app e nel simulatore${diversi.length ? ' — DIVERSI: ' + diversi.join('; ') : ''}`);
+    }
+  }
   const pvv = finCalcola({ tipo: 'pvv', prezzo: 20000, anticipo: 3000, durata: 36, tan: FIN.pvv.tan, vfg: 9000, servizi: 5 * 36 });
   ok(pvv.rata === 348.05 && Math.abs(pvv.taeg * 100 - 11.02) < 0.01, `rata PVV come il simulatore: ${pvv.rata} € (attesa 348,05)`);
   const cl = finCalcola({ tipo: 'classico', prezzo: 14450, anticipo: 2000, durata: 60, tan: FIN.classico.tan });
