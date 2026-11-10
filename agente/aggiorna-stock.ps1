@@ -169,6 +169,7 @@ try {
             Scrivi $l.Testo
             $s = Esegui 'node agente\storico.js'
             Scrivi $s.Testo
+            if (Test-Path (Join-Path $repo 'data\promo.json')) { $pp = Esegui 'node agente\promo-prezzi.js'; Scrivi $pp.Testo }   # prezzo barrato delle auto Black Friday
             $nuova = Pubblica "Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"
 
             $giorno = ((Get-Content $attuale -Raw -Encoding UTF8 | ConvertFrom-Json).meta.day)
