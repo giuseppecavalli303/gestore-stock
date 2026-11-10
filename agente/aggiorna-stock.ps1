@@ -176,7 +176,7 @@ try {
                 $p = Esegui 'node agente\posta.js riepilogo avvisi'
                 if ($p.Codice -ne 0) { Scrivi $p.Testo } else { InviaPosta; SegnaStato 'riepilogo' $giorno }
             }
-            # promo PROMO - NO SCONTO: bozza del riepilogo vendute per Sfregola e Valentino (una al giorno)
+            # promo PROMO - NO SCONTO: riepilogo vendute inviato a Sfregola e Valentino (una al giorno)
             if ($nuova -and (LeggiStato).promo -ne $giorno -and (Test-Path (Join-Path $repo 'data\promo.json'))) {
                 $p = Esegui 'node agente\posta.js promo'
                 Scrivi $p.Testo

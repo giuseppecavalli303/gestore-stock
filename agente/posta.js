@@ -158,7 +158,7 @@ function avvisi() {
 
 /* ---------- allarmi a te ---------- */
 /* ---------- promo PROMO - NO SCONTO: riepilogo delle vendute per la proprieta' ----------
-   Diventa una BOZZA in Outlook (non parte da sola): Giuseppe la controlla e la invia lui.
+   Parte da sola ogni mattina con la stampa nuova (chiesto da Giuseppe il 10/11/2026).
    Lo sconto e' il confronto tra il prezzo in stampa e il prezzo promo del giorno di partenza:
    il prezzo del contratto non e' nella stampa, quindi uno sconto fatto solo a contratto qui non si vede. */
 const PROMO_A = 'matteo.sfregola@valentinoautomobili.it; giuseppe.valentino@valentinoautomobili.it';
@@ -191,7 +191,7 @@ function promo() {
   }
   fs.writeFileSync(memF, JSON.stringify(mem, null, 1));
   const righe = Object.entries(mem).sort((a, b) => ((a[1].pren || a[1].dal) < (b[1].pren || b[1].dal) ? -1 : 1));
-  coda.push({ to: PROMO_A, subject: `Promo No Sconto | Situazione vendite al ${dIt(day)}`, html: mailPromo(righe, pr.targhe.length, inizio, day), bozza: true });
+  coda.push({ to: PROMO_A, subject: `Promo No Sconto | Situazione vendite al ${dIt(day)}`, html: mailPromo(righe, pr.targhe.length, inizio, day) });
 }
 
 /* Mail per la proprieta': impaginazione sobria e compatibile con Outlook (solo tabelle, colori pieni, niente immagini esterne). */
