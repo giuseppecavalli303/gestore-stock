@@ -1160,7 +1160,8 @@
       if (!shared || !shared.cars || !shared.cars.length) return;
       if (S.meta.printDate && !S.meta.demo && S.meta.printDate > shared.meta.printDate) return;
       let prev = null;
-      try { prev = await get('data/prev.json'); } catch (e) {}
+      try { prev = await get('data/ieri.json'); } catch (e) {}                 // versione leggera di ieri (agente/ieri.js)
+      if (!prev) try { prev = await get('data/prev.json'); } catch (e) {}
       const k = chiaveClienti(), sub = window.crypto && crypto.subtle;
       await decifraClienti(shared, k, sub); if (prev) await decifraClienti(prev, k, sub);
       setData(shared, prev);

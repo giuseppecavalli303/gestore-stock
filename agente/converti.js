@@ -51,5 +51,6 @@ if (!pdfPath || !fs.existsSync(pdfPath)) { console.error('PDF non trovato: ' + p
     } catch (e) { /* file precedente illeggibile: lo sovrascrivo */ }
   }
   fs.writeFileSync(curFile, JSON.stringify(data));
+  try { require('./ieri.js').scrivi(root); } catch (e) { /* senza il file leggero l'app usa quello completo */ }
   console.log(`OK: stampa del ${m.printDate}, ${m.count} veicoli, totale verificato${conClienti ? '' : chiaveNomi ? ', nomi dei clienti cifrati' : ', nomi dei clienti rimossi'}${m.annunci ? `, ${m.annunci.abbinati} abbinati agli annunci del sito` : ''}.`);
 })().catch(e => { console.error('Errore di lettura: ' + e.message); process.exit(1); });
