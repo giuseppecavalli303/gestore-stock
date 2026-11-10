@@ -1656,6 +1656,8 @@ async function decifraClienti(data, chiave, subtle) {
   const S = { cars: [], meta: {}, prev: null, vocab: [], Q: parseQuery('', []), view: 'cards', shown: 60, list: [], delta: null, prevMap: null, gone: [], cliente: false };
   // modalita' cliente: si puo' girare il telefono al cliente, l'app nasconde da quanto tempo le auto sono in stock
   const ggVisibili = () => !S.cliente;
+  // giorni da quando l'auto e' pubblicata su AutoScout (data nella stampa)
+  const ggPub = c => (c.as && c.asDate && S.meta && S.meta.day ? Math.max(0, dayDiff(S.meta.day, c.asDate)) : null);
   const acqV = c => (S.cliente ? '' : c.acq || '');   // nome del cliente: solo in modalita' venditore
   let F;
   const resetF = () => { F = { disp: 'all', sets: {}, r: {}, tri: {}, delta: null, preset: null }; FACETS.forEach(f => { F.sets[f.k] = new Set(); }); };
@@ -1741,7 +1743,7 @@ async function decifraClienti(data, chiave, subtle) {
   const stLabel = c => (c._gone ? 'Uscita' : c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato);
   const TCOLS = [['Stato', stLabel], ['Targa', c => c.targa], ['Veicolo', c => c.brand + ' ' + c.family], ['Allestimento', c => c.modello], ['Imm.', c => c.imm],
     ['Km', c => c.km, 1], ['CV', c => c.cv || null, 1], ['Alim.', c => c.fuel], ['Cambio', c => c.cambio], ['Colore', c => c.colore], ['Prezzo', c => c.prezzo || null, 1],
-    ['Ubicazione', c => c.ubic], ['Giorni', c => c.giorni, 1], ['AutoScout', c => (c.as ? 'Sì' : 'No')], ['Acquirente', c => acqV(c)], ['Venditore', c => c.vend]];
+    ['Ubicazione', c => c.ubic], ['Giorni', c => c.giorni, 1], ['Gg pubbl.', ggPub, 1], ['AutoScout', c => (c.as ? 'Sì' : 'No')], ['Acquirente', c => acqV(c)], ['Venditore', c => c.vend]];
   function colCmp({ i, dir }) {
     const get = TCOLS[i][1], num = TCOLS[i][2];
     return (a, b) => {
@@ -1879,7 +1881,7 @@ async function decifraClienti(data, chiave, subtle) {
     const ph = foto(c, 400);
     return `<button class="card" data-i="${i}">
       <div class="ph"><span class="stella" role="button" tabindex="0" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}" aria-label="Lista per il cliente">${STELLA}</span>${ph ? `<img src="${ph}" alt="" loading="lazy" decoding="async">` : '<span>Nessuna foto sul sito</span>'}${c.web && c.web.foto.length > 1 ? `<i class="nfoto">${c.web.foto.length} foto</i>` : ''}${km0(c) ? '<i class="bollo-km0">Km 0</i>' : ''}${PROMO.has(c.targa) ? '<i class="bollo-bf">Black Friday</i>' : ''}</div>
-      <div class="r1">${stPill(c)}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni === 0 ? 'entrata oggi' : c.giorni === 1 ? 'entrata ieri' : c.giorni + ' gg in stock'}</span>` : ''}</div>
+      <div class="r1">${stPill(c)}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni === 0 ? 'entrata oggi' : c.giorni === 1 ? 'entrata ieri' : c.giorni + ' gg in stock'}${ggPub(c) != null ? ` · ${ggPub(c) === 0 ? 'pubblicata oggi' : ggPub(c) + ' gg pubblicata'}` : ''}</span>` : ''}</div>
       <div><h3><span>${esc(c.brand)}</span> ${esc(c.family)}</h3><p class="mod">${esc(c.modello)}</p></div>
       <div class="specs"><div><b>${N(c.km)}</b><span>km</span></div><div><b>${immIt(c)}</b><span>immatr.</span></div><div><b>${c.cv ? c.cv + ' CV' : 'n.d.'}</b><span>potenza</span></div><div><b>${esc(c.fuel)}</b><span>alim.</span></div><div><b>${esc(c.cambio)}</b><span>cambio</span></div><div><b><i class="sw" style="background:${COLOR_HEX[c.colorG] || '#9aa3b2'}"></i>${esc(c.colorG)}</b><span>colore</span></div></div>
       <div class="r3">${plate(c.targa)}${tags}</div>
@@ -1889,7 +1891,7 @@ async function decifraClienti(data, chiave, subtle) {
     </button>`;
   }
   function rowHtml(c, i) {
-    return `<tr data-i="${i}"><td>${stPill(c)}${km0(c) ? ' <span class="pill km0">Km 0</span>' : ''}${PROMO.has(c.targa) ? ' <span class="pill bf">Black Friday</span>' : ''}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r">${barrato(c)}<b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(acqV(c))}</td><td>${esc(c.vend)}</td></tr>`;
+    return `<tr data-i="${i}"><td>${stPill(c)}${km0(c) ? ' <span class="pill km0">Km 0</span>' : ''}${PROMO.has(c.targa) ? ' <span class="pill bf">Black Friday</span>' : ''}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r">${barrato(c)}<b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td class="r col-gg">${ggVisibili() ? ggPub(c) ?? '' : ''}</td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(acqV(c))}</td><td>${esc(c.vend)}</td></tr>`;
   }
   function renderList() {
     const cards = S.view === 'cards', part = S.list.slice(0, S.shown);
@@ -1900,7 +1902,7 @@ async function decifraClienti(data, chiave, subtle) {
       $('more').textContent = ''; return;
     }
     if (cards) $('grid').innerHTML = part.map(cardHtml).join('');
-    else { const sl = $('tablewrap').scrollLeft; $('tablewrap').innerHTML = `<table><thead><tr>${TCOLS.map((t, i) => `<th class="${t[2] ? 'r' : ''}${t[0] === 'Giorni' ? ' col-gg' : ''}" data-col="${i}"${S.col && S.col.i === i ? ` aria-sort="${S.col.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button title="Ordina per ${t[0]}">${t[0]}${S.col && S.col.i === i ? (S.col.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}</tr></thead><tbody>${part.map(rowHtml).join('')}</tbody></table>`; $('tablewrap').scrollLeft = sl; }
+    else { const sl = $('tablewrap').scrollLeft; $('tablewrap').innerHTML = `<table><thead><tr>${TCOLS.map((t, i) => `<th class="${t[2] ? 'r' : ''}${t[0] === 'Giorni' || t[0] === 'Gg pubbl.' ? ' col-gg' : ''}" data-col="${i}"${S.col && S.col.i === i ? ` aria-sort="${S.col.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button title="Ordina per ${t[0]}">${t[0]}${S.col && S.col.i === i ? (S.col.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}</tr></thead><tbody>${part.map(rowHtml).join('')}</tbody></table>`; $('tablewrap').scrollLeft = sl; }
     $('more').textContent = S.shown < S.list.length ? `Mostrati ${N(part.length)} di ${N(S.list.length)} · scorri per vederne altri` : '';
   }
   new IntersectionObserver(es => { if (es[0].isIntersecting && S.shown < S.list.length) { S.shown += 60; renderList(); } }, { rootMargin: '600px' }).observe($('more'));
@@ -1927,7 +1929,7 @@ async function decifraClienti(data, chiave, subtle) {
         <section id="dStoria" hidden><h4>Storia nelle stampe</h4><div class="timeline" id="dStoriaBody"></div></section>
         <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${ggVisibili() ? row('Data di ingresso', dIt(c.ingr)) : ''}${row('Anticipata', c.antic)}</dl></section>
         ${acqV(c) || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', acqV(c))}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
-        <section><h4>Pubblicazione e pratiche</h4><dl class="dl">${row('AutoScout', c.as ? 'Sì' + (c.asDate ? ', dal ' + dIt(c.asDate) : '') : 'No')}${row('Check list', c.check ? 'Sì' + (c.checkDate ? ', il ' + dIt(c.checkDate) : '') : 'No')}${row('Prezzo speciale', yn(c.spec))}${row('IVA esposta', yn(c.iva))}${row('Mini PP', yn(c.mini))}${row('Foglio verde', yn(c.fv))}${row('Note', c.note, true)}${S.cliente ? '' : '<div class="wide" id="dAS"></div>'}</dl></section>
+        <section><h4>Pubblicazione e pratiche</h4><dl class="dl">${row('AutoScout', c.as ? 'Sì' + (c.asDate ? ', dal ' + dIt(c.asDate) + (ggVisibili() && ggPub(c) != null ? ` (${ggPub(c) === 1 ? '1 giorno' : ggPub(c) + ' giorni'})` : '') : '') : 'No')}${row('Check list', c.check ? 'Sì' + (c.checkDate ? ', il ' + dIt(c.checkDate) : '') : 'No')}${row('Prezzo speciale', yn(c.spec))}${row('IVA esposta', yn(c.iva))}${row('Mini PP', yn(c.mini))}${row('Foglio verde', yn(c.fv))}${row('Note', c.note, true)}${S.cliente ? '' : '<div class="wide" id="dAS"></div>'}</dl></section>
         </div>
       </div>`;
     $('drawer').hidden = false;
@@ -2601,13 +2603,13 @@ async function decifraClienti(data, chiave, subtle) {
   async function scaricaExcel() {
     try {
       if (!window.XLSX) await loadScript(XLSXJS);
-      const righe = S.list.map(c => ({ Stato: stLabel(c), Targa: c.targa, Marca: c.brand, Modello: c.family, Allestimento: c.modello, Immatricolazione: immIt(c), Km: c.km, CV: c.cv || null, Alimentazione: c.fuel, Cambio: c.cambio, Colore: c.colore, 'Prezzo totale': c.prezzo || null, 'Prezzo veicolo': c.prezzoV || null, Ubicazione: c.ubic, 'Data ingresso': dIt(c.ingr), 'Giorni in stock': c.giorni, AutoScout: c.as ? 'Sì' : 'No', 'Annuncio sito': c.web ? c.web.url : '', Acquirente: acqV(c), Venditore: c.vend, Note: c.note }));
+      const righe = S.list.map(c => ({ Stato: stLabel(c), Targa: c.targa, Marca: c.brand, Modello: c.family, Allestimento: c.modello, Immatricolazione: immIt(c), Km: c.km, CV: c.cv || null, Alimentazione: c.fuel, Cambio: c.cambio, Colore: c.colore, 'Prezzo totale': c.prezzo || null, 'Prezzo veicolo': c.prezzoV || null, Ubicazione: c.ubic, 'Data ingresso': dIt(c.ingr), 'Giorni in stock': c.giorni, 'Giorni pubblicazione': ggPub(c), AutoScout: c.as ? 'Sì' : 'No', 'Annuncio sito': c.web ? c.web.url : '', Acquirente: acqV(c), Venditore: c.vend, Note: c.note }));
       // prezzo del sito e in cosa differisce dal gestionale (non per il cliente)
       S.list.forEach((c, i) => { const d = sitoDiverso(c), r = righe[i], ord = {};
         for (const [k, v] of Object.entries(r)) { ord[k] = v; if (k === 'Prezzo veicolo') Object.assign(ord, { 'Prezzo sul sito': (c.web && c.web.prezzo) || null, 'Differenza sito - gestionale': d ? d.diff : null, 'Differenza con il sito': d ? d.testo : '' }); }
         righe[i] = ord; });
       if (S.cliente) righe.forEach(r => { delete r['Prezzo sul sito']; delete r['Differenza sito - gestionale']; delete r['Differenza con il sito']; });
-      if (!ggVisibili()) righe.forEach(r => { delete r['Data ingresso']; delete r['Giorni in stock']; });
+      if (!ggVisibili()) righe.forEach(r => { delete r['Data ingresso']; delete r['Giorni in stock']; delete r['Giorni pubblicazione']; });
       const ws = XLSX.utils.json_to_sheet(righe), wb = XLSX.utils.book_new();
       ws['!cols'] = Object.keys(righe[0] || {}).map(k => ({ wch: Math.min(40, Math.max(k.length + 2, ...righe.slice(0, 200).map(r => String(r[k] ?? '').length))) }));
       XLSX.utils.book_append_sheet(wb, ws, 'Stock');
@@ -2640,9 +2642,9 @@ async function decifraClienti(data, chiave, subtle) {
   // link incollato nella stessa scheda del browser: stessa logica dell'apertura
   addEventListener('hashchange', () => { linkFatto = false; apriDaLink(); });
   $('btnCopy').onclick = () => {
-    const head = ['Stato', 'Targa', 'Marca', 'Modello', 'Allestimento', 'Immatricolazione', 'Km', 'CV', 'Alimentazione', 'Cambio', 'Colore', 'Prezzo', 'Ubicazione', 'Ingresso', 'Giorni in stock', 'AutoScout', 'Acquirente', 'Venditore', 'Note'];
-    const rows = S.list.map(c => [c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato, c.targa, c.brand, c.family, c.modello, immIt(c), c.km, c.cv || '', c.fuel, c.cambio, c.colore, c.prezzo || '', c.ubic, dIt(c.ingr), c.giorni ?? '', c.as ? 'Sì' : 'No', acqV(c), c.vend, c.note].join('\t'));
-    const via = ggVisibili() ? [] : [head.indexOf('Ingresso'), head.indexOf('Giorni in stock')];
+    const head = ['Stato', 'Targa', 'Marca', 'Modello', 'Allestimento', 'Immatricolazione', 'Km', 'CV', 'Alimentazione', 'Cambio', 'Colore', 'Prezzo', 'Ubicazione', 'Ingresso', 'Giorni in stock', 'Giorni pubblicazione', 'AutoScout', 'Acquirente', 'Venditore', 'Note'];
+    const rows = S.list.map(c => [c.free ? 'Libera' : c.booked && c.st < 2 ? 'Prenotata' : c.stato, c.targa, c.brand, c.family, c.modello, immIt(c), c.km, c.cv || '', c.fuel, c.cambio, c.colore, c.prezzo || '', c.ubic, dIt(c.ingr), c.giorni ?? '', ggPub(c) ?? '', c.as ? 'Sì' : 'No', acqV(c), c.vend, c.note].join('\t'));
+    const via = ggVisibili() ? [] : [head.indexOf('Ingresso'), head.indexOf('Giorni in stock'), head.indexOf('Giorni pubblicazione')];
     const tieni = r => r.filter((x, i) => !via.includes(i));
     copy([tieni(head).join('\t'), ...rows.map(r => tieni(r.split('\t')).join('\t'))].join('\n'), `${N(S.list.length)} veicoli copiati: incollali in Excel`);
   };
