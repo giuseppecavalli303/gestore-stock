@@ -52,6 +52,10 @@
   const tettoTesto = w => (!w.tettoLista ? '' : `${w.tettoLista}. ` + (!w.tetto ? 'Controllo delle foto in attesa' : w.tetto.esito === 'si' ? `Confermato: in foto${w.tetto.foto ? ' ' + w.tetto.foto : ''} è aperto` : "Nessuna foto con il tetto aperto: da verificare sull'auto"));
   const camTesto = w => (!w.camLista ? '' : !w.cam ? "Nelle dotazioni c'è scritta: controllo delle foto in attesa" : w.cam.esito === 'si' ? `Confermata: c'è la foto dello schermo con la retrocamera${w.cam.foto ? ` (foto ${w.cam.foto})` : ''}` : "Nelle dotazioni c'è scritta, ma tra le foto non c'è quella della retrocamera: da verificare sull'auto");
   let PROMO = new Set();   // targhe delle vetture in PROMO - NO SCONTO (data/promo.json)
+  let PRIMA = {};          // prezzo prima della promo e ultimo giorno in cui valeva (regola Omnibus: il piu' basso dei 30 giorni prima)
+  const bfPrima = c => { const p = PROMO.has(c.targa) && PRIMA[c.targa]; return p && c.prezzo && c.prezzo < p[0] ? p : null; };
+  const barrato = c => { const p = bfPrima(c); return p ? `<s class="bf-prima">${eur(p[0])}</s>` : ''; };
+  const finoAl = c => { const p = bfPrima(c); return p ? `<span class="bf-fino">prezzo in vigore fino al ${dIt(p[1])}</span>` : ''; };
   const TRIS = [
     { k: 'as', label: 'Su AutoScout' }, { k: 'hasPrice', label: 'Con prezzo', get: c => c.prezzo > 0 }, { k: 'check', label: 'Check list fatta' },
     { k: 'spec', label: 'Prezzo speciale' }, { k: 'iva', label: 'IVA esposta' }, { k: 'mini', label: 'Mini PP' }, { k: 'fv', label: 'Foglio verde' },
@@ -291,11 +295,11 @@
       <div class="r3">${plate(c.targa)}${tags}</div>
       ${acqV(c) ? `<div class="who">${esc(acqV(c))}${c.dataPren ? ' · ' + dIt(c.dataPren) : ''}${c.vend ? ' · vend. ' + esc(c.vend) : ''}</div>` : ''}
       ${!S.cliente && sitoDiverso(c) ? `<div class="sito-diff">${esc(sitoDiverso(c).breve)}</div>` : ''}
-      <div class="foot"><div class="price${c.prezzo ? '' : ' nd'}">${c._dp ? `<s>era ${eur(c._dp) || 'n.d.'}</s>` : ''}${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div><div class="loc"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.800 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><b>${esc(c.ubic || 'n.d.')}</b></div></div>
+      <div class="foot"><div class="price${c.prezzo ? '' : ' nd'}">${bfPrima(c) ? `<s class="bf-prima">${eur(bfPrima(c)[0])}</s>` : c._dp ? `<s>era ${eur(c._dp) || 'n.d.'}</s>` : ''}${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}${finoAl(c)}</div><div class="loc"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.800 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><b>${esc(c.ubic || 'n.d.')}</b></div></div>
     </button>`;
   }
   function rowHtml(c, i) {
-    return `<tr data-i="${i}"><td>${stPill(c)}${km0(c) ? ' <span class="pill km0">Km 0</span>' : ''}${PROMO.has(c.targa) ? ' <span class="pill bf">Black Friday</span>' : ''}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r"><b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(acqV(c))}</td><td>${esc(c.vend)}</td></tr>`;
+    return `<tr data-i="${i}"><td>${stPill(c)}${km0(c) ? ' <span class="pill km0">Km 0</span>' : ''}${PROMO.has(c.targa) ? ' <span class="pill bf">Black Friday</span>' : ''}</td><td>${plate(c.targa)}</td><td><b>${esc(c.brand)} ${esc(c.family)}</b></td><td>${esc(c.modello)}</td><td>${immIt(c)}</td><td class="r">${N(c.km)}</td><td class="r">${c.cv || ''}</td><td>${esc(c.fuel)}</td><td>${esc(c.cambio)}</td><td>${esc(c.colore)}</td><td class="r">${barrato(c)}<b>${eur(c.prezzo) || 'n.d.'}</b></td><td>${esc(c.ubic)}</td><td class="r col-gg"><span class="age ${ageCls(c.giorni)}">${ggVisibili() ? c.giorni ?? '' : ''}</span></td><td>${c.as ? 'Sì' : 'No'}</td><td>${esc(acqV(c))}</td><td>${esc(c.vend)}</td></tr>`;
   }
   function renderList() {
     const cards = S.view === 'cards', part = S.list.slice(0, S.shown);
@@ -323,7 +327,7 @@
       <div class="scroll">
         ${c.web && c.web.foto.length ? `<div class="galwrap"><button class="gfr sx" aria-label="Foto precedente"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="gfr dx" aria-label="Foto successiva"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><span class="gnum"></span><div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div></div>` : ''}
         ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
-        <div class="bigprice"><div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
+        <div class="bigprice">${barrato(c)}<div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${finoAl(c)}${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
         <div class="dcols">
         <section id="dFin"><h4>Finanziamento</h4><div id="dCodice">${isVW(c) ? '<p class="hint">Cerco il codice modello nei listini…</p>' : ''}</div><div class="links" id="dSimBtn"></div><div id="dRata"></div></section><section id="dPerm"><h4>Valuta la permuta</h4><div id="dPermBox"></div></section>
         <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${c.web && c.web.vin ? `<div class="wide"><dt>Telaio</dt><dd><span class="mono">${esc(c.web.vin)}</span> <button class="linkbtn" id="dVin">Copia</button></dd></div>` : ''}${row('Categoria del listino', c.section, true)}</dl></section>
@@ -1142,7 +1146,7 @@
       const r = await fetch('data/promo.json?t=' + Date.now(), { cache: 'no-store' });
       const j = r.ok ? await r.json() : null;
       if (!j || !Array.isArray(j.targhe)) return;
-      PROMO = new Set(j.targhe);
+      PROMO = new Set(j.targhe); PRIMA = j.prima || {};
       if (S.cars.length) { renderViews(); renderFilters(true); apply(); }
     } catch (e) { /* nessun elenco: il filtro non compare */ }
   })();
