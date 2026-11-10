@@ -26,6 +26,8 @@ h1,h2{font-family:"Inter","Segoe UI",sans-serif;letter-spacing:-.02em;line-heigh
 h1{font-size:30px} h2{font-size:21px}
 .sub{color:var(--ink2);margin:4px 0 0}
 .bollo-km0{position:absolute;left:10px;top:10px;z-index:2;font-style:normal;font-weight:600;font-size:12.5px;padding:3px 8px;border-radius:4px;background:#f0bf00;color:#14181f;box-shadow:0 4px 14px -4px rgba(0,0,0,.45)}
+.bollo-bf{position:absolute;right:10px;top:10px;z-index:2;font-style:normal;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:#0b0b0b;color:#fff}
+.prezzo s{font-size:17px;font-weight:500;color:var(--ink2);margin-right:8px} .fino{display:block;font:500 12px Inter,sans-serif;color:var(--ink2);margin-top:2px}
 .auto{position:relative} .k0{display:inline-block;margin-left:8px;vertical-align:middle;font-size:13px;font-weight:600;padding:2px 8px;border-radius:4px;background:#f0bf00;color:#14181f}
 .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
 .gal{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:16px -16px 0;padding:0 16px;scrollbar-width:none}
@@ -131,7 +133,7 @@ footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
           <tr><td>Imposta di bollo</td><td>${eur2(f.bol)}</td></tr>
         </table>
         ${(f.serv || []).length ? `<p style="margin:14px 0 0;font-weight:600">Servizi compresi nella rata</p><ul class="serv">${f.serv.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
-        <p class="nota">Esempio di finanziamento a scopo informativo, soggetto ad approvazione di Volkswagen Financial Services. Le condizioni definitive sono quelle indicate nel contratto e nel modulo informativo europeo (SECCI) che ti consegneremo. Prezzo e disponibilità dell'auto possono cambiare.</p>
+        <p class="nota">Simulazione indicativa, non vincolante. Esempio di finanziamento a scopo informativo, soggetto ad approvazione di Volkswagen Financial Services. Le condizioni definitive sono quelle indicate nel contratto e nel modulo informativo europeo (SECCI) che ti consegneremo. Prezzo e disponibilità dell'auto possono cambiare.</p>
         ${azioni(p.url)}</div>
       <footer>Valentino Automobili Roma</footer>`;
     frecce(document.querySelector('.galwrap'));
@@ -153,12 +155,17 @@ footer{color:var(--ink3);font-size:12.5px;text-align:center;margin-top:28px}
     const base = (d.meta && d.meta.annunci && d.meta.annunci.fotoBase) || 'https://cdn.dealerk.it/dealer/datafiles/vehicle/images/';
     const foto = (c, i = 0, s = 800) => (c.web && c.web.foto && c.web.foto[i] ? base + s + '/' + c.web.foto[i] : '');
     const imm = c => (c.imm && !/^0+/.test(c.imm) ? c.imm.slice(5, 7) + '/' + c.imm.slice(0, 4) : '');
+    // auto in promo Black Friday: bollino e prezzo precedente barrato, come nell'app
+    let promo = { targhe: [], prima: {} };
+    try { const r = await fetch('data/promo.json?t=' + Date.now(), { cache: 'no-store' }); if (r.ok) promo = Object.assign(promo, await r.json()); } catch (e) {}
+    const bf = c => promo.targhe.includes(c.targa);
+    const prima = c => { const p = bf(c) && (promo.prima || {})[c.targa]; return p && c.prezzo && c.prezzo < p[0] ? p : null; };
     const auto = targhe.map(t => d.cars.find(c => c.targa === t)).filter(Boolean);
     const disp = auto.filter(c => c.free);
     const km0 = c => /KM\s?0\b|KM\s?ZERO/i.test(c.section || '') || !!(c.web && c.web.km0);
-    const scheda = c => `<div class="box auto${c.free ? '' : ' via'}">${km0(c) ? '<i class="bollo-km0">Km 0</i>' : ''}${foto(c) ? `<img src="${esc(foto(c))}" alt="">` : ''}<div class="in"><h2>${esc(c.brand)} ${esc(c.family)}</h2><p class="sub">${esc(c.modello)}</p>
+    const scheda = c => `<div class="box auto${c.free ? '' : ' via'}">${km0(c) ? '<i class="bollo-km0">Km 0</i>' : ''}${bf(c) && c.free ? '<i class="bollo-bf">Black Friday</i>' : ''}${foto(c) ? `<img src="${esc(foto(c))}" alt="">` : ''}<div class="in"><h2>${esc(c.brand)} ${esc(c.family)}</h2><p class="sub">${esc(c.modello)}</p>
       <dl class="dati">${riga('Immatricolazione', imm(c))}${riga('Chilometri', N(c.km) + ' km')}${riga('Alimentazione', c.fuel)}${riga('Cambio', c.cambio !== 'n.d.' ? c.cambio : '')}${riga('Potenza', c.cv ? c.cv + ' CV' : '')}</dl>
-      ${c.free ? `<div class="prezzo">${eur(c.prezzo) || 'Prezzo su richiesta'}</div>${c.web && c.web.url ? `<div class="azioni"><a class="btn pri" href="${esc(c.web.url)}" target="_blank" rel="noopener">Foto e dettagli</a></div>` : ''}` : '<p class="sub" style="margin-top:12px"><b>Non più disponibile</b></p>'}</div></div>`;
+      ${c.free ? `<div class="prezzo">${prima(c) ? `<s>${eur(prima(c)[0])}</s>` : ''}${eur(c.prezzo) || 'Prezzo su richiesta'}${prima(c) ? `<span class="fino">prezzo in vigore fino al ${dIt(prima(c)[1])}</span>` : ''}</div>${c.web && c.web.url ? `<div class="azioni"><a class="btn pri" href="${esc(c.web.url)}" target="_blank" rel="noopener">Foto e dettagli</a></div>` : ''}` : '<p class="sub" style="margin-top:12px"><b>Non più disponibile</b></p>'}</div></div>`;
     const R = [
       ['Prezzo', c => eur(c.prezzo) || 'su richiesta', c => c.prezzo || 1e12, 'min'],
       ['Immatricolazione', imm, c => c.imm || '', 'max'], ['Chilometri', c => N(c.km) + ' km', c => c.km, 'min'],

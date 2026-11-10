@@ -30,6 +30,8 @@ function prepara(destinazione) {
   togli(/`Pari al \$\{d\.vfgPercent\}% del valore vettura/, 'la descrizione del VFG', "`Pari al ${d.vfgPercent}% ${BASE_VFG ? 'del prezzo da nuovo' : 'del valore vettura'}");
   togli(/\n(\s*)\/\/ Avvio\n/, "l'avvio", `\n$1// Avvio\n$1if (QP.get('modello')) document.getElementById('modello_veicolo').value = QP.get('modello');\n$1if (+QP.get('prezzo') > 0) prezzoInput.value = (+QP.get('prezzo')).toFixed(2);\n$1if (BASE_VFG) document.getElementById('vfg-label').textContent = 'Valore Futuro Garantito (su prezzo da nuovo ' + formatCurrency(BASE_VFG) + ')';\n`);
   togli(/\n(\s*)switchMode\('pvv'\);\n(\s*)servizioManutenzioneCb\.dispatchEvent/, "la scelta iniziale del finanziamento", `\n$1switchMode(['pvv', 'multimake', 'classico'].includes(QP.get('tipo')) ? QP.get('tipo') : 'pvv');\n$1applicaPercentuale();\n$2servizioManutenzioneCb.dispatchEvent`);
+  // sulla stampa: la scritta che la simulazione non impegna
+  togli(/Documento generato ad uso simulativo interno./, 'la nota in fondo alla stampa', 'Simulazione indicativa, non vincolante. Documento generato ad uso simulativo interno.');
   fs.writeFileSync(destinazione, h);
   return 'simulatore aggiornato';
 }
