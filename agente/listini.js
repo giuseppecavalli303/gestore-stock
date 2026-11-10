@@ -194,6 +194,11 @@ function abbina(cars, sezioni) {
       c: cand.slice(0, MAX_CANDIDATI).map(v => [v.codice, v.versione, v.prezzo, v.netto, v.p, v.validita]),
       altri: Math.max(0, cand.length - MAX_CANDIDATI)
     };
+    // la stampa non dice il cambio: se tutte le versioni possibili hanno lo stesso, e' quello
+    if (c.cambio !== 'Automatico' && c.cambio !== 'Manuale') {
+      const cambi = new Set(cand.map(v => v.cambio));
+      if (cambi.size === 1 && /^(Automatico|Manuale)$/.test([...cambi][0])) out[c.targa].cambio = [...cambi][0];
+    }
   }
   return out;
 }
@@ -219,13 +224,17 @@ async function main() {
   const stock = leggi(path.join(root, 'data', 'stock.json'), null);
   if (!stock) throw new Error('data/stock.json mancante');
   const auto = abbina(stock.cars, sezioni);
+  // il cambio ricavato dai listini entra nello stock, cosi' il filtro lo trova (il valore della stampa resta in _cambioPdf, come per gli annunci)
+  let cambi = 0;
+  for (const c of stock.cars) { const a = auto[c.targa]; if (a && a.cambio && c.cambio === 'n.d.') { c._cambioPdf = c.cambio; c.cambio = a.cambio; cambi++; } }
+  if (cambi) fs.writeFileSync(path.join(root, 'data', 'stock.json'), JSON.stringify(stock));
   const date = [...new Set(sezioni.map(s => s.validita))].sort();
   // riscrivo il file solo se cambia qualcosa, cosi' l'agente non pubblica a vuoto
   const dest = path.join(root, 'data', 'codici.json'), prima = leggi(dest, {});
   const dati = { listini: date.length, dal: date[0], al: date[date.length - 1], auto };
   if (JSON.stringify({ ...prima, aggiornato: undefined }) !== JSON.stringify({ ...dati, aggiornato: undefined })) fs.writeFileSync(dest, JSON.stringify({ aggiornato: new Date().toISOString(), ...dati }));
   const v = Object.values(auto), uno = v.filter(x => x.c && x.c.length === 1).length, piu = v.filter(x => x.c && x.c.length > 1).length;
-  console.log(`Codici modello: ${v.length} Volkswagen, ${uno} con un solo codice, ${piu} con più codici da scegliere, ${v.length - uno - piu} senza codice. Listini letti ora: ${letti}.`);
+  console.log(`Codici modello: ${v.length} Volkswagen, ${uno} con un solo codice, ${piu} con più codici da scegliere, ${v.length - uno - piu} senza codice. Listini letti ora: ${letti}.${cambi ? ` Cambio ricavato dai listini per ${cambi} auto.` : ''}`);
 }
 
 module.exports = { leggiPdf, abbina, punteggio, famigliaListino };

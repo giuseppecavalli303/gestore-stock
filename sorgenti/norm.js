@@ -7,20 +7,22 @@ const VW_FAM = [
 ];
 const OTHER_FAM = [
   [/\b500X\b/, 'Fiat', '500X'], [/\b500L\b/, 'Fiat', '500L'], [/\b500\b/, 'Fiat', '500'], [/\bPAND(A|INA)\b/, 'Fiat', 'Panda'], [/\b600\b/, 'Fiat', '600'], [/\bTIPO\b/, 'Fiat', 'Tipo'],
-  [/YPSILON/, 'Lancia', 'Ypsilon'], [/AVENGER/, 'Jeep', 'Avenger'], [/RENEGADE/, 'Jeep', 'Renegade'], [/\bCOMPASS\b/, 'Jeep', 'Compass'],
+  [/YPSILON/, 'Lancia', 'Ypsilon'], [/AVENGER/, 'Jeep', 'Avenger'], [/RENEGADE/, 'Jeep', 'Renegade'], [/\bCOMPASS?\b/, 'Jeep', 'Compass'],
   [/FORMENTOR/, 'Cupra', 'Formentor'], [/\bBORN\b/, 'Cupra', 'Born'], [/\bLEON\b/, 'Cupra', 'Leon'], [/\bATECA\b/, 'Seat', 'Ateca'], [/\bIBIZA\b/, 'Seat', 'Ibiza'], [/\bARONA\b/, 'Seat', 'Arona'],
   [/\bA1\b/, 'Audi', 'A1'], [/\bA3\b/, 'Audi', 'A3'], [/\bA4\b/, 'Audi', 'A4'], [/\bQ2\b/, 'Audi', 'Q2'], [/\bQ3\b/, 'Audi', 'Q3'], [/\bQ4\b/, 'Audi', 'Q4 e-tron'], [/\bQ5\b/, 'Audi', 'Q5'],
-  [/CLASSE A\b/, 'Mercedes', 'Classe A'], [/CLASSE B\b/, 'Mercedes', 'Classe B'], [/CLASSE C\b/, 'Mercedes', 'Classe C'], [/\bGLA\b/, 'Mercedes', 'GLA'],
+  [/CLASSE A\b/, 'Mercedes', 'Classe A'], [/CLASSE B\b/, 'Mercedes', 'Classe B'], [/CLASSE C\b/, 'Mercedes', 'Classe C'], [/\bGLA\b/, 'Mercedes', 'GLA'], [/\bGLC\b/, 'Mercedes', 'GLC'], [/\bGLB\b/, 'Mercedes', 'GLB'], [/\bA ?(1[4-9]|2[0-5])0\b/, 'Mercedes', 'Classe A'],
   [/\bFIESTA\b/, 'Ford', 'Fiesta'], [/\bPUMA\b/, 'Ford', 'Puma'], [/\bFOCUS\b/, 'Ford', 'Focus'], [/\bKUGA\b/, 'Ford', 'Kuga'],
   [/\bI10\b/, 'Hyundai', 'i10'], [/\bI20\b/, 'Hyundai', 'i20'], [/\bTUCSON\b/, 'Hyundai', 'Tucson'], [/\bKONA\b/, 'Hyundai', 'Kona'],
-  [/\bCORSA\b/, 'Opel', 'Corsa'], [/\bMOKKA\b/, 'Opel', 'Mokka'], [/CAPTURE?\b/, 'Renault', 'Captur'], [/\bCLIO\b/, 'Renault', 'Clio'],
-  [/\bC3\b/, 'Citroën', 'C3'], [/DISCOVERY/, 'Land Rover', 'Discovery Sport'], [/EVOQUE/, 'Land Rover', 'Evoque'],
+  [/\bCORSA\b/, 'Opel', 'Corsa'], [/\bMOKKA\b/, 'Opel', 'Mokka'], [/\bASTRA\b/, 'Opel', 'Astra'], [/CAPTURE?\b/, 'Renault', 'Captur'], [/\bCLIO\b/, 'Renault', 'Clio'],
+  [/\bC3\b/, 'Citroën', 'C3'], [/\bC1\b/, 'Citroën', 'C1'], [/DISCOVERY/, 'Land Rover', 'Discovery Sport'], [/EVOQUE/, 'Land Rover', 'Evoque'],
   [/X[- ]?TRAIL/, 'Nissan', 'X-Trail'], [/QASHQAI/, 'Nissan', 'Qashqai'], [/\bJUKE\b/, 'Nissan', 'Juke'], [/\bMICRA\b/, 'Nissan', 'Micra'],
   [/FORFOUR/, 'Smart', 'Forfour'], [/FORTWO/, 'Smart', 'Fortwo'],
   [/\bFABIA\b/, 'Skoda', 'Fabia'], [/\bOCTAVIA\b/, 'Skoda', 'Octavia'], [/\bKAMIQ\b/, 'Skoda', 'Kamiq'], [/\bKAROQ\b/, 'Skoda', 'Karoq'],
   [/\bYARIS\b/, 'Toyota', 'Yaris'], [/\bAYGO\b/, 'Toyota', 'Aygo'], [/C-HR/, 'Toyota', 'C-HR'], [/\b208\b/, 'Peugeot', '208'], [/\b2008\b/, 'Peugeot', '2008'], [/\b3008\b/, 'Peugeot', '3008'],
   [/SANDERO/, 'Dacia', 'Sandero'], [/DUSTER/, 'Dacia', 'Duster'], [/PICANTO/, 'Kia', 'Picanto'], [/SPORTAGE/, 'Kia', 'Sportage'],
-  [/\bMINI\b/, 'Mini', 'Mini'], [/\bBMW\b|SERIE [1-5]\b/, 'BMW', 'Serie'], [/GIULIETTA|STELVIO|TONALE/, 'Alfa Romeo', 'Alfa'], [/\bCX-?\d+\b|MAZDA/, 'Mazda', 'Mazda'], [/\bXC\d0\b|VOLVO/, 'Volvo', 'Volvo']
+  [/\bMINI\b/, 'Mini', 'Mini'], [/\bBMW\b|SERIE [1-5]\b/, 'BMW', 'Serie'], [/GIULIETTA|STELVIO|TONALE/, 'Alfa Romeo', 'Alfa'], [/\bCX-?\d+\b|MAZDA/, 'Mazda', 'Mazda'], [/\bXC\d0\b|VOLVO/, 'Volvo', 'Volvo'],
+  // marche scritte "AM" nella stampa: si riconoscono solo dall'inizio del nome
+  [/^SKODA\b/, 'Skoda', 'Skoda'], [/^DR ?\d/, 'DR', 'DR'], [/^EVO ?\d\b/, 'EVO', 'EVO']
 ];
 const COLORI = [
   ['Bianco', /WHITE|BIANC|BLANC|GELATO/, '#f4f5f7'], ['Nero', /BLACK|NER[OA]\b|NOIR|VESUVIO/, '#17181c'], ['Argento', /SILVER|ARGENT|AEGENTO|\bARG\b/, '#b9bec7'], ['Grigio', /GREY|GRAY|GRIGI|GRG|GRIS|GRAU|SMOK|\bGR\.? ?MET|GRAPHITE|TITAN|PLATIN/, '#7b808a'],
@@ -60,7 +62,7 @@ function describe(modello, marcaRaw, section) {
   if (/COMPAS|RENEGADE|AVENGER/.test(M) && /HYBRID/.test(M) && !/4XE|PLUG|PHEV/.test(M)) fuel = 'Ibrida';
   else if (/\bE-? ?HYBRID|\bGTE\b|PLUG|PHEV|\b4XE\b|\bT[SF]SI E\b/.test(M)) fuel = 'Plug-in';
   else if (/ELECTRIC\/T[SF]SI/.test(M)) fuel = 'Ibrida';
-  else if (/\bID\.|\bE-UP|ELECTRIC|ELETTRIC|\bBORN\b|KWH|\bBEV\b|E-BOOST/.test(M)) fuel = 'Elettrica';
+  else if (/\bID\.|\bID ?(BUZZ|[3457]\b)|\bE-UP|ELECTRIC|ELETTRIC|\bBORN\b|KWH|\bBEV\b|E-BOOST/.test(M)) fuel = 'Elettrica';
   else if (/\bTDI\b|\bGTD\b|DIESEL|HDI\b|MJT|MULTIJET|\bCDI\b|\bDCI\b|CRDI|\b\d{3}D\b/.test(M) || /DIESEL/.test(section)) fuel = 'Diesel';
   else if (/\bTGI\b|METANO|\bCNG\b/.test(M) || /METANO/.test(section)) fuel = 'Metano';
   else if (/GPL|\bLPG\b|BIFUEL/.test(M)) fuel = 'GPL';
@@ -69,7 +71,9 @@ function describe(modello, marcaRaw, section) {
 
   let cambio = 'n.d.';
   if (/DSG|AUTOMATIC|AUTOM|\bAUT\b|S[- ]?TRONIC|TIPTRONIC|\bEDC\b|\bDCT\b|\bCVT\b|\bEAT\d|[178]-SPEED/.test(M) || fuel === 'Elettrica') cambio = 'Automatico';
-  else if (/MANUAL|\bBVM|\bMT\d?\b|[56]-SPEED/.test(M)) cambio = 'Manuale';
+  else if (/MANUAL|\bMAN\b|\bBVM|\bMT\d?\b|[56]-SPEED/.test(M)) cambio = 'Manuale';
+  // Fiat 500 e Panda 1.0 Hybrid esistono solo con il cambio manuale
+  else if (brand === 'Fiat' && (family === '500' || family === 'Panda') && /HYBRID/.test(M)) cambio = 'Manuale';
   return { brand, family, cv, kw, fuel, cambio };
 }
 
