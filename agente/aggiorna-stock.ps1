@@ -14,6 +14,7 @@ $Mittenti  = @('Muschitiello', 'Quartieri')      # la stampa deve arrivare da un
 $Allegato  = 'stock_auto_usato*.pdf'
 $GiorniMax = 3                                   # quanto indietro guardare nella posta
 $OraAllarme = 13                                 # da quest'ora, se la stampa manca, mando un avviso
+$ArchivioDrive = 'G:\Il mio Drive\lavoro\Stock usato - stampe'   # copia di ogni stampa su Google Drive (storico completo, non si cancella mai)
 
 $repo   = Split-Path $PSScriptRoot -Parent
 $arrivi = Join-Path $PSScriptRoot 'arrivi'
@@ -155,6 +156,13 @@ try {
         if (-not $giaOnline) {
             $pdf = Join-Path $arrivi $trovato.Allegato.FileName
             if (-not (Test-Path $pdf)) { $trovato.Allegato.SaveAsFile($pdf) }
+            # storico su Drive: se Drive non e' acceso si va avanti lo stesso, la copia si recupera al giro dopo (vedi sotto)
+            try {
+                if (Test-Path (Split-Path $ArchivioDrive -Parent)) {
+                    New-Item -ItemType Directory -Force $ArchivioDrive | Out-Null
+                    Get-ChildItem $arrivi -Filter *.pdf | Where-Object { -not (Test-Path (Join-Path $ArchivioDrive $_.Name)) } | ForEach-Object { Copy-Item $_.FullName $ArchivioDrive; Scrivi "Stampa $($_.Name) copiata nello storico su Drive." }
+                } else { Scrivi 'Storico su Drive: Google Drive non raggiungibile, riprovo con la prossima stampa.' }
+            } catch { Scrivi "Storico su Drive non aggiornato: $($_.Exception.Message)" }
             Scrivi "Trovato $($trovato.Allegato.FileName) da $($trovato.Mittente), ricevuto il $($trovato.Quando.ToString('dd/MM/yyyy HH:mm'))."
 
             $a = Esegui 'node agente\annunci.js'                      # se il sito non risponde si va avanti senza foto nuove
