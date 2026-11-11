@@ -4,8 +4,8 @@
 const fs = require('fs'), path = require('path');
 const { vendite } = require('./venditori.js');
 const CACHE = path.join(__dirname, 'storico-lungo-cache.json'), OUT = path.join(__dirname, 'rapporti', 'venditori');
-// note che vengono da Giuseppe, non dai dati
-const NOTE = { 'Francesco Cannizzo': 'Secondo quanto mi hai detto, Francesco non aveva mai venduto un\'auto prima di entrare: i dati non dicono quanta esperienza avessero gli altri all\'ingresso.' };
+// note che vengono da Giuseppe, non dai dati: in agente/rapporti/note-venditori.json (resta sul PC), { "Nome Cognome": "testo" }
+const NOTE = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'rapporti', 'note-venditori.json'), 'utf8')); } catch (e) { return {}; } })();
 
 const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
 const MESI_L = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
