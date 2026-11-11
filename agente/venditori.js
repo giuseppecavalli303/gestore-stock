@@ -60,6 +60,17 @@ function altoValore(titolo, l) {
   return `<h2 style="font-size:18px;margin:30px 0 4px">${titolo}</h2><p style="margin:0 0 10px;color:#5b6675;font-size:13px">Auto con prezzo esposto da ${N(SOGLIA_ALTO)} € in su · ${N(alte.length)} vendite su ${N(l.length)}</p>${c.length ? `<div style="overflow-x:auto"><table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13.5px"><thead><tr>${th('#')}${th('Venditore', 1)}${th('Auto ad alto valore')}${th('Valore a listino')}${th('Prezzo medio')}${th('Quota sulle sue vendite')}${th('La più cara', 1)}</tr></thead><tbody>${c.map((r, i) => `<tr>${td(i + 1)}${td('<b>' + esc(r.vend) + '</b>', 1)}${td('<b>' + N(r.n) + '</b>')}${td(eur(r.valore))}${td(eur(r.valore / r.n))}${td(r.quota + '%')}${td(esc(r.top.auto) + ' · ' + eur(r.top.prezzo), 1)}</tr>`).join('')}</tbody></table></div>` : '<p style="color:#5b6675">Nessuna in questo periodo.</p>'}`;
 }
 
+// auto di altre marche: tutto quello che non e' Volkswagen
+function altreMarche(titolo, l) {
+  const altre = l.filter(v => !/^Volkswagen /.test(v.auto)), tot = new Map(); l.forEach(v => tot.set(v.vend, (tot.get(v.vend) || 0) + 1));
+  const m = new Map(); altre.forEach(v => { if (!m.has(v.vend)) m.set(v.vend, []); m.get(v.vend).push(v); });
+  const piu = (x, k) => { const c = new Map(); x.forEach(v => c.set(k(v), (c.get(k(v)) || 0) + 1)); const t = [...c].sort((a, b) => b[1] - a[1])[0]; return t ? t[0] + ' (' + t[1] + ')' : ''; };
+  const c = [...m].map(([vend, x]) => ({ vend, n: x.length, valore: x.reduce((t, v) => t + (v.prezzo || 0), 0), quota: Math.round(x.length / tot.get(vend) * 100), gg: mediana(x.map(v => v.gg)), marca: piu(x, v => v.auto.split(' ')[0] === 'Altre' ? 'Altre marche' : v.auto.split(' ')[0]), modello: piu(x, v => v.auto) })).sort((a, b) => b.n - a.n || b.valore - a.valore);
+  const th = (t, sx) => `<th style="text-align:${sx ? 'left' : 'right'};padding:8px 10px;border-bottom:2px solid #0b2545;font-size:12px;color:#5b6675;white-space:nowrap">${t}</th>`;
+  const td = (t, sx) => `<td style="text-align:${sx ? 'left' : 'right'};padding:7px 10px;border-bottom:1px solid #e3e7ed;white-space:nowrap">${t}</td>`;
+  return `<h2 style="font-size:18px;margin:30px 0 4px">${titolo}</h2><p style="margin:0 0 10px;color:#5b6675;font-size:13px">Auto di marche diverse da Volkswagen · ${N(altre.length)} vendite su ${N(l.length)}</p>${c.length ? `<div style="overflow-x:auto"><table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13.5px"><thead><tr>${th('#')}${th('Venditore', 1)}${th('Auto non Volkswagen')}${th('Quota sulle sue vendite')}${th('Valore a listino')}${th('Giorni in stock')}${th('Marca più venduta', 1)}${th('Modello più venduto', 1)}</tr></thead><tbody>${c.map((r, i) => `<tr>${td(i + 1)}${td('<b>' + esc(r.vend) + '</b>', 1)}${td('<b>' + N(r.n) + '</b>')}${td(r.quota + '%')}${td(eur(r.valore))}${td(N(r.gg))}${td(esc(r.marca), 1)}${td(esc(r.modello), 1)}</tr>`).join('')}</tbody></table></div>` : '<p style="color:#5b6675">Nessuna in questo periodo.</p>'}`;
+}
+
 function prepara(mese, S) {
   const V = vendite(S), al = S.giorni.reduce((m, g) => (g.d > m ? g.d : m), '');
   const [y, mm] = mese.split('-'), titoloMese = `${MESI[+mm - 1]} ${y}`;
@@ -74,8 +85,10 @@ function prepara(mese, S) {
 <p style="margin:0;color:#5b6675;font-size:13.5px">Ricostruito dalle stampe dello stock fino al ${dIt(al)}. Una vendita è un'auto prenotata con data di prenotazione nel periodo, assegnata al venditore scritto nella stampa. Le prenotazioni poi annullate non contano. Il valore è il prezzo esposto, non quello del contratto.</p>
 ${sez(`Il mese: ${titoloMese}`, 'Classifica per numero di vendite', delMese)}
 ${altoValore(`Alto valore · ${titoloMese}`, delMese)}
+${altreMarche(`Non Volkswagen · ${titoloMese}`, delMese)}
 ${sez('Ultimi 12 mesi', `Da ${MESI[+mm % 12]} ${+mm === 12 ? y : +y - 1} a ${titoloMese}`, ultimi12)}
 ${altoValore('Alto valore · ultimi 12 mesi', ultimi12)}
+${altreMarche('Non Volkswagen · ultimi 12 mesi', ultimi12)}
 ${anni.map(a => sez(`Anno ${a}`, a === y ? `Fino a ${titoloMese}` : a === '2022' ? 'Da maggio, quando comincia l’archivio' : 'Anno intero', V.filter(v => v.d.slice(0, 4) === a && v.d.slice(0, 7) <= mese))).join('')}
 </div></body></html>`;
   const csv = '﻿' + [['Data prenotazione', 'Venditore', 'Targa', 'Auto', 'Versione', 'Alimentazione', 'Prezzo esposto', 'Giorni in stock', 'Ribassi', 'Uscita dallo stock']].concat(
@@ -100,6 +113,8 @@ function storico(S) {
 <h2 style="font-size:18px;margin:30px 0 10px">Tutto il periodo</h2><div style="overflow-x:auto">${tabella(cl, tutte.length || 1)}</div>
 ${altoValore('Chi vende più auto ad alto valore · tutto il periodo', tutte)}
 ${anni.slice().reverse().map(a => altoValore('Alto valore · ' + a, tutte.filter(v => v.d.slice(0, 4) === a))).join('')}
+${altreMarche('Chi vende più auto non Volkswagen · tutto il periodo', tutte)}
+${anni.slice().reverse().map(a => altreMarche('Non Volkswagen · ' + a, tutte.filter(v => v.d.slice(0, 4) === a))).join('')}
 <h2 style="font-size:18px;margin:30px 0 10px">Vendite anno per anno</h2><div style="overflow-x:auto">${matrice}</div>
 </div></body></html>`;
   const csv = '﻿' + [['Data prenotazione', 'Venditore', 'Targa', 'Auto', 'Versione', 'Alimentazione', 'Prezzo esposto', 'Giorni in stock', 'Ribassi', 'Uscita dallo stock']].concat(
