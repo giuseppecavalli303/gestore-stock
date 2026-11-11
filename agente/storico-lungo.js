@@ -70,7 +70,16 @@ async function raccogli(daCapo) {
   return S;
 }
 
-module.exports = { aggiungi, raccogli, giorni };
+// vendite da non contare (es. auto cedute in blocco a un commerciante): regole in agente/vendite-escluse.json, che resta sul PC.
+// Ogni regola: venditori (minuscolo), alimentazione e data di inizio; vale per le prenotazioni da quella data in poi.
+const REGOLE = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'vendite-escluse.json'), 'utf8')); } catch (e) { return []; } })();
+const pulito = s => String(s || '').replace(/[^a-zA-Z ]/g, ' ').replace(/ +/g, ' ').trim().toLowerCase();
+function esclusa(a) {
+  const v = pulito(a.vend);
+  return REGOLE.some(r => (!r.venditori || r.venditori.includes(v)) && (!r.alimentazione || r.alimentazione === a.fu) && (!r.dal || (a.pren || '') >= r.dal) && (!r.al || (a.pren || '') <= r.al));
+}
+
+module.exports = { aggiungi, raccogli, giorni, esclusa };
 if (require.main === module) (async () => {
   const S = await raccogli(process.argv.includes('--da-capo'));
   const out = require('./storico-lungo-conti.js').conti(S);

@@ -2,7 +2,7 @@
 // Solo aggregati: niente targhe, clienti o venditori, perche' il file e' pubblicato.
 // "Vendita" = auto la cui ultima situazione nota e' prenotata con una data di prenotazione; la data della vendita e' quella.
 // "Giorni per vendere" = dalla data di ingresso in stock alla prenotazione (0 se venduta prima dell'arrivo).
-const { giorni } = require('./storico-lungo.js');
+const { giorni, esclusa } = require('./storico-lungo.js');
 
 const mediana = v => { if (!v.length) return null; const s = [...v].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
 const media = v => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
@@ -17,7 +17,7 @@ function conti(S) {
   // vendite ricostruite
   const vendite = [];
   for (const a of Object.values(S.auto)) {
-    if (!a.bk || !a.pren || !a.ingr) continue;
+    if (!a.bk || !a.pren || !a.ingr || esclusa(a)) continue;
     const g = giorni(a.pren, a.ingr);
     if (g < -400 || g > 1500 || a.pren > al) continue;                      // date sbagliate nel gestionale
     const prezzi = a.p.filter(x => x[0] <= a.pren || x === a.p[0]);

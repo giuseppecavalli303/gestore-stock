@@ -6,6 +6,7 @@
 // Uso: node agente/venditori.js [AAAA-MM] [--senza-mail]     (senza mese: il mese scorso)
 const fs = require('fs'), path = require('path');
 const IO = 'giuseppe.cavalli@valentinoautomobili.it';
+const { esclusa } = require('./storico-lungo.js');
 const CACHE = path.join(__dirname, 'storico-lungo-cache.json'), OUT = path.join(__dirname, 'rapporti');
 const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
 const giorni = (a, b) => Math.round((Date.parse(a + 'T00:00:00Z') - Date.parse(b + 'T00:00:00Z')) / 864e5);
@@ -20,7 +21,7 @@ const nome = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase().repl
 function vendite(S) {
   const al = S.giorni.reduce((m, g) => (g.d > m ? g.d : m), ''), out = [];
   for (const [targa, a] of Object.entries(S.auto)) {
-    if (!a.bk || !a.pren || !a.vend || !a.ingr || a.pren > al) continue;
+    if (!a.bk || !a.pren || !a.vend || !a.ingr || a.pren > al || esclusa(a)) continue;
     const g = giorni(a.pren, a.ingr);
     if (g < -400 || g > 1500) continue;
     const prezzi = a.p.filter(x => x[0] <= a.pren || x === a.p[0]);
