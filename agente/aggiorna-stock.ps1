@@ -31,7 +31,12 @@ $blocco = New-Object System.Threading.Mutex($false, 'Local\GestoreStockAgente')
 try { $preso = $blocco.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $preso = $true }
 if (-not $preso) { exit 0 }
 
-function Scrivi($msg) { $riga = "{0}  {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm'), $msg; Add-Content -Path $log -Value $riga -Encoding utf8; Write-Host $riga }
+# il registro puo' essere occupato per un attimo (antivirus, un altro programma che lo legge): riprovo e, se non riesco, vado avanti lo stesso
+function Scrivi($msg) {
+    $riga = "{0}  {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm'), $msg
+    for ($i = 0; $i -lt 5; $i++) { try { Add-Content -Path $log -Value $riga -Encoding utf8 -ErrorAction Stop; break } catch { Start-Sleep -Milliseconds 300 } }
+    Write-Host $riga
+}
 # node e git scrivono anche sul canale degli errori: passo da cmd perche' PowerShell non li scambi per un guasto
 function Esegui($riga) { $out = cmd /c "$riga 2>&1" | Out-String; return @{ Codice = $LASTEXITCODE; Testo = $out.Trim() } }
 function LeggiStato { if (Test-Path $statoF) { try { return Get-Content $statoF -Raw -Encoding UTF8 | ConvertFrom-Json } catch {} } return [pscustomobject]@{} }
@@ -183,29 +188,32 @@ try {
             if (Test-Path (Join-Path $repo 'data\promo.json')) { $pp = Esegui 'node agente\promo-prezzi.js'; Scrivi $pp.Testo }   # prezzo barrato delle auto Black Friday
             $nuova = Pubblica "Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"
 
-            $giorno = ((Get-Content $attuale -Raw -Encoding UTF8 | ConvertFrom-Json).meta.day)
-            if ($nuova -and (LeggiStato).riepilogo -ne $giorno) {
-                $p = Esegui 'node agente\posta.js riepilogo avvisi'
-                if ($p.Codice -ne 0) { Scrivi $p.Testo } else { InviaPosta; SegnaStato 'riepilogo' $giorno }
-            }
-            # promo PROMO - NO SCONTO: riepilogo vendute inviato a Sfregola e Valentino (una al giorno)
-            if ($nuova -and (LeggiStato).promo -ne $giorno -and (Test-Path (Join-Path $repo 'data\promo.json'))) {
-                $p = Esegui 'node agente\posta.js promo'
-                Scrivi $p.Testo
-                if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'promo' $giorno }
-            }
-            if ($nuova -and (LeggiStato).rapporto -ne $giorno) {
-                SegnaStato 'rapporto' $giorno                            # una sola presentazione al giorno, anche se qualcosa va storto
-                if (PreparaRapporto) { InviaPosta }
-            }
-            # una volta al mese, con la prima stampa del mese: vendite per venditore del mese scorso, solo a Giuseppe
-            $meseOra = (Get-Date).ToString('yyyy-MM')
-            if ($nuova -and (LeggiStato).venditori -ne $meseOra) {
-                $v = Esegui 'node agente\venditori.js'
-                Scrivi $v.Testo
-                if ($v.Codice -eq 0) { InviaPosta; SegnaStato 'venditori' $meseOra }
-            }
             Get-ChildItem $arrivi -Filter *.pdf | Sort-Object LastWriteTime -Descending | Select-Object -Skip 15 | Remove-Item -Force
+        }
+        # mail del giorno: partono quando la stampa trovata e' online, anche se l'ha pubblicata un giro precedente che poi si e' fermato.
+        # Lo stato (riepilogo, promo, rapporto, venditori) evita i doppioni.
+        $pubblicata = -not (Esegui 'git status --porcelain data/stock.json').Testo -and ((Get-Content $attuale -Raw -Encoding UTF8) -match ('"source":"' + [regex]::Escape($trovato.Allegato.FileName) + '"'))
+        $giorno = ((Get-Content $attuale -Raw -Encoding UTF8 | ConvertFrom-Json).meta.day)
+        if ($pubblicata -and (LeggiStato).riepilogo -ne $giorno) {
+            $p = Esegui 'node agente\posta.js riepilogo avvisi'
+            if ($p.Codice -ne 0) { Scrivi $p.Testo } else { InviaPosta; SegnaStato 'riepilogo' $giorno }
+        }
+        # promo PROMO - NO SCONTO: riepilogo vendute inviato a Sfregola e Valentino (una al giorno)
+        if ($pubblicata -and (LeggiStato).promo -ne $giorno -and (Test-Path (Join-Path $repo 'data\promo.json'))) {
+            $p = Esegui 'node agente\posta.js promo'
+            Scrivi $p.Testo
+            if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'promo' $giorno }
+        }
+        if ($pubblicata -and (LeggiStato).rapporto -ne $giorno) {
+            SegnaStato 'rapporto' $giorno                            # una sola presentazione al giorno, anche se qualcosa va storto
+            if (PreparaRapporto) { InviaPosta }
+        }
+        # una volta al mese, con la prima stampa del mese: vendite per venditore del mese scorso, solo a Giuseppe
+        $meseOra = (Get-Date).ToString('yyyy-MM')
+        if ($pubblicata -and (LeggiStato).venditori -ne $meseOra) {
+            $v = Esegui 'node agente\venditori.js'
+            Scrivi $v.Testo
+            if ($v.Codice -eq 0) { InviaPosta; SegnaStato 'venditori' $meseOra }
         }
     }
 
