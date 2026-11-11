@@ -161,7 +161,8 @@ function avvisi() {
    Parte da sola ogni mattina con la stampa nuova (chiesto da Giuseppe il 10/11/2026).
    Lo sconto e' il confronto tra il prezzo in stampa e il prezzo promo del giorno di partenza:
    il prezzo del contratto non e' nella stampa, quindi uno sconto fatto solo a contratto qui non si vede. */
-const PROMO_A = 'matteo.sfregola@valentinoautomobili.it; giuseppe.valentino@valentinoautomobili.it';
+// destinatari della mail promo: nel file agente/promo-destinatari.txt (resta sul PC, il progetto e' pubblico), uno per riga
+const PROMO_A = (() => { try { const l = fs.readFileSync(qui('promo-destinatari.txt'), 'utf8').split(/\r?\n/).map(x => x.trim()).filter(x => /^[^@\s#]+@[^@\s]+$/.test(x)); if (l.length) return l.join('; '); } catch (e) {} return 'matteo.sfregola@valentinoautomobili.it'; })();
 function promo() {
   const pr = leggi(dati('promo.json'), null);
   if (!pr || !Array.isArray(pr.targhe) || !pr.targhe.length) { console.log('Nessuna promo attiva.'); return; }
