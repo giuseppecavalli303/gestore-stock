@@ -89,7 +89,7 @@ function normalize(ext) {
   const day = (ext.printDate || new Date().toISOString()).slice(0, 10);
   const cars = ext.rows.map(r => {
     const g = k => r.cells[COLS.indexOf(k)].map(o => o.s).join(' ').replace(/\s+/g, ' ').trim();
-    const stato = g('stato'), st = +stato[0];
+    const stato = g('stato'), st = parseInt(stato, 10);
     const modello = g('modello'), marcaRaw = g('marca');
     const d = describe(modello, marcaRaw, r.section);
     const ingr = isoDate(g('dataIngr')), imm = g('dImm').replace('/', '-');
@@ -97,7 +97,7 @@ function normalize(ext) {
     const note = g('note').replace(/-\s+(?=[A-Z]+-)/g, '-').replace(/\.\s*-/g, '. -');
     const colore = g('colore'), acq = g('acquirente');
     const c = {
-      targa: g('targa'), st, stato: STATI[st] || stato.replace(/^\d - /, ''), marcaRaw, brand: d.brand, family: d.family, modello,
+      targa: g('targa'), st, stato: STATI[st] || stato.replace(/^\d{1,2} - /, ''), marcaRaw, brand: d.brand, family: d.family, modello,
       ingr, giorni: ingr ? Math.max(0, dayDiff(day, ingr)) : null, imm, anno: +imm.slice(0, 4) || null,
       km: parseInt(g('km').replace(/\./g, ''), 10) || 0, colore: titleCase(colore), colorG: colorGroup(colore),
       spec: /^SI/.test(g('prezzoSpec')), check: /^SI/.test(chk), checkDate: isoDate(chk), as: /^SI/.test(as), asDate: isoDate(as),

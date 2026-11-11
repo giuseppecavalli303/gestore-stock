@@ -1033,13 +1033,24 @@
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); promptInstall = e; $('btnInstall').hidden = false; });
   $('btnInstall').onclick = async () => { if (!promptInstall) return; promptInstall.prompt(); try { await promptInstall.userChoice; } catch (e) {} promptInstall = null; $('btnInstall').hidden = true; };
   function setTab(t) {
-    if (S.cliente && t === 'stat') t = 'auto';
-    const stat = t === 'stat', perm = t === 'perm';
+    if (S.cliente && (t === 'stat' || t === 'storico')) t = 'auto';
+    const stat = t === 'stat', perm = t === 'perm', lungo = t === 'storico';
     document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === t)));
-    $('layout').hidden = stat || perm; $('stats').hidden = !stat; $('permute').hidden = !perm;
+    $('layout').hidden = stat || perm || lungo; $('stats').hidden = !stat; $('permute').hidden = !perm; $('storicoL').hidden = !lungo;
+    if (lungo) apriStoricoLungo();
     if (perm && !$('permute').firstChild) montaValutatore($('permute'), { url: AI_URL, token: AI_TOKEN });
     if (stat) renderStats();
     try { history.replaceState(history.state, '', stat ? '#statistiche' : location.pathname + location.search); } catch (e) {}
+  }
+  // storico degli anni passati: si scarica solo quando si apre la scheda
+  let LUNGO = null;
+  async function apriStoricoLungo() {
+    const el = $('storicoL');
+    if (LUNGO) return;
+    el.innerHTML = '<div class="panel glass wide"><p class="hint">Carico lo storico…</p></div>';
+    try { const r = await fetch('data/storico-lungo.json?t=' + Date.now(), { cache: 'no-store' }); LUNGO = r.ok ? await r.json() : null; } catch (e) { LUNGO = null; }
+    if (!LUNGO || !LUNGO.mesi) { el.innerHTML = '<div class="panel glass wide"><h3>Storico</h3><p class="hint">Lo storico degli anni passati non è disponibile in questo momento.</p></div>'; return; }
+    montaStoricoLungo(el, LUNGO);
   }
   let linkFatto = false;
   function apriDaLink() {
@@ -1111,7 +1122,7 @@
       if (!['cons', 'ingr', 'pa', 'pd', 'km', 'anno', 'cv', 'col'].includes($('sort').value)) $('sort').value = 'cons';
       delete F.r.giorni;
       if (activePreset === 'old') activePreset = 'all';
-      if (!$('stats').hidden) setTab('auto');
+      if (!$('stats').hidden || !$('storicoL').hidden) setTab('auto');
     } else if (!ORD_GG[0].parentNode) ORD_GG.forEach((o, i) => $('sort').options.add(o, 2 + i));
     if (S.Q && S.Q.r && S.Q.r.giorni) S.Q = capisci($('q').value.trim());
     if (S.cars.length) { renderKpis(); renderViews(); renderFilters(true); apply(); }

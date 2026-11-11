@@ -1,7 +1,7 @@
 /* Parser stock usato: riceve le pagine come liste di item {s,x,y,w,fs} in ordine di stream */
 const COLS = ['stato','marca','modello','dataIngr','targa','checkList','dImm','km','colore','prezzoSpec','autoscout','note','prezzoVeicolo','pp','prezzoTot','ingresso','ubicazione','anticipata','miniPP','acquirente','dataPren','caparra','modVen','fv','venditore'];
 const HEAD_FIRST = ['stato','marca','modello','data','targa','check','d.imm','km','colore','prezzo','autoscout','note','prezzo','pp','prezzo','ingresso','ubicazione','anticipata','mini','acquirente','data','caparra','mod.','fv','venditore'];
-const RE_STATO = /^\d -( |$)/;
+const RE_STATO = /^\d{1,2} -( |$)/;      // anche gli stati a due cifre delle stampe vecchie ("10 - DEPOSITO 2")
 
 function chW(ch) {
   if (ch >= '0' && ch <= '9') return 0.556;
@@ -37,12 +37,18 @@ function findHeader(items) {
   const ws = [];
   for (let i = i0; i < items.length && Math.abs(items[i].y - hy) <= 8; i++) ws.push(...words(items[i]));
   ws.sort((a, b) => a.x0 - b.x0 || a.y - b.y);
-  const xs = [];
+  // le stampe degli anni scorsi hanno meno colonne (senza prezzo speciale, anticipata, mini PP): si saltano quelle che mancano.
+  // cols dice, per ogni colonna trovata, quale colonna di COLS e'.
+  const xs = [], cols = [];
   let k = 0;
   for (const w of ws) {
-    if (k < HEAD_FIRST.length && w.s.toLowerCase() === HEAD_FIRST[k] && (!xs.length || w.x0 - xs[xs.length - 1] > 4)) { xs.push(w.x0); k++; }
+    if (xs.length && w.x0 - xs[xs.length - 1] <= 4) continue;
+    const j = HEAD_FIRST.indexOf(w.s.toLowerCase(), k);
+    if (j < 0) continue;
+    xs.push(w.x0); cols.push(j); k = j + 1;
   }
-  return xs.length === COLS.length ? { xs, y: hy } : null;
+  const ci = n => cols.includes(COLS.indexOf(n));
+  return xs.length >= 20 && ['stato', 'modello', 'dataIngr', 'targa', 'prezzoTot', 'venditore'].every(ci) ? { xs, cols, y: hy } : null;
 }
 
 function colOf(xs, x) {
@@ -90,7 +96,7 @@ function extract(pages) {
       if (!head) { warnings.push(`Pagina ${pi + 1}: intestazione colonne non riconosciuta`); break; }
       if (own && Math.abs(it.y - head.y) <= 8) continue;       // intestazione colonne
       for (const w of words(it)) {
-        const c = colOf(head.xs, (w.x0 + w.x1) / 2);
+        const c = head.cols[colOf(head.xs, (w.x0 + w.x1) / 2)];
         if (c === 0 && RE_STATO.test(s) && w.x0 === it.x) {
           cur = { page: pi + 1, section, cells: COLS.map(() => []) };
           rows.push(cur);

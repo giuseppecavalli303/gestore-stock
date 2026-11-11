@@ -265,7 +265,7 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--hover)}
 .hint.err{color:var(--bad)}
 /* modalita' cliente */
 #btnCliente[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-html.cliente .col-gg,html.cliente [data-tab="stat"]{display:none}
+html.cliente .col-gg,html.cliente [data-tab="stat"],html.cliente [data-tab="storico"]{display:none}
 /* valutatore permute */
 #dPerm{display:grid;gap:10px}
 .permute{max-width:720px;margin:0 auto;padding:4px 0 40px}
@@ -402,7 +402,7 @@ body:has(#listaBar:not([hidden])) .toast{bottom:calc(env(safe-area-inset-bottom,
 .understood .linkbtn{margin-left:6px}
 
 /* statistiche */
-.tabs{align-self:flex-start;width:min(320px,100%)}
+.tabs{align-self:flex-start;width:min(420px,100%)}
 .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 .stats .wide{grid-column:1/-1}
 .stats .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -424,6 +424,19 @@ body:has(#listaBar:not([hidden])) .toast{bottom:calc(env(safe-area-inset-bottom,
 .legend i.s1{background:var(--s1)} .legend i.s2{background:var(--s2)}
 .tip{position:fixed;z-index:99;pointer-events:none;padding:7px 11px;border-radius:10px;background:var(--solid);color:var(--ink);border:1px solid var(--edge);box-shadow:var(--shadow-sm);font-size:12.5px;font-variant-numeric:tabular-nums;max-width:280px}
 table.vel{white-space:nowrap}
+/* storico lungo: colori delle serie (in ordine fisso) e barre orizzontali */
+.stats{--c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--c5:#e87ba4}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .stats{--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181} }
+:root[data-theme="dark"] .stats{--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181}
+.chart .ln.c1{stroke:var(--c1)} .chart .ln.c2{stroke:var(--c2)} .chart .ln.c3{stroke:var(--c3)} .chart .ln.c4{stroke:var(--c4)} .chart .ln.c5{stroke:var(--c5)}
+.chart .dot.c1{fill:var(--c1)} .chart .dot.c2{fill:var(--c2)} .chart .dot.c3{fill:var(--c3)} .chart .dot.c4{fill:var(--c4)} .chart .dot.c5{fill:var(--c5)}
+.chart .dot{stroke:var(--solid);stroke-width:2} .chart .bar.c1{fill:var(--c1)}
+.legend{flex-wrap:wrap} .legend i.c1{background:var(--c1)} .legend i.c2{background:var(--c2)} .legend i.c3{background:var(--c3)} .legend i.c4{background:var(--c4)} .legend i.c5{background:var(--c5)}
+.hb{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.hbr{display:grid;grid-template-columns:minmax(96px,34%) minmax(0,1fr) 58px;align-items:center;gap:10px;font-size:13px}
+.hbk{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2)}
+.hbt{height:12px;border-radius:4px;background:var(--hair);overflow:hidden} .hbt i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--c1)}
+.hbr b{text-align:right;font-variant-numeric:tabular-nums}
 .hbar{position:relative;min-width:150px;height:22px;display:flex;align-items:center}
 .hbar i{position:absolute;left:0;top:4px;bottom:4px;border-radius:0 4px 4px 0;background:var(--accent-soft)}
 .hbar span{position:relative;padding-left:8px;font-weight:600}
@@ -689,7 +702,7 @@ body{font-size:13.5px;letter-spacing:-.006em}
   <div class="strip" id="delta" hidden></div>
   <div class="strip" id="views"></div>
 
-  <div class="seg tabs" role="tablist" aria-label="Sezione"><button data-tab="auto" aria-pressed="true">Auto</button><button data-tab="stat" aria-pressed="false">Statistiche</button><button data-tab="perm" aria-pressed="false">Permute</button></div>
+  <div class="seg tabs" role="tablist" aria-label="Sezione"><button data-tab="auto" aria-pressed="true">Auto</button><button data-tab="stat" aria-pressed="false">Statistiche</button><button data-tab="storico" aria-pressed="false">Storico</button><button data-tab="perm" aria-pressed="false">Permute</button></div>
 
   <div class="layout" id="layout">
     <aside class="filters glass" id="filters" aria-label="Filtri"></aside>
@@ -722,6 +735,7 @@ body{font-size:13.5px;letter-spacing:-.006em}
   </div>
 
   <section class="stats" id="stats" hidden aria-label="Statistiche"></section>
+  <section class="stats" id="storicoL" hidden aria-label="Storico degli anni passati"></section>
   <section class="permute" id="permute" hidden aria-label="Valuta una permuta"></section>
 </div>
 
@@ -739,7 +753,7 @@ body{font-size:13.5px;letter-spacing:-.006em}
 /* Parser stock usato: riceve le pagine come liste di item {s,x,y,w,fs} in ordine di stream */
 const COLS = ['stato','marca','modello','dataIngr','targa','checkList','dImm','km','colore','prezzoSpec','autoscout','note','prezzoVeicolo','pp','prezzoTot','ingresso','ubicazione','anticipata','miniPP','acquirente','dataPren','caparra','modVen','fv','venditore'];
 const HEAD_FIRST = ['stato','marca','modello','data','targa','check','d.imm','km','colore','prezzo','autoscout','note','prezzo','pp','prezzo','ingresso','ubicazione','anticipata','mini','acquirente','data','caparra','mod.','fv','venditore'];
-const RE_STATO = /^\d -( |$)/;
+const RE_STATO = /^\d{1,2} -( |$)/;      // anche gli stati a due cifre delle stampe vecchie ("10 - DEPOSITO 2")
 
 function chW(ch) {
   if (ch >= '0' && ch <= '9') return 0.556;
@@ -775,12 +789,18 @@ function findHeader(items) {
   const ws = [];
   for (let i = i0; i < items.length && Math.abs(items[i].y - hy) <= 8; i++) ws.push(...words(items[i]));
   ws.sort((a, b) => a.x0 - b.x0 || a.y - b.y);
-  const xs = [];
+  // le stampe degli anni scorsi hanno meno colonne (senza prezzo speciale, anticipata, mini PP): si saltano quelle che mancano.
+  // cols dice, per ogni colonna trovata, quale colonna di COLS e'.
+  const xs = [], cols = [];
   let k = 0;
   for (const w of ws) {
-    if (k < HEAD_FIRST.length && w.s.toLowerCase() === HEAD_FIRST[k] && (!xs.length || w.x0 - xs[xs.length - 1] > 4)) { xs.push(w.x0); k++; }
+    if (xs.length && w.x0 - xs[xs.length - 1] <= 4) continue;
+    const j = HEAD_FIRST.indexOf(w.s.toLowerCase(), k);
+    if (j < 0) continue;
+    xs.push(w.x0); cols.push(j); k = j + 1;
   }
-  return xs.length === COLS.length ? { xs, y: hy } : null;
+  const ci = n => cols.includes(COLS.indexOf(n));
+  return xs.length >= 20 && ['stato', 'modello', 'dataIngr', 'targa', 'prezzoTot', 'venditore'].every(ci) ? { xs, cols, y: hy } : null;
 }
 
 function colOf(xs, x) {
@@ -828,7 +848,7 @@ function extract(pages) {
       if (!head) { warnings.push(`Pagina ${pi + 1}: intestazione colonne non riconosciuta`); break; }
       if (own && Math.abs(it.y - head.y) <= 8) continue;       // intestazione colonne
       for (const w of words(it)) {
-        const c = colOf(head.xs, (w.x0 + w.x1) / 2);
+        const c = head.cols[colOf(head.xs, (w.x0 + w.x1) / 2)];
         if (c === 0 && RE_STATO.test(s) && w.x0 === it.x) {
           cur = { page: pi + 1, section, cells: COLS.map(() => []) };
           rows.push(cur);
@@ -935,7 +955,7 @@ function normalize(ext) {
   const day = (ext.printDate || new Date().toISOString()).slice(0, 10);
   const cars = ext.rows.map(r => {
     const g = k => r.cells[COLS.indexOf(k)].map(o => o.s).join(' ').replace(/\s+/g, ' ').trim();
-    const stato = g('stato'), st = +stato[0];
+    const stato = g('stato'), st = parseInt(stato, 10);
     const modello = g('modello'), marcaRaw = g('marca');
     const d = describe(modello, marcaRaw, r.section);
     const ingr = isoDate(g('dataIngr')), imm = g('dImm').replace('/', '-');
@@ -943,7 +963,7 @@ function normalize(ext) {
     const note = g('note').replace(/-\s+(?=[A-Z]+-)/g, '-').replace(/\.\s*-/g, '. -');
     const colore = g('colore'), acq = g('acquirente');
     const c = {
-      targa: g('targa'), st, stato: STATI[st] || stato.replace(/^\d - /, ''), marcaRaw, brand: d.brand, family: d.family, modello,
+      targa: g('targa'), st, stato: STATI[st] || stato.replace(/^\d{1,2} - /, ''), marcaRaw, brand: d.brand, family: d.family, modello,
       ingr, giorni: ingr ? Math.max(0, dayDiff(day, ingr)) : null, imm, anno: +imm.slice(0, 4) || null,
       km: parseInt(g('km').replace(/\./g, ''), 10) || 0, colore: titleCase(colore), colorG: colorGroup(colore),
       spec: /^SI/.test(g('prezzoSpec')), check: /^SI/.test(chk), checkDate: isoDate(chk), as: /^SI/.test(as), asDate: isoDate(as),
@@ -1588,6 +1608,104 @@ async function decifraClienti(data, chiave, subtle) {
     try { const b = b64Byte(c.acqX); c.acq = new TextDecoder().decode(await subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, key, b.slice(12))); n++; } catch (e) { /* chiave sbagliata: niente nome */ }
   }
   return n;
+}
+
+/* ---------- Storico lungo: i grafici sugli anni di stampe (dati in data/storico-lungo.json, preparati da agente/storico-lungo.js) ---------- */
+function montaStoricoLungo(el, D) {
+  const n = v => (v == null ? '—' : Math.round(v).toLocaleString('it-IT'));
+  const eur = v => (v == null ? '—' : n(v) + ' €');
+  const es = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const meseIt = m => MESI[+m.slice(5, 7) - 1] + ' ' + m.slice(2, 4);
+  const dIt = iso => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+  const passo = (span, k) => { const raw = span / k, p = Math.pow(10, Math.floor(Math.log10(raw || 1))), m = raw / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; };
+  const largo = () => Math.max(300, Math.min(el.clientWidth || 900, 1400));
+  const legenda = serie => (serie.length > 1 ? `<div class="legend">${serie.map(s => `<span><i class="${s.c}"></i>${es(s.nome)}</span>`).join('')}</div>` : '');
+
+  // linee: una o piu' serie con la stessa unita' di misura, un solo asse. etichette = testi sull'asse x, tip = intestazione del riquadro
+  function linee(o) {
+    const W = Math.max(300, o.larg), H = 220, ml = 46, mr = 16, mt = 12, mb = 28, L = o.etichette.length;
+    const tutti = o.serie.flatMap(s => s.v).filter(v => v != null);
+    if (!tutti.length) return '<p class="hint">Dati non ancora disponibili.</p>';
+    const hi0 = Math.max(...tutti), lo0 = o.daZero ? 0 : Math.min(...tutti), st = passo(Math.max(1, hi0 - lo0), 4);
+    const lo = o.daZero ? 0 : Math.max(0, Math.floor(lo0 / st) * st), hi = Math.ceil(hi0 / st) * st || st;
+    const x = i => ml + (L === 1 ? (W - ml - mr) / 2 : i * (W - ml - mr) / (L - 1)), y = v => mt + (hi - v) * (H - mt - mb) / (hi - lo);
+    let s = `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${es(o.titolo)}">`;
+    for (let t = lo; t <= hi + 1e-9; t += st) s += `<line x1="${ml}" x2="${W - mr}" y1="${y(t)}" y2="${y(t)}" class="grid"/><text x="${ml - 8}" y="${y(t) + 4}" class="ax" text-anchor="end">${n(t)}${o.unita || ''}</text>`;
+    const ogni = Math.max(1, Math.ceil(L / Math.floor((W - ml - mr) / 58)));
+    o.etichette.forEach((e, i) => { if (i % ogni === 0) s += `<text x="${x(i)}" y="${H - 8}" class="ax" text-anchor="middle">${es(e)}</text>`; });
+    for (const z of o.serie) {
+      let d = '', su = false;
+      z.v.forEach((v, i) => { if (v == null) { su = false; return; } d += (su ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); su = true; });
+      s += `<path d="${d}" class="ln ${z.c}"/>`;
+      if (L <= 14) z.v.forEach((v, i) => { if (v != null) s += `<circle cx="${x(i)}" cy="${y(v)}" r="4" class="dot ${z.c}"/>`; });
+    }
+    const colW = (W - ml - mr) / Math.max(1, L - 1 || 1);
+    o.etichette.forEach((e, i) => {
+      const tip = `${(o.tip || o.etichette)[i]}: ` + o.serie.filter(z => z.v[i] != null).map(z => `${o.serie.length > 1 ? z.nome + ' ' : ''}${n(z.v[i])}${o.unita || ''}`).join(' · ');
+      s += `<rect x="${x(i) - colW / 2}" y="${mt}" width="${colW}" height="${H - mt - mb}" class="hit" data-tip="${es(tip)}"/>`;
+    });
+    return `<div class="chartbox">${s}</svg></div>${legenda(o.serie)}`;
+  }
+
+  // colonne: quantita' per periodo, asse da zero
+  function colonne(o) {
+    const W = Math.max(300, o.larg), H = 220, ml = 40, mr = 10, mt = 12, mb = 28, L = o.valori.length;
+    const hi0 = Math.max(1, ...o.valori.map(v => v || 0)), st = passo(hi0, 4), hi = Math.ceil(hi0 / st) * st;
+    const y = v => mt + (hi - v) * (H - mt - mb) / hi, colW = (W - ml - mr) / L, bw = Math.max(3, Math.min(34, colW - 2));
+    let s = `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${es(o.titolo)}">`;
+    for (let t = 0; t <= hi + 1e-9; t += st) s += `<line x1="${ml}" x2="${W - mr}" y1="${y(t)}" y2="${y(t)}" class="grid"/><text x="${ml - 8}" y="${y(t) + 4}" class="ax" text-anchor="end">${n(t)}</text>`;
+    const ogni = Math.max(1, Math.ceil(L / Math.floor((W - ml - mr) / 58)));
+    o.valori.forEach((v, i) => {
+      const cx = ml + colW * i + colW / 2, x0 = cx - bw / 2;
+      if (v) { const h = y(0) - y(v), r = Math.min(4, h, bw / 2); s += `<path class="bar ${o.c || 'c1'}" d="M${x0} ${y(0)} V${y(v) + r} Q${x0} ${y(v)} ${x0 + r} ${y(v)} H${x0 + bw - r} Q${x0 + bw} ${y(v)} ${x0 + bw} ${y(v) + r} V${y(0)} Z"/>`; }
+      if (i % ogni === 0) s += `<text x="${cx}" y="${H - 8}" class="ax" text-anchor="middle">${es(o.etichette[i])}</text>`;
+      if (L <= 12 && v) s += `<text x="${cx}" y="${y(v) - 5}" class="ax" text-anchor="middle">${n(v)}</text>`;
+      s += `<rect x="${cx - colW / 2}" y="${mt}" width="${colW}" height="${H - mt - mb}" class="hit" data-tip="${es((o.tip || o.etichette)[i])}: ${n(v)}${o.unita ? ' ' + o.unita : ''}"/>`;
+    });
+    return `<div class="chartbox">${s}</svg></div>`;
+  }
+
+  // barre orizzontali: una riga per voce, con il valore scritto e il numero di vendite su cui e' calcolato
+  function righe(lista, val, testo, nota) {
+    const max = Math.max(1, ...lista.map(val));
+    return `<div class="hb">${lista.map(r => `<div class="hbr" data-tip="${es(r.k)}: ${es(nota(r))}"><span class="hbk">${es(r.k)}</span><span class="hbt"><i style="width:${Math.max(1.5, val(r) / max * 100).toFixed(1)}%"></i></span><b>${testo(r)}</b></div>`).join('')}</div>`;
+  }
+  const notaV = r => `venduta in ${n(r.gg)} giorni (valore centrale) · ${n(r.entro30)}% entro 30 giorni · ${n(r.n)} vendite · prezzo medio ${eur(r.prezzo)}`;
+  const perGiorni = l => righe(l, r => r.gg, r => n(r.gg) + ' gg', notaV);
+  const riquadro = (titolo, sotto, corpo, wide) => `<div class="panel glass${wide ? ' wide' : ''}"><h3>${titolo}</h3>${sotto ? `<p class="hint">${sotto}</p>` : ''}${corpo}</div>`;
+  const tessera = (v, t) => `<div class="kpi glass"><span class="v num">${v}</span><span class="l">${t}</span></div>`;
+
+  function disegna() {
+    const M = D.mesi, W = largo() - 58, mezzo = innerWidth >= 900 ? (largo() - 14) / 2 - 58 : W;
+    const et = M.map(m => meseIt(m.m)), tip = M.map(m => MESI[+m.m.slice(5, 7) - 1] + ' ' + m.m.slice(0, 4));
+    const pieni = M.slice(1, -1);                       // primo e ultimo mese sono a meta'
+    const top = [...pieni].sort((a, b) => b.vendite - a.vendite)[0], lenti = [...D.perModello].sort((a, b) => b.gg - a.gg), veloci = [...D.perModello].sort((a, b) => a.gg - b.gg);
+    const SER = ['c1', 'c2', 'c3', 'c4', 'c5'];
+    const totV = D.velocita.reduce((s, v) => s + v.n, 0) || 1, giorniSett = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+    el.innerHTML = `
+      <div class="panel glass wide"><h3>Storico dal ${dIt(D.dal)} al ${dIt(D.al)}</h3><p class="hint">Ricostruito da ${n(D.stampe)} stampe dello stock: ${n(D.auto)} auto diverse passate in stock. Una vendita è un'auto prenotata che poi è uscita (o è ancora prenotata); i giorni per vendere vanno dall'ingresso in stock alla prenotazione. Tocca i grafici per i numeri.</p></div>
+      <div class="kpis wide">${tessera(n(D.vendute), 'Vendite ricostruite')}${tessera(n(D.ggMediana) + '<small> gg</small>', 'Metà delle auto si vende entro questi giorni')}${tessera(n(D.entro30) + '<small>%</small>', 'Vendute entro 30 giorni dall’ingresso')}${tessera(top ? MESI[+top.m.slice(5, 7) - 1] + ' ' + top.m.slice(0, 4) : '—', top ? `Mese record: ${n(top.vendite)} vendite` : 'Mese record')}</div>
+      ${riquadro('Quante auto in stock', 'Media del mese: tutte le auto e quelle libere.', linee({ titolo: 'Auto in stock per mese', larg: W, etichette: et, tip, daZero: true, serie: [{ nome: 'In stock', c: 'c1', v: M.map(m => m.tot) }, { nome: 'Libere', c: 'c2', v: M.map(m => m.lib) }] }), true)}
+      ${riquadro('Vendite per mese', 'Per data di prenotazione. Il primo e l’ultimo mese non sono completi.', colonne({ titolo: 'Vendite per mese', larg: W, etichette: et, tip, valori: M.map(m => m.vendite), unita: 'vendite' }), true)}
+      ${riquadro('In che mesi si vende di più', 'Un anno per linea: si vede se la stagione si ripete. Il mese in corso non è completo.', linee({ titolo: 'Vendite per mese dell’anno', larg: mezzo, etichette: MESI, daZero: true, serie: D.stagione.map((a, i) => ({ nome: a.anno, c: SER[i % 5], v: a.mesi })) }))}
+      ${riquadro('In che giorno si prenota', 'Vendite per giorno della settimana, su tutto il periodo.', colonne({ titolo: 'Vendite per giorno della settimana', larg: mezzo, etichette: giorniSett, valori: D.perGiorno, unita: 'vendite' }))}
+      ${riquadro('Quanto ci vuole a vendere', 'Giorni dall’ingresso alla prenotazione, valore centrale del mese.', linee({ titolo: 'Giorni per vendere, mese per mese', larg: mezzo, etichette: et, tip, daZero: true, unita: ' gg', serie: [{ nome: 'Giorni per vendere', c: 'c1', v: M.map(m => m.ggVendita) }] }))}
+      ${riquadro('In quanti giorni si vendono', `Su ${n(totV)} vendite.`, righe(D.velocita, r => r.n, r => Math.round(r.n / totV * 100) + '%', r => `${n(r.n)} vendite`))}
+      ${riquadro('Giorni per vendere, per modello', `I modelli più venduti. Il più rapido è ${es(veloci[0] ? veloci[0].k : '—')}, il più lento ${es(lenti[0] ? lenti[0].k : '—')}.`, perGiorni(veloci))}
+      ${riquadro('Modelli più venduti', 'Numero di vendite nel periodo.', righe(D.perModello, r => r.n, r => n(r.n), notaV))}
+      ${riquadro('Per alimentazione', 'Giorni per vendere.', perGiorni(D.perFuel))}
+      ${riquadro('Per fascia di prezzo', 'Giorni per vendere.', perGiorni(D.perPrezzo))}
+      ${riquadro('Per cambio', 'Giorni per vendere.', perGiorni(D.perCambio))}
+      ${riquadro('Per marca', 'Giorni per vendere.', perGiorni(D.perMarca))}
+      ${riquadro('Ribassi prima della vendita', `Su ${n(D.ribassiSu)} vendite di auto entrate dopo l’inizio dell’archivio. Più ribassi vuol dire auto rimasta più a lungo, non che il ribasso rallenta.`, righe(D.perRibassi, r => r.n, r => Math.round(r.n / (D.ribassiSu || 1) * 100) + '%', r => `${n(r.n)} vendite · vendute in ${n(r.gg)} giorni (valore centrale)${r.calo ? ` · ribasso medio ${String(r.calo).replace('.', ',')}%` : ''}`))}
+      ${riquadro('Anno per anno', 'Vendite e giorni per vendere.', `<div class="tablewrap"><table class="vel"><thead><tr><th>Anno</th><th class="r">Vendite</th><th class="r">Giorni</th><th class="r">Entro 30 gg</th><th class="r">Con ribasso</th><th class="r">Prezzo medio</th></tr></thead><tbody>${D.perAnno.map(a => `<tr><td>${es(a.k)}</td><td class="r">${n(a.n)}</td><td class="r">${n(a.gg)}</td><td class="r">${n(a.entro30)}%</td><td class="r">${n(a.ribassate)}%</td><td class="r">${eur(a.prezzo)}</td></tr>`).join('')}</tbody></table></div>`)}
+      ${riquadro('Com’è cambiato lo stock', 'Quota di ogni alimentazione sul totale delle auto in stock.', linee({ titolo: 'Alimentazioni in stock', larg: W, etichette: et, tip, daZero: true, unita: '%', serie: [['Benzina', 'benzina'], ['Diesel', 'diesel'], ['Ibride e plug-in', 'ibrida'], ['Elettriche', 'elettrica'], ['Metano e GPL', 'gas']].map(([nome, k], i) => ({ nome, c: SER[i], v: M.map(m => m.mix[k]) })) }), true)}
+      ${riquadro('Prezzo medio delle auto libere', 'Media del mese.', linee({ titolo: 'Prezzo medio delle libere', larg: mezzo, etichette: et, tip, unita: ' €', serie: [{ nome: 'Prezzo medio', c: 'c1', v: M.map(m => m.prezzo) }] }))}
+      ${riquadro('Auto ferme da oltre 90 giorni', 'Quota sulle auto libere.', linee({ titolo: 'Libere da oltre 90 giorni', larg: mezzo, etichette: et, tip, daZero: true, unita: '%', serie: [{ nome: 'Oltre 90 giorni', c: 'c1', v: M.map(m => m.vecchie) }] }))}`;
+  }
+  disegna();
+  let t; addEventListener('resize', () => { if (el.hidden || !el.firstChild) return; clearTimeout(t); t = setTimeout(disegna, 200); });
 }
 
 </script>
@@ -2627,13 +2745,24 @@ async function decifraClienti(data, chiave, subtle) {
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); promptInstall = e; $('btnInstall').hidden = false; });
   $('btnInstall').onclick = async () => { if (!promptInstall) return; promptInstall.prompt(); try { await promptInstall.userChoice; } catch (e) {} promptInstall = null; $('btnInstall').hidden = true; };
   function setTab(t) {
-    if (S.cliente && t === 'stat') t = 'auto';
-    const stat = t === 'stat', perm = t === 'perm';
+    if (S.cliente && (t === 'stat' || t === 'storico')) t = 'auto';
+    const stat = t === 'stat', perm = t === 'perm', lungo = t === 'storico';
     document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === t)));
-    $('layout').hidden = stat || perm; $('stats').hidden = !stat; $('permute').hidden = !perm;
+    $('layout').hidden = stat || perm || lungo; $('stats').hidden = !stat; $('permute').hidden = !perm; $('storicoL').hidden = !lungo;
+    if (lungo) apriStoricoLungo();
     if (perm && !$('permute').firstChild) montaValutatore($('permute'), { url: AI_URL, token: AI_TOKEN });
     if (stat) renderStats();
     try { history.replaceState(history.state, '', stat ? '#statistiche' : location.pathname + location.search); } catch (e) {}
+  }
+  // storico degli anni passati: si scarica solo quando si apre la scheda
+  let LUNGO = null;
+  async function apriStoricoLungo() {
+    const el = $('storicoL');
+    if (LUNGO) return;
+    el.innerHTML = '<div class="panel glass wide"><p class="hint">Carico lo storico…</p></div>';
+    try { const r = await fetch('data/storico-lungo.json?t=' + Date.now(), { cache: 'no-store' }); LUNGO = r.ok ? await r.json() : null; } catch (e) { LUNGO = null; }
+    if (!LUNGO || !LUNGO.mesi) { el.innerHTML = '<div class="panel glass wide"><h3>Storico</h3><p class="hint">Lo storico degli anni passati non è disponibile in questo momento.</p></div>'; return; }
+    montaStoricoLungo(el, LUNGO);
   }
   let linkFatto = false;
   function apriDaLink() {
@@ -2705,7 +2834,7 @@ async function decifraClienti(data, chiave, subtle) {
       if (!['cons', 'ingr', 'pa', 'pd', 'km', 'anno', 'cv', 'col'].includes($('sort').value)) $('sort').value = 'cons';
       delete F.r.giorni;
       if (activePreset === 'old') activePreset = 'all';
-      if (!$('stats').hidden) setTab('auto');
+      if (!$('stats').hidden || !$('storicoL').hidden) setTab('auto');
     } else if (!ORD_GG[0].parentNode) ORD_GG.forEach((o, i) => $('sort').options.add(o, 2 + i));
     if (S.Q && S.Q.r && S.Q.r.giorni) S.Q = capisci($('q').value.trim());
     if (S.cars.length) { renderKpis(); renderViews(); renderFilters(true); apply(); }

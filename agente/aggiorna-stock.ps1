@@ -178,6 +178,8 @@ try {
             Scrivi $l.Testo
             $s = Esegui 'node agente\storico.js'
             Scrivi $s.Testo
+            $sl = Esegui 'node agente\storico-lungo.js'               # storico degli anni passati: aggiunge la stampa di oggi ai grafici
+            Scrivi $sl.Testo
             if (Test-Path (Join-Path $repo 'data\promo.json')) { $pp = Esegui 'node agente\promo-prezzi.js'; Scrivi $pp.Testo }   # prezzo barrato delle auto Black Friday
             $nuova = Pubblica "Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"
 
@@ -195,6 +197,13 @@ try {
             if ($nuova -and (LeggiStato).rapporto -ne $giorno) {
                 SegnaStato 'rapporto' $giorno                            # una sola presentazione al giorno, anche se qualcosa va storto
                 if (PreparaRapporto) { InviaPosta }
+            }
+            # una volta al mese, con la prima stampa del mese: vendite per venditore del mese scorso, solo a Giuseppe
+            $meseOra = (Get-Date).ToString('yyyy-MM')
+            if ($nuova -and (LeggiStato).venditori -ne $meseOra) {
+                $v = Esegui 'node agente\venditori.js'
+                Scrivi $v.Testo
+                if ($v.Codice -eq 0) { InviaPosta; SegnaStato 'venditori' $meseOra }
             }
             Get-ChildItem $arrivi -Filter *.pdf | Sort-Object LastWriteTime -Descending | Select-Object -Skip 15 | Remove-Item -Force
         }
