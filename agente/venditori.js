@@ -72,7 +72,10 @@ function altreMarche(titolo, l) {
 }
 
 function prepara(mese, S) {
-  const V = vendite(S), al = S.giorni.reduce((m, g) => (g.d > m ? g.d : m), '');
+  const tutteV = vendite(S), al = S.giorni.reduce((m, g) => (g.d > m ? g.d : m), '');
+  // nel rapporto mensile solo i venditori in forza: chi ha almeno una vendita negli ultimi 60 giorni di stampe.
+  // Chi non c'e' piu' resta solo nella classifica storica.
+  const attivi = new Set(tutteV.filter(v => giorni(al, v.d) <= 60).map(v => v.vend)), V = tutteV.filter(v => attivi.has(v.vend));
   const [y, mm] = mese.split('-'), titoloMese = `${MESI[+mm - 1]} ${y}`;
   const delMese = V.filter(v => v.d.slice(0, 7) === mese);
   const da12 = `${+y - 1}-${mm}`, ultimi12 = V.filter(v => v.d.slice(0, 7) > da12 && v.d.slice(0, 7) <= mese);
@@ -82,7 +85,7 @@ function prepara(mese, S) {
 <body style="margin:0;background:#f4f6f9;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#0b2545"><div style="max-width:1150px;margin:0 auto;padding:26px 18px 50px">
 <div style="font-size:12px;color:#5b6675;letter-spacing:.04em;text-transform:uppercase">Riservato · solo per Giuseppe Cavalli</div>
 <h1 style="font-size:26px;margin:6px 0 4px">Vendite per venditore · ${titoloMese}</h1>
-<p style="margin:0;color:#5b6675;font-size:13.5px">Ricostruito dalle stampe dello stock fino al ${dIt(al)}. Una vendita è un'auto prenotata con data di prenotazione nel periodo, assegnata al venditore scritto nella stampa. Le prenotazioni poi annullate non contano. Il valore è il prezzo esposto, non quello del contratto.</p>
+<p style="margin:0;color:#5b6675;font-size:13.5px">Ricostruito dalle stampe dello stock fino al ${dIt(al)}. Una vendita è un'auto prenotata con data di prenotazione nel periodo, assegnata al venditore scritto nella stampa. Sono compresi solo i ${attivi.size} venditori in forza oggi (almeno una vendita negli ultimi 60 giorni): chi non c'è più è solo nella classifica storica. Le prenotazioni poi annullate non contano. Il valore è il prezzo esposto, non quello del contratto.</p>
 ${sez(`Il mese: ${titoloMese}`, 'Classifica per numero di vendite', delMese)}
 ${altoValore(`Alto valore · ${titoloMese}`, delMese)}
 ${altreMarche(`Non Volkswagen · ${titoloMese}`, delMese)}
