@@ -43,7 +43,8 @@ function profilo(l) {
     rib: pct(l.filter(v => v.cali > 0).length, l.length), sab: pct(l.filter(v => new Date(v.d + 'T12:00:00Z').getUTCDay() === 6).length, l.length) };
 }
 
-function rapporto(nome, C) {
+// copia=true: versione da consegnare al venditore (niente nomi o numeri dei colleghi, niente note di Giuseppe)
+function rapporto(nome, C, copia) {
   const L = C.per.get(nome);
   if (!L) throw new Error('Venditore non trovato: ' + nome);
   const { ultimo, da12, in12, squadra, sq, anno, meseFine, ytd } = C;
@@ -165,7 +166,7 @@ td{text-align:right;padding:6px 10px;border-bottom:1px solid var(--line);white-s
 .nota{font-size:13px;color:var(--ink3)} .due{display:grid;grid-template-columns:1fr 1fr;gap:14px} @media (max-width:700px){.due{grid-template-columns:1fr}}
 @media print{body{background:#fff}.pag{padding:0}.card{break-inside:avoid}}
 </style></head><body><div class="pag">
-<div class="ris">Riservato · solo per Giuseppe Cavalli</div>
+<div class="ris">${copia ? `Riservato · per ${esc(nome)}` : 'Riservato · solo per Giuseppe Cavalli'}</div>
 <h1>${esc(nome)}</h1>
 <p class="sotto">${dallInizio ? 'In squadra almeno da maggio 2022, quando comincia l\'archivio delle stampe' : `In squadra da ${meseL(primoMese)}`}. Vendite ricostruite dalle stampe dello stock fino a ${meseL(ultimo)}, a confronto con i ${squadra.length} venditori in forza.</p>
 <div class="kpi">
@@ -175,7 +176,7 @@ td{text-align:right;padding:6px 10px;border-bottom:1px solid var(--line);white-s
 <div><b>${var1 == null ? '—' : segno(var1)}</b><span>${var1 == null ? 'confronto con l’anno scorso non disponibile' : `gennaio–${MESI_L[+meseFine - 1]} ${anno} sul ${+anno - 1}`}</span></div>
 </div>
 <div class="card sintesi"><p style="margin:0"><b>In breve.</b> ${sintesi.join(' ')}</p></div>
-${NOTE[nome] ? `<p class="nota">${esc(NOTE[nome])}</p>` : ''}
+${!copia && NOTE[nome] ? `<p class="nota">${esc(NOTE[nome])}</p>` : ''}
 
 <h2>1. Mese per mese</h2>
 <p>Le sue vendite (barre) e il valore centrale della squadra nello stesso mese (linea tratteggiata). Passa sopra una barra per i numeri.</p>
@@ -192,7 +193,8 @@ ${NOTE[nome] ? `<p class="nota">${esc(NOTE[nome])}</p>` : ''}
 ${annoTab.map(a => `<tr><td class="l">${a.y}${a.y === '2022' ? ' <span class="nota">(da maggio)</span>' : a.y === ultimo.slice(0, 4) ? ` <span class="nota">(fino a ${MESI[+meseFine - 1]})</span>` : ''}</td><td><b>${a.io}</b></td><td>${N(a.media)}</td><td class="${a.indice >= 110 ? 'su' : a.indice <= 90 ? 'giu' : ''}">${a.indice}%</td><td>${a.pos}° su ${a.di}</td></tr>`).join('')}
 </tbody></table></div>
 <p class="nota">"Media a testa" = vendite medie dei venditori con almeno 30 vendite in quell'anno. 100% vuol dire esattamente nella media. Il primo anno di chi entra a metà anno risulta basso per forza.</p>
-${ingresso && ingresso.length > 1 ? `<h3>Il primo anno a confronto con gli altri nuovi ingressi</h3>
+${copia && ingresso && ingresso.length > 1 ? (() => { const i = ingresso.findIndex(x => x.k === nome), me = ingresso[i]; return addMesi(primoMese, 11) <= ultimo ? `<h3>Il primo anno</h3><p>Nei primi 12 mesi: <b>${me.n[2]} vendite</b> (${me.n[0]} nei primi 3, ${me.n[1]} nei primi 6). È ${i === 0 ? 'il miglior primo anno' : `il ${i + 1}° miglior primo anno`} tra i ${ingresso.length} venditori in squadra entrati dal 2022.</p><p class="nota">Chi è entrato nel 2024–2025 ha trovato un reparto più grande e più vendite a testa: il confronto con chi è entrato prima lo favorisce.</p>` : ''; })() : ''}
+${!copia && ingresso && ingresso.length > 1 ? `<h3>Il primo anno a confronto con gli altri nuovi ingressi</h3>
 <div class="tw"><table><thead><tr><th class="l">Venditore</th><th class="l">Primo mese</th><th>Primi 3 mesi</th><th>Primi 6 mesi</th><th>Primi 12 mesi</th></tr></thead><tbody>
 ${ingresso.map(x => `<tr${x.k === nome ? ' class="io"' : ''}><td class="l">${x.k === nome ? '<b>' + esc(x.k) + '</b>' : esc(x.k)}</td><td class="l">${meseIt(x.p.slice(0, 7))}</td><td>${x.n[0]}</td><td>${x.n[1]}</td><td><b>${addMesi(x.p.slice(0, 7), 11) <= ultimo ? x.n[2] : '…'}</b></td></tr>`).join('')}
 </tbody></table></div>
@@ -222,7 +224,7 @@ ${tr('Prenotate di sabato', P.sab + '%', T.sab + '%', '')}
 <h3>Dove può crescere</h3>
 <ul>${leve.map(x => `<li>${x}</li>`).join('')}</ul>
 
-<p class="nota" style="margin-top:28px">Come leggere i numeri: una vendita è un'auto che nella stampa risulta prenotata con data di prenotazione, assegnata al venditore scritto nella stampa; le prenotazioni poi annullate non contano. Il prezzo è quello esposto, non quello del contratto. Le quote su auto ferme e ribassi dicono che tipo di auto vende, non quanto è veloce. Squadra = i ${squadra.length} venditori in forza con un'attività regolare; escluse le pratiche di Carlo Graus. Preparato dall'agente dello stock usato il ${new Date().toLocaleDateString('it-IT')}.</p>
+<p class="nota" style="margin-top:28px">Come leggere i numeri: una vendita è un'auto che nella stampa risulta prenotata con data di prenotazione, assegnata al venditore scritto nella stampa; le prenotazioni poi annullate non contano. Il prezzo è quello esposto, non quello del contratto. Le quote su auto ferme e ribassi dicono che tipo di auto vende, non quanto è veloce. Squadra = i ${squadra.length} venditori in forza con un'attività regolare; ${copia ? 'escluse le cessioni a commercianti e le vendite particolari.' : 'escluse le pratiche di Carlo Graus.'} ${copia ? 'Preparato da Giuseppe Cavalli' : 'Preparato dall\'agente dello stock usato'} il ${new Date().toLocaleDateString('it-IT')}.</p>
 </div></body></html>`;
   return { html, pos, alMese, var1, sintesi };
 }
@@ -230,8 +232,10 @@ ${tr('Prenotate di sabato', P.sab + '%', T.sab + '%', '')}
 if (require.main === module) {
   const C = contesto(JSON.parse(fs.readFileSync(CACHE, 'utf8')));
   fs.mkdirSync(OUT, { recursive: true });
-  for (const nome of process.argv.slice(2)) {
-    const r = rapporto(nome, C), f = path.join(OUT, `Rapporto ${nome}.html`);
+  const copia = process.argv.includes('--copia'), dir = copia ? path.join(OUT, 'copie') : OUT;
+  fs.mkdirSync(dir, { recursive: true });
+  for (const nome of process.argv.slice(2).filter(a => a !== '--copia')) {
+    const r = rapporto(nome, C, copia), f = path.join(dir, `Rapporto ${nome}.html`);
     fs.writeFileSync(f, r.html);
     console.log(`${nome}: ${r.pos}°, ${D1(r.alMese)} al mese, ${r.var1 == null ? 'n.d.' : segno(r.var1)} · ${r.sintesi.join(' ')}`);
   }
