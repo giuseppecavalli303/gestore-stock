@@ -179,7 +179,7 @@ function promo() {
   // prenotate o vendute dalla partenza della promo: le ricordo, cosi' restano in elenco anche quando escono dallo stock
   for (const c of cur.cars) {
     if (!P.has(c.targa) || !(c.booked || c.st >= 1)) continue;
-    if (c.dataPren && c.dataPren < inizio) continue;
+    if (c.dataPren && c.dataPren <= inizio) continue;      // prenotate il giorno di partenza: prima che la promo fosse comunicata (deciso da Giuseppe l'11/11)
     // "dal" = primo giorno in cui la stampa la mostra prenotata dopo la partenza della promo (dallo storico)
     const s = ((storia[c.targa] && storia[c.targa].s) || []).filter(x => x[0] >= inizio && x[1] !== 'Libera');
     const m = mem[c.targa] || (mem[c.targa] = { dal: s.length ? s[0][0] : primoGiro ? c.dataPren || inizio : day });
