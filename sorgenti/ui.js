@@ -758,7 +758,7 @@
   }
 
   /* ---------- assistente (Gemini, tramite il servizio Apps Script) ---------- */
-  const ICONA_AI = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>';
+  const ICONA_AI = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>';
   // le auto che l'assistente puo' proporre: quelle dei filtri laterali (non la ricerca scritta, che e' la domanda), non prenotate e vendibili
   function candidatiAI(domanda) {
     const Q = S.Q; S.Q = parseQuery('', []);
@@ -1107,7 +1107,6 @@
     const cur = F.r[k] || [null, null]; cur[+e.target.dataset.i] = e.target.value === '' ? null : +e.target.value; F.r[k] = cur; activePreset = '';
     clearTimeout(qT); qT = setTimeout(apply, 200);
   });
-  $('grid').addEventListener('pointermove', e => { const c = e.target.closest('.card'); if (!c) return; const r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
 
   /* ---------- modalita' cliente ---------- */
   // in modalita' cliente sparisce solo "Piu' vecchie in stock"; "Ultimi ingressi" resta: ordina senza mostrare i giorni
