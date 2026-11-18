@@ -47,3 +47,6 @@ agente/analisi-prezzi-cache.json
 agente/cross-*.txt
 # analisi interna sulle sedi e sulle squadre (giudizi, non va pubblicata)
 agente/analisi-stock.js
+
+# dotazioni dei cartelli scelte dal servizio Google (cache locale)
+agente/cartelli-dotazioni.json

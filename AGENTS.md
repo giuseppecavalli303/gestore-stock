@@ -60,6 +60,7 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
 ## Diario delle novità
 
 - **18/11/2026:**
+  - i cartelli da cambiare escono con le dotazioni: per ogni auto con annuncio sul sito lo script chiede nome e righe al servizio Google, come il tasto "Cartello salone", una richiesta alla volta (insieme vengono rifiutate); le scelte restano in `agente/cartelli-dotazioni.json` (locale). Senza annuncio, o se l'annuncio non elenca le dotazioni (es. 500 km0), le righe restano vuote e il PDF elenca le targhe;
   - prezzi consigliati per le libere senza prezzo (`agente/prezzi-consigliati.js`, PDF): vendite simili dalle stampe, prezzo adeguato ad anno e km (circa 5% all'anno e 2,5% ogni 10.000 km, calcolato modello per modello), prezzo veicolo arrotondato a 450/950. Il prezzo delle vendite è quello in stampa alla prenotazione: lo sconto finale non c'è;
   - l'archivio delle stampe ha dei buchi (circa 100 giorni feriali su 1.150, il più lungo dal 23/07 al 05/08/2026): gli arrivi si contano sulla data di ingresso scritta nella stampa (campo `ingr`), non sul primo giorno in cui l'auto compare;
   - cartelli da cambiare: ogni mattina un PDF per Giuseppe con le auto a cui è cambiato il prezzo, divise per sede, e i cartelli salone già compilati (alle sedi solo se lo chiede lui);

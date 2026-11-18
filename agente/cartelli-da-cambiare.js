@@ -1,6 +1,8 @@
 // Cartelli da cambiare: le auto libere a cui e' cambiato il prezzo (o che l'hanno appena avuto) rispetto alla stampa di ieri,
 // divise per sede. Un solo PDF: prima l'elenco per sede (prezzo vecchio -> nuovo), poi i cartelli gia' compilati, nello stesso ordine.
-// Le righe delle dotazioni restano vuote (nell'app le scrive l'assistente quando si preme "Cartello salone"): si scrivono a mano.
+// Nome e righe delle dotazioni li sceglie il servizio Google (Gemini legge l'annuncio sul sito), come il tasto "Cartello salone"
+// dell'app; le scelte restano in agente/cartelli-dotazioni.json per non richiederle a ogni cambio di prezzo.
+// Le auto senza annuncio sul sito (o se il servizio non risponde) hanno le righe vuote, da scrivere a mano.
 // Uso: node agente/cartelli-da-cambiare.js [--giorni N] [--mail]
 //   --giorni N  invece di ieri, tutte le auto col prezzo cambiato negli ultimi N giorni (per recuperare i cartelli arretrati)
 //   --mail      mette in coda la mail per Giuseppe con il PDF allegato (per ora solo a lui: alle sedi solo se lo chiede)
@@ -16,6 +18,25 @@ const N = n => Math.round(n || 0).toLocaleString('it-IT', { useGrouping: 'always
 const dIt = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 const IO = 'giuseppe.cavalli@valentinoautomobili.it';
 const ORDINE = ['Prenestina', 'Tuscolana', 'Tiburtina 1128', 'Tiburtina', 'Tiburtina 2'];
+
+// stesso servizio e stessa chiave dell'app (sorgenti/ui.js): cosi' se cambiano li' cambiano anche qui
+const UI = src('ui.js'), AI_URL = (/const AI_URL = '([^']+)'/.exec(UI) || [])[1], AI_TOKEN = (/const AI_TOKEN = '([^']+)'/.exec(UI) || [])[1];
+const fileDot = path.join(__dirname, 'cartelli-dotazioni.json'), dotazioni = leggi(fileDot, {});
+async function chiediDotazioni(c) {
+  const w = c.web || {};
+  if (dotazioni[c.targa] && dotazioni[c.targa].url === w.url) return dotazioni[c.targa];
+  if (!w.url || !AI_URL || !AI_TOKEN) return null;
+  for (let prova = 0; prova < 2; prova++) {
+    try {
+      const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: AbortSignal.timeout(60000),
+        body: JSON.stringify({ token: AI_TOKEN, azione: 'cartello', url: w.url, auto: `${c.brand} ${c.modello}`, telecamera: !!(w.cam && w.cam.esito === 'si'), tetto: !!(w.tetto && w.tetto.esito === 'si') }) });
+      const j = await r.json();
+      if (!j.errore && Array.isArray(j.righe) && j.righe.length) return (dotazioni[c.targa] = { url: w.url, nome: j.nome, righe: j.righe, cc: j.cc, euro: j.euro, offerta: j.offerta, quando: new Date().toISOString().slice(0, 10) });
+    } catch (e) { /* riprova una volta */ }
+    await new Promise(ok => setTimeout(ok, 5000));
+  }
+  return null;
+}
 
 const arg = process.argv.slice(2), iG = arg.indexOf('--giorni'), giorni = iG >= 0 ? +arg[iG + 1] || 30 : 0;
 const stock = leggi(path.join(root, 'data', 'stock.json')), OGGI = stock.meta.day;
@@ -47,6 +68,11 @@ function prezziPrima() {
     .sort((a, b) => ORDINE.indexOf(a.c.ubic) - ORDINE.indexOf(b.c.ubic) || a.c.targa.localeCompare(b.c.targa));
   if (!lista.length) { console.log('Cartelli: nessun prezzo cambiato.'); return; }
 
+  // dotazioni: una richiesta alla volta (piu' richieste insieme il servizio Google le rifiuta)
+  const scelte = new Map();
+  for (const x of lista) scelte.set(x.c.targa, await chiediDotazioni(x.c));
+  const vuoti = lista.filter(x => !scelte.get(x.c.targa));
+  fs.writeFileSync(fileDot, JSON.stringify(dotazioni, null, 1));
   const perSede = ORDINE.map(s => [s, lista.filter(x => x.c.ubic === s)]).filter(([, l]) => l.length);
   const riga = ({ c, prima: p }) => `<tr><td><b>${esc(c.targa)}</b></td><td>${esc(c.brand)} ${esc(c.family)}<br><small>${esc(c.modello)}</small></td>
     <td class="r">${p ? N(p) + ' €' : '<small>senza prezzo</small>'}</td><td class="r"><b>${N(c.prezzo)} €</b></td>
@@ -64,7 +90,7 @@ function prezziPrima() {
   </style></head><body><h1>${esc(sede)} · cartelli da cambiare: ${l.length}</h1>
   <div class="sub">Stampa del ${dIt(OGGI)} · prezzi cambiati ${esc(prima.quando)} · dopo questo elenco ci sono i cartelli già compilati, nello stesso ordine</div>
   <table><thead><tr><th>Targa</th><th>Auto</th><th class="r">Prima</th><th class="r">Ora</th><th class="r">Differenza</th><th></th><th>Fatto</th></tr></thead><tbody>${l.map(riga).join('')}</tbody></table>
-  <p class="nota">Sul cartello le righe delle dotazioni sono vuote: si scrivono a mano oppure si rifà il cartello completo dal tasto "Cartello salone" nella scheda dell'auto. Togliere il cartello vecchio dall'auto.</p></body></html>`;
+  <p class="nota">Le dotazioni sul cartello sono scelte dall'annuncio sul sito, come con il tasto "Cartello salone".${l.some(x => !scelte.get(x.c.targa)) ? ` Senza dotazioni (auto non ancora sul sito): ${l.filter(x => !scelte.get(x.c.targa)).map(x => esc(x.c.targa)).join(', ')}; si scrivono a mano o si rifà il cartello dal tasto quando l'annuncio è online.` : ''} Togliere il cartello vecchio dall'auto.</p></body></html>`;
 
   const fileHtml = path.join(dir, 'elenco.html'), fileElenco = path.join(dir, 'elenco.pdf');
   fs.writeFileSync(fileHtml, html);
@@ -90,7 +116,7 @@ function prezziPrima() {
     return (modelli[file] = { pagina, campi, width, height });
   }
   for (const { c } of l) {
-    const d = datiCartello(c, null), m = await modello(d.file);
+    const d = datiCartello(c, scelte.get(c.targa)), m = await modello(d.file);
     const pg = out.addPage([m.width, m.height]);
     pg.drawPage(m.pagina, { x: 0, y: 0, width: m.width, height: m.height });
     for (const [nome, testo] of Object.entries(d.campi)) {
@@ -112,7 +138,7 @@ function prezziPrima() {
   for (const [s, l] of perSede) files.push(await fileSede(s, l));
   fs.rmSync(path.join(dir, 'elenco.pdf'), { force: true }); fs.rmSync(path.join(dir, 'elenco.html'), { force: true });
   const riassunto = perSede.map(([s, l]) => `${s} ${l.length}`).join(', ');
-  console.log(`Cartelli: ${lista.length} da cambiare (${riassunto}), un PDF per sede in ${dir}`);
+  console.log(`Cartelli: ${lista.length} da cambiare (${riassunto}), un PDF per sede in ${dir}; dotazioni compilate per ${lista.length - vuoti.length}${vuoti.length ? `, vuote per ${vuoti.length} (${vuoti.map(x => x.c.targa).join(' ')})` : ''}`);
 
   if (arg.includes('--mail')) {
     const codaF = path.join(__dirname, 'posta-da-inviare.json'), coda = leggi(codaF, []);
