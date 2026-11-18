@@ -37,6 +37,17 @@ function sitoDiverso(c) {
     : { sito, gest, diff, passaggio, breve: `Sito ${eu(sito)}: ${diff > 0 ? '+' : '−'}${eu(diff)} rispetto al gestionale`, testo: `Sul sito ${eu(sito)}, nel gestionale ${eu(gest)}: il sito è ${eu(diff)} più ${diff > 0 ? 'alto' : 'basso'}` };
 }
 
+// prezzo totale della stampa che non torna con prezzo del veicolo + passaggio: errore di inserimento nel gestionale.
+// L'app mostra il totale, il sito il prezzo del veicolo: se non tornano, uno dei due e' sbagliato.
+function totaleIncoerente(c) {
+  if (!(c.prezzo > 0) || !(c.prezzoV > 0)) return null;
+  const atteso = c.prezzoV + (c.pp || 0), diff = c.prezzo - atteso;
+  if (Math.abs(diff) <= 1) return null;
+  const eu = n => String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+  return { atteso, diff, breve: `Totale da verificare: ${eu(c.prezzo)} invece di ${eu(atteso)}`,
+    testo: `Nel gestionale il totale è ${eu(c.prezzo)}, ma veicolo ${eu(c.prezzoV)} + passaggio ${eu(c.pp || 0)} fanno ${eu(atteso)} (${diff > 0 ? '+' : '−'}${eu(diff)}). Uno dei due prezzi è sbagliato: va corretto nel gestionale.` };
+}
+
 function parseQuery(raw, vocab) {
   const Q = { r: {}, st: new Set(), fuel: new Set(), cambio: new Set(), color: new Set(), brand: new Set(), family: new Set(), vend: new Set(), ubic: [], terms: [], chips: [] };
   let t = ' ' + deacc((raw || '').toLowerCase()).replace(/[€]/g, ' euro ').replace(/[,;:]+/g, ' ') + ' ';

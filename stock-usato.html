@@ -1073,6 +1073,17 @@ function sitoDiverso(c) {
     : { sito, gest, diff, passaggio, breve: `Sito ${eu(sito)}: ${diff > 0 ? '+' : '−'}${eu(diff)} rispetto al gestionale`, testo: `Sul sito ${eu(sito)}, nel gestionale ${eu(gest)}: il sito è ${eu(diff)} più ${diff > 0 ? 'alto' : 'basso'}` };
 }
 
+// prezzo totale della stampa che non torna con prezzo del veicolo + passaggio: errore di inserimento nel gestionale.
+// L'app mostra il totale, il sito il prezzo del veicolo: se non tornano, uno dei due e' sbagliato.
+function totaleIncoerente(c) {
+  if (!(c.prezzo > 0) || !(c.prezzoV > 0)) return null;
+  const atteso = c.prezzoV + (c.pp || 0), diff = c.prezzo - atteso;
+  if (Math.abs(diff) <= 1) return null;
+  const eu = n => String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+  return { atteso, diff, breve: `Totale da verificare: ${eu(c.prezzo)} invece di ${eu(atteso)}`,
+    testo: `Nel gestionale il totale è ${eu(c.prezzo)}, ma veicolo ${eu(c.prezzoV)} + passaggio ${eu(c.pp || 0)} fanno ${eu(atteso)} (${diff > 0 ? '+' : '−'}${eu(diff)}). Uno dei due prezzi è sbagliato: va corretto nel gestionale.` };
+}
+
 function parseQuery(raw, vocab) {
   const Q = { r: {}, st: new Set(), fuel: new Set(), cambio: new Set(), color: new Set(), brand: new Set(), family: new Set(), vend: new Set(), ubic: [], terms: [], chips: [] };
   let t = ' ' + deacc((raw || '').toLowerCase()).replace(/[€]/g, ' euro ').replace(/[,;:]+/g, ' ') + ' ';
@@ -1816,7 +1827,7 @@ function montaStoricoLungo(el, D) {
   const camTesto = w => (!w.camLista ? '' : !w.cam ? "Nelle dotazioni c'è scritta: controllo delle foto in attesa" : w.cam.esito === 'si' ? `Confermata: c'è la foto dello schermo con la retrocamera${w.cam.foto ? ` (foto ${w.cam.foto})` : ''}` : "Nelle dotazioni c'è scritta, ma tra le foto non c'è quella della retrocamera: da verificare sull'auto");
   let PROMO = new Set();   // targhe delle vetture in PROMO - NO SCONTO (data/promo.json)
   let PRIMA = {};          // prezzo prima della promo e ultimo giorno in cui valeva (regola Omnibus: il piu' basso dei 30 giorni prima)
-  const bfPrima = c => { const p = PROMO.has(c.targa) && PRIMA[c.targa]; return p && c.prezzo && c.prezzo < p[0] ? p : null; };
+  const bfPrima = c => { const p = PROMO.has(c.targa) && PRIMA[c.targa]; return p && c.prezzo && c.prezzo < p[0] && !totaleIncoerente(c) ? p : null; };
   const barrato = c => { const p = bfPrima(c); return p ? `<s class="bf-prima">${eur(p[0])}</s>` : ''; };
   const finoAl = c => { const p = bfPrima(c); return p ? `<span class="bf-fino">prezzo in vigore fino al ${dIt(p[1])}</span>` : ''; };
   const TRIS = [
@@ -1903,7 +1914,7 @@ function montaStoricoLungo(el, D) {
     if (F.preset === 'priceDiff' && !prezzoDiverso(c)) return false;
     return matchQuery(c, S.Q);
   }
-  const prezzoDiverso = c => !!sitoDiverso(c);
+  const prezzoDiverso = c => !!(sitoDiverso(c) || totaleIncoerente(c));
   // consigliato: prima le libere con foto, poi le altre libere, poi in arrivo e il resto, poi le prenotate; a parita' le piu' recenti
   const rango = c => (c.free ? (c.web ? 0 : 1) : c.booked ? 3 : 2);
   const SORTS = {
@@ -1958,7 +1969,7 @@ function montaStoricoLungo(el, D) {
     spec: { label: 'Prezzo speciale', set() { F.tri.spec = true; } },
     check: { label: 'Check list fatta', set() { F.tri.check = true; } },
     noWeb: { label: 'Libere senza annuncio sul sito', set() { F.disp = 'free'; F.tri.web = false; } },
-    priceDiff: { label: 'Prezzo diverso dal sito', set() { F.preset = 'priceDiff'; } },
+    priceDiff: { label: 'Prezzo da verificare', set() { F.preset = 'priceDiff'; } },
     neo: { label: 'Per neopatentati', set() { F.disp = 'free'; F.tri.neo = true; } },
     km0: { label: 'Km 0', set() { F.tri.km0 = true; } },
     promo: { label: 'PROMO - NO SCONTO', set() { F.tri.promo = true; } }
@@ -2039,7 +2050,7 @@ function montaStoricoLungo(el, D) {
     if (F.disp !== 'all') a.push(['disp', F.disp === 'free' ? 'Libere' : 'Prenotate']);
     if (F.delta) a.push(['delta', { new: 'Nuovi ingressi', gone: 'Usciti dallo stock', price: 'Prezzo cambiato', state: 'Stato cambiato' }[F.delta]]);
     if (F.preset === 'recentBooked') a.push(['preset', 'Prenotate negli ultimi 7 giorni']);
-    if (F.preset === 'priceDiff') a.push(['preset', 'Prezzo diverso dal sito']);
+    if (F.preset === 'priceDiff') a.push(['preset', 'Prezzo da verificare']);
     for (const f of FACETS) for (const v of F.sets[f.k]) a.push(['set:' + f.k + ':' + v, v]);
     for (const r of RANGES) { const v = F.r[r.k]; if (v && (v[0] != null || v[1] != null)) a.push(['r:' + r.k, `${r.label.replace(/ \(.*/, '')}: ${v[0] != null ? 'da ' + N(v[0]) : ''} ${v[1] != null ? 'a ' + N(v[1]) : ''}`.replace(/(\d)\.(\d{3})(?=\D|$)/g, r.k === 'anno' ? '$1$2' : '$1.$2')]); }
     for (const t of TRIS) if (F.tri[t.k] != null) a.push(['tri:' + t.k, t.label + ': ' + (F.tri[t.k] ? 'sì' : 'no')]);
@@ -2059,7 +2070,7 @@ function montaStoricoLungo(el, D) {
       <div class="specs"><div><b>${N(c.km)}</b><span>km</span></div><div><b>${immIt(c)}</b><span>immatr.</span></div><div><b>${c.cv ? c.cv + ' CV' : 'n.d.'}</b><span>potenza</span></div><div><b>${esc(c.fuel)}</b><span>alim.</span></div><div><b>${esc(c.cambio)}</b><span>cambio</span></div><div><b><i class="sw" style="background:${COLOR_HEX[c.colorG] || '#9aa3b2'}"></i>${esc(c.colorG)}</b><span>colore</span></div></div>
       <div class="r3">${plate(c.targa)}${tags}</div>
       ${acqV(c) ? `<div class="who">${esc(acqV(c))}${c.dataPren ? ' · ' + dIt(c.dataPren) : ''}${c.vend ? ' · vend. ' + esc(c.vend) : ''}</div>` : ''}
-      ${!S.cliente && sitoDiverso(c) ? `<div class="sito-diff">${esc(sitoDiverso(c).breve)}</div>` : ''}
+      ${!S.cliente && totaleIncoerente(c) ? `<div class="sito-diff">${esc(totaleIncoerente(c).breve)}</div>` : ''}${!S.cliente && sitoDiverso(c) ? `<div class="sito-diff">${esc(sitoDiverso(c).breve)}</div>` : ''}
       <div class="foot"><div class="price${c.prezzo ? '' : ' nd'}">${bfPrima(c) ? `<s class="bf-prima">${eur(bfPrima(c)[0])}</s>` : c._dp ? `<s>era ${eur(c._dp) || 'n.d.'}</s>` : ''}${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}${finoAl(c)}</div><div class="loc"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.800 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><b>${esc(c.ubic || 'n.d.')}</b></div></div>
     </button>`;
   }
@@ -2092,13 +2103,13 @@ function montaStoricoLungo(el, D) {
       <div class="scroll">
         ${c.web && c.web.foto.length ? `<div class="galwrap"><button class="gfr sx" aria-label="Foto precedente"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="gfr dx" aria-label="Foto successiva"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><span class="gnum"></span><div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div></div>` : ''}
         ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
-        <div class="bigprice">${barrato(c)}<div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${finoAl(c)}${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>
+        <div class="bigprice">${barrato(c)}<div class="price${c.prezzo ? '' : ' nd'}">${c.prezzo ? eur(c.prezzo) : 'Prezzo non inserito'}</div>${finoAl(c)}${c.prezzo ? `<span style="color:var(--ink2)">veicolo ${eur(c.prezzoV) || '0 €'} + passaggio ${eur(c.pp) || '0 €'}</span>` : ''}${c._dp != null ? `<span class="tag">ieri ${eur(c._dp) || 'n.d.'}</span>` : ''}</div>${!S.cliente && totaleIncoerente(c) ? `<p class="sito-diff" style="margin:6px 0 0">${esc(totaleIncoerente(c).testo)}</p>` : ''}
         <div class="dcols">
         <section id="dFin"><h4>Finanziamento</h4><div id="dCodice">${isVW(c) ? '<p class="hint">Cerco il codice modello nei listini…</p>' : ''}</div><div class="links" id="dSimBtn"></div><div id="dRata"></div></section><section id="dPerm"><h4>Valuta la permuta</h4><div id="dPermBox"></div></section>
         <section><h4>Veicolo</h4><dl class="dl">${row('Immatricolazione', immIt(c))}${row('Chilometri', N(c.km) + ' km')}${row('Potenza', c.cv ? c.cv + ' CV / ' + c.kw + ' kW' : 'n.d.')}${row('Alimentazione', c.fuel)}${row('Cambio', c.cambio)}${row('Colore', c.colore || 'n.d.')}${c.web && c.web.vin ? `<div class="wide"><dt>Telaio</dt><dd><span class="mono">${esc(c.web.vin)}</span> <button class="linkbtn" id="dVin">Copia</button></dd></div>` : ''}${row('Categoria del listino', c.section, true)}</dl></section>
         ${camOk(c) && c.web.cam.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.cam.url)}" target="_blank" rel="noopener">Vedi la foto della retrocamera</a>` : ''}
         ${tettoOk(c) && c.web.tetto.url ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.tetto.url)}" target="_blank" rel="noopener">Vedi la foto del tetto</a>` : ''}
-        ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', prezzoDiverso(c) ? sitoDiverso(c).testo : eur(c.web.prezzo), prezzoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${row('Tetto apribile', tettoTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
+        ${c.web ? `<section><h4>Dal sito</h4><dl class="dl">${row('Prezzo sul sito', sitoDiverso(c) ? sitoDiverso(c).testo : eur(c.web.prezzo), !!sitoDiverso(c))}${row('Carrozzeria', c.web.carrozzeria)}${row('Porte e posti', [c.web.porte && c.web.porte + ' porte', c.web.posti && c.web.posti + ' posti'].filter(Boolean).join(', '))}${row('Cambio', [c.web.cambio, c.web.marce && c.web.marce + ' marce'].filter(Boolean).join(', '))}${row('Trazione', c.web.trazione)}${row('Interni', c.web.interni)}${row('Garanzia', c.web.garanzia ? c.web.garanzia + ' mesi' : '')}${row('Neopatentati', c.web.neopatentati ? 'Sì' : 'No')}${row('Telecamera posteriore', camTesto(c.web), true)}${row('Tetto apribile', tettoTesto(c.web), true)}${c.web.camLista ? row('Cosa dicono le dotazioni del sito', c.web.camLista, true) : ''}${row('Certificazione', c.web.certificato, true)}</dl></section>` : ''}
         <section id="dStoria" hidden><h4>Storia nelle stampe</h4><div class="timeline" id="dStoriaBody"></div></section>
         <section><h4>Dove si trova</h4><dl class="dl">${row('Ubicazione attuale', c.ubic || 'n.d.')}${row('Sede di ingresso', c.ingresso)}${ggVisibili() ? row('Data di ingresso', dIt(c.ingr)) : ''}${row('Anticipata', c.antic)}</dl></section>
         ${acqV(c) || c.vend || c.dataPren ? `<section><h4>Prenotazione</h4><dl class="dl">${row('Acquirente', acqV(c))}${row('Venditore', c.vend)}${row('Data prenotazione', dIt(c.dataPren))}${row('Modalità di vendita', c.modVen)}${row('Caparra', c.caparra ? eur(c.caparra) : '0 €')}</dl></section>` : ''}
@@ -2673,7 +2684,7 @@ function montaStoricoLungo(el, D) {
       <div class="panel glass"><h3>Ultime uscite dallo stock</h3><p class="hint">Auto che non compaiono più nella stampa, con i giorni passati in stock.</p><ul class="lst">${uscite.slice(0, 20).map(({ t, a, gg }) => auto1(t, a.n, `${dIt(a.out)}${gg != null ? ` · ${gg} gg in stock` : ''}`)).join('') || '<li class="muted">Ancora nessuna</li>'}</ul></div>
       <div class="panel glass"><h3>Prezzi ritoccati</h3><p class="hint">Ultimi 14 giorni. Tocca un'auto per aprirla.</p><ul class="lst">${ritocchi.slice(0, 20).map(r => auto1(r.t, r.a.n, `${ddmm(r.d)} · ${eur(r.da)} → <b>${eur(r.a_)}</b> <span class="${r.a_ < r.da ? 'down' : 'up'}">${r.a_ < r.da ? '−' : '+'}${eur(Math.abs(r.a_ - r.da))}</span>`)).join('') || '<li class="muted">Nessun ritocco</li>'}</ul></div>
       <div class="panel glass"><h3>Libere ferme da più tempo</h3><ul class="lst">${S.cars.filter(c => c.free && c.giorni != null).sort((a, b) => b.giorni - a.giorni).slice(0, 15).map(c => auto1(c.targa, c.brand + ' ' + c.family, `${c.giorni} gg · ${eur(c.prezzo) || 'senza prezzo'} · ${esc(c.ubic)}`)).join('')}</ul></div>
-      <div class="panel glass"><h3>Annunci sul sito</h3>${S.meta.annunci ? `<p>${N(S.meta.annunci.abbinati)} auto dello stock hanno un annuncio su valentinoautomobili.it, su ${N(S.meta.annunci.totali)} annunci pubblicati.</p><ul class="lst"><li class="cl" data-preset-go="noWeb"><span>Libere senza annuncio sul sito</span><b>${N(countPreset('noWeb'))}</b></li><li class="cl" data-preset-go="priceDiff"><span>Prezzo sul sito diverso dal gestionale</span><b>${N(countPreset('priceDiff'))}</b></li></ul><p class="hint">Annunci letti il ${dIt(S.meta.annunci.aggiornato.slice(0, 10))} alle ${new Date(S.meta.annunci.aggiornato).toTimeString().slice(0, 5)}.</p>` : '<p class="hint">Annunci non ancora disponibili.</p>'}</div>`;
+      <div class="panel glass"><h3>Annunci sul sito</h3>${S.meta.annunci ? `<p>${N(S.meta.annunci.abbinati)} auto dello stock hanno un annuncio su valentinoautomobili.it, su ${N(S.meta.annunci.totali)} annunci pubblicati.</p><ul class="lst"><li class="cl" data-preset-go="noWeb"><span>Libere senza annuncio sul sito</span><b>${N(countPreset('noWeb'))}</b></li><li class="cl" data-preset-go="priceDiff"><span>Prezzo da verificare (sito diverso o totale che non torna)</span><b>${N(countPreset('priceDiff'))}</b></li></ul><p class="hint">Annunci letti il ${dIt(S.meta.annunci.aggiornato.slice(0, 10))} alle ${new Date(S.meta.annunci.aggiornato).toTimeString().slice(0, 5)}.</p>` : '<p class="hint">Annunci non ancora disponibili.</p>'}</div>`;
   }
   // tooltip dei grafici: col mouse segue il puntatore, col dito appare al tocco
   addEventListener('pointerover', e => { const t = e.target.closest && e.target.closest('[data-tip]'); const tip = $('tip'); if (!t) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; posTip(e); });

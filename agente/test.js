@@ -265,11 +265,12 @@ async function leggi(file) {
   }
   // prezzo diverso dal sito: in cosa differisce (passaggio incluso per sbaglio, oppure prezzo proprio diverso)
   {
-    const { sitoDiverso } = new Function(['parser.js', 'norm.js', 'query.js'].map(src).join('\n') + '\nreturn { sitoDiverso };')();
+    const { sitoDiverso, totaleIncoerente } = new Function(['parser.js', 'norm.js', 'query.js'].map(src).join('\n') + '\nreturn { sitoDiverso, totaleIncoerente };')();
     const conPass = sitoDiverso({ prezzoV: 19540, pp: 560, prezzo: 20100, web: { prezzo: 20100 } });
     ok(conPass && conPass.passaggio && conPass.diff === 560 && /passaggio/.test(conPass.testo) && /20\.100/.test(conPass.testo) && /19\.540/.test(conPass.testo), `sito: prezzo con il passaggio riconosciuto (${conPass && conPass.testo})`);
     const piuBasso = sitoDiverso({ prezzoV: 19540, pp: 700, prezzo: 20240, web: { prezzo: 18540 } });
     ok(piuBasso && !piuBasso.passaggio && piuBasso.diff === -1000 && /1\.000 € piu' basso|1\.000 € più basso/.test(piuBasso.testo), `sito: prezzo piu' basso spiegato (${piuBasso && piuBasso.testo})`);
+    ok(totaleIncoerente({ prezzoV: 19450, pp: 650, prezzo: 18100 }).atteso === 20100 && totaleIncoerente({ prezzoV: 19450, pp: 650, prezzo: 20100 }) === null && totaleIncoerente({ prezzoV: 0, pp: 0, prezzo: 0 }) === null, 'prezzo: totale che non torna con veicolo + passaggio segnalato (GW745CE)');
     ok(sitoDiverso({ prezzoV: 19540, web: { prezzo: 19540 } }) === null && sitoDiverso({ prezzoV: 19540 }) === null, 'sito: stesso prezzo o senza annuncio, niente differenza');
   }
   // cartello salone: dati dall'annuncio (cilindrata, Euro, riga dell'offerta, dotazioni)
