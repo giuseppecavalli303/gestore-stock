@@ -1,6 +1,6 @@
 // Prepara le mail che l'agente spedisce da Outlook: riepilogo del giorno, avvisi delle ricerche salvate,
 // conferme di iscrizione e allarmi. Scrive tutto in agente/posta-da-inviare.json; l'invio lo fa aggiorna-stock.ps1.
-// Uso: node agente/posta.js riepilogo | avvisi | richieste | promo | allarme <mancante|errore> [testo]
+// Uso: node agente/posta.js riepilogo | avvisi | richieste | promo | prezzi | allarme <mancante|errore> [testo]
 const fs = require('fs'), path = require('path');
 
 const root = path.join(__dirname, '..');
@@ -13,7 +13,7 @@ const DOMINIO = '@valentinoautomobili.it';
 const FOTO = 'https://cdn.dealerk.it/dealer/datafiles/vehicle/images/200/';
 
 const src = f => fs.readFileSync(path.join(root, 'sorgenti', f), 'utf8');
-const { buildVocab, parseQuery, matchQuery, deacc } = new Function(src('norm.js') + '\n' + src('query.js') + '\nreturn { buildVocab, parseQuery, matchQuery, deacc };')();
+const { buildVocab, parseQuery, matchQuery, deacc, sitoDiverso, totaleIncoerente } = new Function(src('norm.js') + '\n' + src('query.js') + '\nreturn { buildVocab, parseQuery, matchQuery, deacc, sitoDiverso, totaleIncoerente };')();
 
 const leggi = (f, def) => { try { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '')); } catch (e) { return def; } };
 const N = n => Math.round(n || 0).toLocaleString('it-IT', { useGrouping: 'always' });
@@ -245,6 +245,33 @@ function allarme(tipo, testo) {
   else accoda(IO, "Stock usato: l'agente ha un problema", `<p>L'ultimo controllo si è fermato con questo messaggio:</p><pre style="white-space:pre-wrap;background:#fff;padding:10px;border-radius:8px">${esc(testo || 'errore sconosciuto')}</pre><p>Il sito mostra l'ultima stampa pubblicata correttamente. Il registro completo è in agente\\agente.log.</p>`);
 }
 
+/* ---------- controllo prezzi del mattino: solo a Giuseppe, solo se c'e' qualcosa da sistemare ---------- */
+function prezzi() {
+  const { cur } = caricaStock(), day = cur.meta.day;
+  const P = new Set((leggi(dati('promo.json'), {}).targhe) || []);
+  const inStock = cur.cars.filter(c => c.st !== 9);
+  const tot = inStock.filter(c => totaleIncoerente(c)).sort((a, b) => Math.abs(totaleIncoerente(b).diff) - Math.abs(totaleIncoerente(a).diff));
+  const sito = inStock.filter(c => !c.booked && sitoDiverso(c)), sitoVero = sito.filter(c => !sitoDiverso(c).passaggio), sitoPass = sito.length - sitoVero.length;
+  const senza = cur.cars.filter(c => c.free && !c.prezzo).sort((a, b) => (b.giorni || 0) - (a.giorni || 0));
+  const td = (t, r) => `<td style="padding:6px 8px;border-bottom:1px solid #dde3ea;font-size:13px;${r ? 'text-align:right;white-space:nowrap' : ''}">${t}</td>`;
+  const th = (t, r) => `<th style="padding:6px 8px;border-bottom:2px solid #0c1a2b;font-size:12px;color:#5b6b80;text-align:${r ? 'right' : 'left'}">${t}</th>`;
+  const tab = (testa, righe) => `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;background:#fff"><tr>${testa}</tr>${righe.join('')}</table>`;
+  const auto = c => `<a href="${APPV}#${encodeURIComponent(c.targa)}" style="color:#0a5cf5">${esc(c.targa)}</a> · ${esc(c.brand)} ${esc(c.family)}${P.has(c.targa) ? ' <b>(Black Friday)</b>' : ''}<br><span style="color:#5b6b80">${esc(etichetta(c))}</span>`;
+  const h2 = (t, n, spiega) => `<h2 style="font-size:15px;margin:22px 0 4px">${t} · ${n}</h2><p style="margin:0 0 8px;color:#44556a;font-size:13px">${spiega}</p>`;
+  let corpo = '';
+  if (tot.length) corpo += h2('Totale che non torna', tot.length, 'Nel gestionale il prezzo totale è diverso da prezzo veicolo + passaggio. L’app mostra il totale, il sito il prezzo del veicolo: uno dei due è sbagliato. Sulle auto Black Friday il prezzo barrato resta nascosto finché non si corregge.') +
+    tab(th('Auto') + th('Veicolo', 1) + th('Passaggio', 1) + th('Dovrebbe essere', 1) + th('Totale in stampa', 1), tot.map(c => `<tr>${td(auto(c))}${td(N(c.prezzoV) + ' €', 1)}${td(N(c.pp) + ' €', 1)}${td('<b>' + N(totaleIncoerente(c).atteso) + ' €</b>', 1)}${td('<b style="color:#b3261e">' + N(c.prezzo) + ' €</b>', 1)}</tr>`));
+  if (sitoVero.length) corpo += h2('Prezzo sul sito diverso dal gestionale', sitoVero.length, 'Auto non prenotate con un prezzo sul sito che non coincide con il prezzo del veicolo nel gestionale.') +
+    tab(th('Auto') + th('Gestionale', 1) + th('Sito', 1) + th('Differenza', 1), sitoVero.map(c => { const d = sitoDiverso(c); return `<tr>${td(auto(c))}${td(N(d.gest) + ' €', 1)}${td(N(d.sito) + ' €', 1)}${td('<b>' + (d.diff > 0 ? '+' : '−') + N(Math.abs(d.diff)) + ' €</b>', 1)}</tr>`; }));
+  if (sitoPass) corpo += `<p style="margin:14px 0 0;font-size:13px;color:#44556a">Altre ${sitoPass} auto hanno sul sito il prezzo con il passaggio incluso al posto del prezzo del veicolo: non è un prezzo sbagliato, solo esposto in modo diverso.</p>`;
+  if (senza.length) corpo += h2('Auto libere senza prezzo', senza.length, 'In vendita nel gestionale ma senza prezzo inserito. Le più vecchie in alto.') +
+    `<p style="margin:0;font-size:13px;line-height:1.7">${senza.slice(0, 40).map(c => `<a href="${APPV}#${encodeURIComponent(c.targa)}" style="color:#0a5cf5">${esc(c.targa)}</a> ${esc(c.brand)} ${esc(c.family)} (${c.giorni ?? '?'} gg)`).join(' · ')}${senza.length > 40 ? ` · e altre ${senza.length - 40}` : ''}</p>`;
+  if (!corpo) { console.log('Prezzi: tutto in ordine.'); return; }
+  const titolo = `Prezzi da verificare ${dIt(day)}: ${tot.length} totali che non tornano, ${sitoVero.length} diversi dal sito`;
+  coda.push({ to: IO, subject: titolo, html: pagina(titolo, `<p style="margin:0">Controllo automatico dei prezzi sulla stampa di stamattina. Le correzioni vanno fatte nel gestionale.</p>${corpo}`) });
+  console.log(`Prezzi: ${tot.length} totali che non tornano, ${sitoVero.length} diversi dal sito, ${senza.length} libere senza prezzo.`);
+}
+
 const [cmd, ...arg] = process.argv.slice(2);
 try {
   for (const c of [cmd, ...arg]) {
@@ -252,6 +279,7 @@ try {
     else if (c === 'avvisi') avvisi();
     else if (c === 'richieste') richieste();
     else if (c === 'promo') promo();
+    else if (c === 'prezzi') prezzi();
   }
   if (cmd === 'allarme') allarme(arg[0], arg.slice(1).join(' '));
   salvaCoda();

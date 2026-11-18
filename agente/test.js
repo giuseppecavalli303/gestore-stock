@@ -30,7 +30,10 @@ async function leggi(file) {
   for (const f of pdf) {
     const d = await leggi(path.join(dir, f)), m = d.meta;
     ok(m.count === m.expected && !m.badSec.length && !m.warnings.length, `${f}: ${m.count} letti, ${m.expected} dichiarati${m.badSec.length ? ', sezioni che non tornano: ' + m.badSec.join(', ') : ''}`);
-    ok(new Set(d.cars.map(c => c.targa)).size === d.cars.length, `${f}: targhe tutte diverse`);
+    // una targa ripetuta e' un errore del lettore solo se le due righe sono diverse; due righe identiche sono un doppione del gestionale
+    const viste = new Map(), doppie = [];
+    for (const c of d.cars) { const k = JSON.stringify([c.modello, c.section, c.stato, c.km, c.prezzo]); if (viste.has(c.targa)) doppie.push([c.targa, viste.get(c.targa) === k]); else viste.set(c.targa, k); }
+    ok(doppie.every(x => x[1]), `${f}: targhe tutte diverse${doppie.length ? ` (doppione nel gestionale: ${doppie.map(x => x[0]).join(', ')})` : ''}`);
     ok(d.cars.filter(c => c.brand === 'Altre marche').length <= 5, `${f}: marche riconosciute (${d.cars.filter(c => c.brand === 'Altre marche').length} non riconosciute)`);
     ok(d.cars.every(c => c.ingr && c.giorni != null), `${f}: data di ingresso presente su tutte`);
     ultima = d;
@@ -58,7 +61,7 @@ async function leggi(file) {
       pari('spese di istruttoria', FIN.speseIstruttoria, C.speseIstruttoria); pari('spese di incasso', FIN.speseIncasso, C.speseIncasso); pari('imposta di bollo', FIN.bolloPercent, C.bolloPercent);
       pari('TAN PVV', FIN.pvv.tan, C.pvv.tan); pari('anticipo massimo PVV', FIN.pvv.maxAnticipo, C.pvv.maxAnticipoPercent);
       pari('TAN Multimake', FIN.multimake.tassi.map(t => t.tan), C.multimake.tassi.map(t => t.tan)); pari('anticipo massimo Multimake', FIN.multimake.maxAnticipo, C.multimake.maxAnticipoPercent);
-      pari('TAN Classico', FIN.classico.tan, C.classico.tan);
+      pari('TAN Classico', FIN.classico.tan, C.classico.tan); pari('codici dei finanziamenti', [FIN.pvv.codice, FIN.multimake.tassi.map(t => t.codice), FIN.classico.codice], [C.pvv.codice, C.multimake.tassi.map(t => t.codice), C.classico.codice]);
       pari('furto e incendio', FIN.servizi.furtoPerMille, Z.furtoPerMilleAnnuo); pari('GAP', FIN.servizi.gap, Z.gapMensile); pari('Alter Ego', FIN.servizi.alterEgo, Z.alterEgoMensile); pari('Personal Safe', FIN.servizi.personalSafe, Z.personalSafeMensile);
       pari('manutenzione', [FIN.manutenzione.tagliando1, FIN.manutenzione.tagliando2, FIN.manutenzione.plugin], [Z.tagliando1Mensile, Z.tagliando2Mensile, Z.pluginMensile]);
       ok(!diversi.length, `tassi e spese uguali nell'app e nel simulatore${diversi.length ? ' — DIVERSI: ' + diversi.join('; ') : ''}`);

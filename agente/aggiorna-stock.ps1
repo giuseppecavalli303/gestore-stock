@@ -204,6 +204,12 @@ try {
             Scrivi $p.Testo
             if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'promo' $giorno }
         }
+        # controllo prezzi del mattino: totali che non tornano, prezzi diversi dal sito, libere senza prezzo (solo a Giuseppe)
+        if ($pubblicata -and (LeggiStato).prezzi -ne $giorno) {
+            $p = Esegui 'node agente\posta.js prezzi'
+            Scrivi $p.Testo
+            if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'prezzi' $giorno }
+        }
         if ($pubblicata -and (LeggiStato).rapporto -ne $giorno) {
             SegnaStato 'rapporto' $giorno                            # una sola presentazione al giorno, anche se qualcosa va storto
             if (PreparaRapporto) { InviaPosta }
