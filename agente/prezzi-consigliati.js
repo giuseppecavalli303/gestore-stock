@@ -1,6 +1,7 @@
 // Prezzi consigliati per le auto libere senza prezzo: per ognuna acquisto e carrozzeria (da CROSS), le auto simili
 // vendute da noi negli ultimi mesi (dalle stampe dello stock) e un prezzo consigliato. PDF riservato, mai sul sito.
-// Uso: node agente/prezzi-consigliati.js   ->   agente/rapporti/Prezzi consigliati GG-MM-AAAA.pdf
+// Uso: node agente/prezzi-consigliati.js -> agente/rapporti/Prezzi consigliati GG-MM-AAAA.pdf (tabella, 4 pagine)
+//      e "Prezzi consigliati - vendute simili GG-MM-AAAA.pdf" (le vendite usate per ogni calcolo)
 //
 // Come si calcola il prezzo consigliato:
 //  1. auto simili vendute: stessa marca, modello e alimentazione; poi, se ce ne sono almeno 3, stesso allestimento,
@@ -152,59 +153,59 @@ const affTxt = { alta: 'alta', media: 'media', bassa: 'bassa', nessuna: '' };
 const pct = x => (Math.abs(x) * 100).toFixed(1).replace('.', ',');
 const kMed = perModello['Volkswagen|T-Roc'] || GLOB;
 let n = 0;
+const anno = iso => iso ? iso.slice(5, 7) + '/' + iso.slice(2, 4) : '';
 const tab = righe.map(r => {
   const { c, usate, cons } = r, diff = cons && r.costo ? cons.incasso - r.costo : null;
   const min = usate.length ? Math.min(...usate.map(v => v.pp)) : 0, max = usate.length ? Math.max(...usate.map(v => v.pp)) : 0;
-  const stock = r.inStock.length ? `<br><small>in vendita oggi: ${r.inStock.length} simili da ${E(Math.min(...r.inStock.map(x => x.prezzoV || veicolo(x.prezzo, x.kw))))}</small>` : '';
-  return `<tr>
-  <td class="n">${++n}</td>
-  <td class="t">${esc(c.targa)}${c.spec ? '<br><span class="ps">PREZZO SPECIALE</span>' : ''}</td>
-  <td><b>${esc(c.brand)} ${esc(c.family)}</b><br><small>${esc(c.modello)}</small></td>
-  <td>${mIt(c.imm)}<br><small>${c.km ? N(c.km) + ' km' : 'km non indicati'}</small></td>
-  <td class="r">${r.acq ? E(r.acq) : '<small>non trovato</small>'}</td>
-  <td class="r">${r.cN ? E(r.cN) : c.spec ? '<small>così com\'è</small>' : '<small>-</small>'}${r.aN ? `<br><small>altri lavori ${E(r.aN)}</small>` : ''}</td>
-  <td class="r b">${E(r.costo)}</td>
-  <td>${usate.length ? `<b>${usate.length}</b> vendute, esposte a ${min === max ? E(min) : E(min) + ' – ' + E(max)}<br><small>${esc(LIVELLI[r.liv].nome)}${r.gg != null && usate.length ? ' · vendute in ' + N(r.gg) + ' giorni (tipico)' : ''}</small>` : '<small>nessuna vendita simile</small>'}${stock}</td>
-  <td class="r cons">${cons ? `${E(cons.veic)}<br><small>trattativa ${pct(cons.trattativa)}%</small>` : '<small>da valutare<br>a mano</small>'}</td>
-  <td class="r">${cons ? `${E(cons.incasso)}${cons.daCross ? '' : ' <small>(stima)</small>'}<br><small>prenotate a ${E(cons.prenot)}</small>` : ''}</td>
-  <td class="r ${diff != null && diff < 0 ? 'neg' : ''}">${diff != null ? (diff < 0 ? '−' : '+') + E(Math.abs(diff)) : ''}</td>
-  <td class="aff ${r.aff}">${affTxt[r.aff]}</td></tr>`;
+  const stock = r.inStock.length ? '<br><small>oggi in vendita ' + r.inStock.length + ' da ' + E(Math.min(...r.inStock.map(x => x.prezzoV || veicolo(x.prezzo, x.kw)))) + '</small>' : '';
+  return '<tr><td class="n">' + (++n) + '</td>'
+    + '<td class="t">' + esc(c.targa) + (c.spec ? ' <span class="ps">PS</span>' : '') + '</td>'
+    + '<td class="auto"><b>' + esc(c.brand === 'Volkswagen' ? '' : c.brand + ' ') + esc(c.family) + '</b><small>' + esc(c.modello) + '</small></td>'
+    + '<td class="r">' + anno(c.imm) + '<br><small>' + (c.km ? N(c.km) + ' km' : 'km n.d.') + '</small></td>'
+    + '<td class="r">' + (r.acq ? E(r.acq) : '-') + (r.cN ? '<br><small>carr. ' + E(r.cN) + '</small>' : '') + (r.aN ? '<br><small>altri ' + E(r.aN) + '</small>' : '') + '</td>'
+    + '<td class="r b">' + E(r.costo) + '</td>'
+    + '<td>' + (usate.length ? '<b>' + usate.length + '</b> · ' + (min === max ? E(min) : N(min) + '–' + E(max)) : '<small>nessuna</small>') + stock + '</td>'
+    + '<td class="r cons">' + (cons ? E(cons.veic) + '<br><small>trattativa ' + pct(cons.trattativa) + '%</small>' : '<small>a mano</small>') + '</td>'
+    + '<td class="r">' + (cons ? E(cons.incasso) + (cons.daCross ? '' : '*') : '') + '</td>'
+    + '<td class="r ' + (diff != null && diff < 0 ? 'neg' : '') + '">' + (diff != null ? (diff < 0 ? '−' : '+') + E(Math.abs(diff)) : '') + '</td>'
+    + '<td class="aff ' + r.aff + '">' + affTxt[r.aff] + '</td></tr>';
 }).join('');
 
-// dettaglio: le auto simili usate per ogni prezzo, cosi' ogni numero si puo' controllare
-const dett = righe.map((r, i) => !r.usate.length ? '' : `<div class="det"><div class="dh"><b>${i + 1}. ${esc(r.c.targa)} · ${esc(r.c.brand)} ${esc(r.c.family)}</b> <small>${esc(r.c.modello)} · ${mIt(r.c.imm)} · ${r.c.km ? N(r.c.km) + ' km' : 'km non indicati'}</small><span>${r.cons ? 'consigliato ' + E(r.cons.veic) : 'da valutare a mano'}</span></div>
-<table><thead><tr><th>Targa</th><th>Versione</th><th>Immatr.</th><th class="r">Km</th><th>Venduta il</th><th class="r">Giorni in vendita</th><th class="r">Primo prezzo</th><th class="r">Primo prezzo adeguato</th><th class="r">Prezzo alla prenotazione</th><th class="r">Venduta a (CROSS)</th></tr></thead><tbody>
-${r.usate.map(v => `<tr><td>${esc(v.t)}${v.spec ? ' <span class="ps">PS</span>' : ''}</td><td><small>${esc(v.m)}</small></td><td>${mIt(v.imm)}</td><td class="r">${v.km ? N(v.km) : '-'}</td><td>${dIt(v.pren)}</td><td class="r">${v.gg ?? '-'}</td><td class="r">${E(v.p0)}</td><td class="r b">${E(v.adegP0)}</td><td class="r">${v.pp !== v.p0 ? E(v.pp) : '<small>uguale</small>'}</td><td class="r">${v.pv ? E(v.pv) + ` <small>(−${pct(1 - v.pv / v.pp)}%)</small>` : '<small>-</small>'}</td></tr>`).join('')}
-</tbody></table></div>`).join('');
+// dettaglio in un file a parte: le 5 simili piu' vicine per ogni auto, per controllare i numeri
+const dett = righe.map((r, i) => !r.usate.length ? '' : '<div class="det"><div class="dh"><b>' + (i + 1) + '. ' + esc(r.c.targa) + ' · ' + esc(r.c.family) + '</b> <small>' + anno(r.c.imm) + ' · ' + (r.c.km ? N(r.c.km) + ' km' : 'km n.d.') + '</small><span>' + (r.cons ? E(r.cons.veic) : 'a mano') + '</span></div>'
+  + '<table><thead><tr><th>Targa</th><th>Immatr.</th><th class="r">Km</th><th>Prenotata</th><th class="r">Primo prezzo</th><th class="r">Adeguato</th><th class="r">Incasso CROSS</th></tr></thead><tbody>'
+  + r.usate.slice(0, 5).map(v => '<tr><td>' + esc(v.t) + (v.spec ? ' <span class="ps">PS</span>' : '') + '</td><td>' + anno(v.imm) + '</td><td class="r">' + (v.km ? N(v.km) : '-') + '</td><td>' + dIt(v.pren) + '</td><td class="r">' + E(v.p0) + (v.pp !== v.p0 ? '<br><small>ribassata ' + E(v.pp) + '</small>' : '') + '</td><td class="r b">' + E(v.adegP0) + '</td><td class="r">' + (v.pv ? E(v.pv) : '-') + '</td></tr>').join('')
+  + '</tbody></table></div>').join('');
 
-const html = `<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Prezzi consigliati ${dIt(OGGI)}</title><style>
-@page { size: A4 landscape; margin: 11mm 10mm; }
-body { font-family: Segoe UI, Helvetica, Arial, sans-serif; color: #0c1a2b; font-size: 10px; margin: 0; }
-.top { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #0c1a2b; padding-bottom: 6px; }
-h1 { font-size: 20px; margin: 0; } .sub { color: #5b6b80; font-size: 11px; } h2 { font-size: 14px; margin: 14px 0 4px; break-after: avoid; }
-.boxes { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
-.box { background: #eef2f7; border-radius: 6px; padding: 6px 10px; min-width: 110px; } .box b { display: block; font-size: 17px; } .box span { color: #44556a; font-size: 10px; }
-.note { color: #44556a; font-size: 9.5px; margin: 6px 0; line-height: 1.5; }
-table { width: 100%; border-collapse: collapse; } thead { display: table-header-group; }
-th { text-align: left; font-size: 9px; color: #5b6b80; border-bottom: 2px solid #0c1a2b; padding: 4px 4px; }
-td { border-bottom: 1px solid #dde3ea; padding: 4px 4px; vertical-align: top; } tr { break-inside: avoid; }
-small { color: #5b6b80; font-size: 8.5px; } .r { text-align: right; } td.r { white-space: nowrap; } .n { color: #8a97a8; width: 16px; } .t { font-weight: 700; white-space: nowrap; } .b { font-weight: 700; }
-td.cons { font-weight: 800; font-size: 12px; background: #eef4fc; white-space: nowrap; } td.neg { color: #8a4b00; font-weight: 700; }
-.aff { font-size: 9px; font-weight: 700; } .aff.alta { color: #0a7a3d; } .aff.media { color: #a35a00; } .aff.bassa { color: #b3261e; }
-.ps { display: inline-block; background: #0a5cf5; color: #fff; border-radius: 4px; padding: 1px 4px; font-size: 7.5px; font-weight: 700; line-height: 1.3; }
-.det { break-inside: avoid; margin: 0 0 9px; } .dh { display: flex; gap: 8px; align-items: baseline; border-bottom: 1px solid #0c1a2b; padding: 2px 0; } .dh span { margin-left: auto; font-weight: 700; }
-.det table td, .det table th { padding: 2px 4px; font-size: 9px; } .pag { break-before: page; }
-</style></head><body>
-<div class="top"><div><h1>Le ${righe.length} auto libere senza prezzo · prezzi consigliati</h1><div class="sub">Stampa stock del ${dIt(OGGI)} · acquisto e carrozzeria da CROSS · auto simili vendute da noi negli ultimi mesi · riservato</div></div><div class="sub">Valentino Automobili · Usato</div></div>
-<div class="boxes">${box(righe.length, 'auto senza prezzo')}${box(conCons.length, 'con un prezzo consigliato')}${box(alta.length, 'con stima affidabile (5 o più vendite identiche)')}${box(righe.length - conCons.length, 'da valutare a mano (poche vendite simili)')}${box(E(valore), 'valore ai prezzi consigliati (prezzo veicolo)')}${box(E(conCons.reduce((t, r) => t + r.cons.incasso, 0)), 'incasso atteso, con lo sconto reale da CROSS')}</div>
-<p class="note"><b>Come leggere la tabella.</b> <b>Costo</b> = acquisto IVA compresa (fattura per VTI ed estero, ritiro per privati e permute) + carrozzeria e altri lavori registrati in CROSS. <b>Vendute simili</b>: auto dello stesso modello, alimentazione, allestimento, potenza e cambio vendute da noi, con il prezzo esposto quando si sono prenotate. <b>Tutti i prezzi sono prezzi veicolo, quelli che finiscono in 450 o 950</b>: il totale in stampa aggiunge il passaggio. <b>Prezzo consigliato</b>: il prezzo da esporre, calcolato come lo mette chi prezza. È il <b>primo prezzo</b> che le simili hanno avuto al loro arrivo (8 vendute su 10 sono andate a quel prezzo, senza ribassi), adeguato all'anno e ai km di questa auto (dalle nostre vendite: circa ${pct(kMed.eta)}% in meno per ogni anno in più e ${pct(kMed.km)}% ogni 10.000 km in più, calcolato modello per modello), poi la mediana delle 8 più vicine, arrotondata a 450 o 950. Sotto, il <b>margine di trattativa</b>: quanto si scende in media fino all'incasso. <b>Incasso atteso</b>: il consigliato meno quanto si è sceso davvero sulle simili, tra ribassi e trattativa, dal loro primo prezzo al prezzo di vendita registrato in CROSS (PV-lordo); "stima" quando in CROSS ce ne sono meno di 3 e si usa quanto si scende in media su tutte le vendite (${pct(1 - rappP0)}%). <b>Differenza</b> = incasso atteso meno costo, indicativa. <b>Affidabilità</b>: alta con 5 o più vendite identiche, media con meno vendite o allestimento diverso, bassa con il solo modello. Le auto sono ordinate per modello, così le simili stanno vicine. Dopo la tabella, per ogni auto, l'elenco delle vendite usate per il calcolo.</p>
-<table><thead><tr><th>#</th><th>Targa</th><th>Auto</th><th>Immatr. · km</th><th class="r">Acquisto</th><th class="r">Carrozzeria</th><th class="r">Costo</th><th>Vendute simili</th><th class="r">Prezzo consigliato</th><th class="r">Incasso atteso</th><th class="r">Differenza</th><th>Affid.</th></tr></thead><tbody>${tab}</tbody></table>
-<div class="pag"></div><h2>Le vendite usate per ogni prezzo</h2>
-<p class="note">Per ogni auto, le vendite simili più vicine (per anno, km, data di vendita e prezzo speciale), con il primo prezzo che hanno avuto all'arrivo, lo stesso prezzo adeguato all'anno e ai km dell'auto da prezzare, il prezzo esposto quando si sono prenotate (se c'era stato un ribasso) e il prezzo a cui sono state vendute davvero secondo CROSS. PS = era a prezzo speciale.</p>
-${dett}
-</body></html>`;
+const CSS = '@page { size: A4 landscape; margin: 9mm 9mm; }'
+  + 'body { font-family: Segoe UI, Helvetica, Arial, sans-serif; color: #0c1a2b; font-size: 9.5px; margin: 0; }'
+  + '.top { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #0c1a2b; padding-bottom: 4px; }'
+  + 'h1 { font-size: 18px; margin: 0; } .sub { color: #5b6b80; font-size: 10px; }'
+  + '.boxes { display: flex; gap: 6px; margin: 7px 0 3px; } .box { background: #eef2f7; border-radius: 6px; padding: 4px 9px; flex: 1; } .box b { display: block; font-size: 15px; } .box span { color: #44556a; font-size: 9px; }'
+  + '.note { color: #44556a; font-size: 8.8px; margin: 4px 0 6px; line-height: 1.4; }'
+  + 'table { width: 100%; border-collapse: collapse; } thead { display: table-header-group; }'
+  + 'th { text-align: left; font-size: 8.5px; color: #5b6b80; border-bottom: 2px solid #0c1a2b; padding: 3px 4px; }'
+  + 'td { border-bottom: 1px solid #dde3ea; padding: 2.5px 4px; vertical-align: top; line-height: 1.25; } tr { break-inside: avoid; }'
+  + 'small { color: #5b6b80; font-size: 8px; } .r { text-align: right; } td.r { white-space: nowrap; } .n { color: #8a97a8; } .t { font-weight: 700; white-space: nowrap; } .b { font-weight: 700; }'
+  + 'td.auto { max-width: 280px; } td.auto small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }'
+  + 'td.cons { font-weight: 800; font-size: 11.5px; background: #eef4fc; } td.cons small { font-weight: 400; } td.neg { color: #8a4b00; font-weight: 700; }'
+  + '.aff { font-size: 8.5px; font-weight: 700; } .aff.alta { color: #0a7a3d; } .aff.media { color: #a35a00; } .aff.bassa { color: #b3261e; }'
+  + '.ps { display: inline-block; background: #0a5cf5; color: #fff; border-radius: 3px; padding: 0 3px; font-size: 7px; font-weight: 700; }'
+  + '.colonne { column-count: 2; column-gap: 14px; } .det { break-inside: avoid; margin: 0 0 7px; } .dh { display: flex; gap: 6px; align-items: baseline; border-bottom: 1px solid #0c1a2b; padding: 1px 0; } .dh span { margin-left: auto; font-weight: 800; }'
+  + '.det td, .det th { padding: 1.5px 3px; font-size: 8.5px; }';
+const pagina = (titolo, corpo) => '<!doctype html><html lang="it"><head><meta charset="utf-8"><title>' + titolo + '</title><style>' + CSS + '</style></head><body>' + corpo + '</body></html>';
+const testata = (t, sotto) => '<div class="top"><div><h1>' + t + '</h1><div class="sub">' + sotto + '</div></div><div class="sub">Valentino Automobili · Usato · riservato</div></div>';
+
+const html = pagina('Prezzi consigliati ' + dIt(OGGI), testata('Le ' + righe.length + ' auto libere senza prezzo · prezzi consigliati', 'Stampa stock del ' + dIt(OGGI) + ' · costi da CROSS · confronto con le auto simili vendute da noi')
+  + '<div class="boxes">' + box(conCons.length + ' su ' + righe.length, 'con prezzo consigliato (' + alta.length + ' con stima affidabile)') + box(E(valore), 'valore ai prezzi consigliati') + box(E(conCons.reduce((t, r) => t + r.cons.incasso, 0)), 'incasso atteso dopo la trattativa') + box('−' + pct(kMed.eta) + '% · −' + pct(kMed.km) + '%', 'quanto toglie un anno in più · 10.000 km in più') + '</div>'
+  + '<p class="note">Prezzi veicolo (finiscono in 450 o 950; in stampa si aggiunge il passaggio). <b>Costo</b>: acquisto IVA compresa + carrozzeria e altri lavori da CROSS. <b>Simili vendute</b>: quante auto uguali (modello, allestimento, potenza, cambio) abbiamo venduto e a che prezzi; sotto, quante simili sono in vendita oggi. <b>Prezzo consigliato</b>: il primo prezzo dato alle simili al loro arrivo (8 su 10 si vendono a quel prezzo), adeguato ad anno e km; sotto, il margine di trattativa. <b>Incasso atteso</b>: quanto si incassa dopo la trattativa, dai prezzi di vendita veri in CROSS (* = stima media). <b>Differenza</b>: incasso atteso meno costo. PS = prezzo speciale. Le vendite usate per ogni calcolo sono nel file "vendute simili".</p>'
+  + '<table><thead><tr><th>#</th><th>Targa</th><th>Auto</th><th class="r">Imm. · km</th><th class="r">Acquisto</th><th class="r">Costo</th><th>Simili vendute</th><th class="r">Prezzo consigliato</th><th class="r">Incasso atteso</th><th class="r">Differenza</th><th>Affid.</th></tr></thead><tbody>' + tab + '</tbody></table>');
+const htmlDett = pagina('Vendute simili ' + dIt(OGGI), testata('Le vendite usate per i prezzi consigliati', 'Per ogni auto le 5 simili più vicine: primo prezzo all\'arrivo (e ribasso, se c\'è stato), lo stesso adeguato ad anno e km dell\'auto da prezzare, incasso vero da CROSS · stampa del ' + dIt(OGGI)) + '<div class="colonne" style="margin-top:8px">' + dett + '</div>');
 
 const dir = path.join(__dirname, 'rapporti'); fs.mkdirSync(dir, { recursive: true });
-const fileHtml = path.join(dir, 'prezzi-consigliati.html'), filePdf = path.join(dir, `Prezzi consigliati ${dIt(OGGI).replace(/\//g, '-')}.pdf`);
-fs.writeFileSync(fileHtml, html);
-stampaPdf(fileHtml, filePdf).then(() => console.log(`${righe.length} auto: ${conCons.length} con prezzo consigliato (${alta.length} affidabili), ${righe.length - conCons.length} da valutare a mano -> ${filePdf}`)).catch(e => { console.error(e.message); process.exit(1); });
+const giorno = dIt(OGGI).replace(/\//g, '-');
+const filePdf = path.join(dir, 'Prezzi consigliati ' + giorno + '.pdf'), fileDett = path.join(dir, 'Prezzi consigliati - vendute simili ' + giorno + '.pdf');
+fs.writeFileSync(path.join(dir, 'prezzi-consigliati.html'), html); fs.writeFileSync(path.join(dir, 'prezzi-consigliati-dettaglio.html'), htmlDett);
+stampaPdf(path.join(dir, 'prezzi-consigliati.html'), filePdf).then(() => stampaPdf(path.join(dir, 'prezzi-consigliati-dettaglio.html'), fileDett))
+  .then(() => console.log(righe.length + ' auto: ' + conCons.length + ' con prezzo consigliato (' + alta.length + ' affidabili) -> ' + filePdf + ' + dettaglio'))
+  .catch(e => { console.error(e.message); process.exit(1); });
