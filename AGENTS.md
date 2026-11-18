@@ -48,6 +48,7 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
   - mai premere tasti senza aver guardato lo schermo, perché "Dettagli" apre un modulo modificabile e Invio salva;
   - nell'accordo di ritiro non premere "Eseguire", perché accanto c'è l'azione "Cancella".
 - Nell'elenco pratiche le colonne dei prezzi di acquisto escono "*" per l'utenza di Giuseppe: i dati si leggono pratica per pratica.
+- **Prezzi di vendita veri:** il "PV-lordo" invece si vede. F8, nei criteri lasciare solo lo stato "Concluso" e una data di consegna "da"; OK, "Leggere tutto"; da "Configuraz." aggiungere Targa e Data consegna e premere "Applicare" (non "Salvare la selezione"); "Esport.". Il file va copiato in `agente/cross-vendute.txt` (escluso dal repo) e lo usa `prezzi-consigliati.js`. Il PV-lordo è il prezzo veicolo senza passaggio; valori fuori dal 70-110% del prezzo esposto sono errori di registrazione.
 
 ## Come si lavora
 
