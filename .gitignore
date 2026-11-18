@@ -43,4 +43,7 @@ agente/promo-destinatari.txt
 agente/vendite-escluse.json
 # prezzi di acquisto e costi letti da CROSS: riservati
 agente/cross-ingresso.json
+agente/analisi-prezzi-cache.json
 agente/cross-*.txt
+# analisi interna sulle sedi e sulle squadre (giudizi, non va pubblicata)
+agente/analisi-stock.js

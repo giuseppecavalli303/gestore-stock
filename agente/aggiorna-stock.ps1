@@ -211,6 +211,12 @@ try {
             Scrivi $p.Testo
             if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'prezzi' $giorno }
         }
+        # cartelli da cambiare: auto con il prezzo cambiato o appena messo rispetto a ieri, PDF con elenco per sede e cartelli compilati (solo a Giuseppe)
+        if ($pubblicata -and (LeggiStato).cartelli -ne $giorno) {
+            $p = Esegui 'node agente\cartelli-da-cambiare.js --mail'
+            Scrivi $p.Testo
+            if ($p.Codice -eq 0) { InviaPosta; SegnaStato 'cartelli' $giorno }
+        }
         if ($pubblicata -and (LeggiStato).rapporto -ne $giorno) {
             SegnaStato 'rapporto' $giorno                            # una sola presentazione al giorno, anche se qualcosa va storto
             if (PreparaRapporto) { InviaPosta }

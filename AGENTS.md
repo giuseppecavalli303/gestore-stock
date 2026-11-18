@@ -11,7 +11,7 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
 - **Il repo è pubblico.** Mai committare:
   - stampe PDF dello stock e nomi dei clienti (nei dati pubblici viaggiano cifrati, la chiave resta sul PC);
   - indirizzi email privati;
-  - dati e classifiche dei venditori;
+  - dati e classifiche dei venditori, giudizi sulle sedi o sui loro responsabili;
   - prezzi di acquisto, costi di carrozzeria, provvigioni, margini del valutatore (solo nella proprietà VAL_CONFIG del servizio Google).
 - I file locali e riservati sono elencati in `.gitignore`: tenerli lì.
 - **Rapporti e classifiche dei venditori vanno solo a Giuseppe.** Agli altri si manda qualcosa solo se lo chiede lui esplicitamente, e senza testo nel corpo della mail.
@@ -59,6 +59,8 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
 ## Diario delle novità
 
 - **18/11/2026:**
+  - cartelli da cambiare: ogni mattina un PDF per Giuseppe con le auto a cui è cambiato il prezzo, divise per sede, e i cartelli salone già compilati (alle sedi solo se lo chiede lui);
+  - analisi dello stock 2022-2026 (squadre e piazzali per sede, libere senza prezzo). Il codice con i giudizi sulle sedi resta locale (`agente/analisi-stock.js` in `.gitignore`), mentre è pubblica solo la raccolta dati generica;
   - copia di sicurezza di tutto il progetto su Google Drive, aggiornata a ogni giro dell'agente;
   - controllo prezzi automatico ogni mattina;
   - "Prezzo da verificare" anche per i totali che non tornano (es. GW745CE);
