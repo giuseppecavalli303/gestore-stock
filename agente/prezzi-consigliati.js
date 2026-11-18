@@ -6,11 +6,12 @@
 //  1. auto simili vendute: stessa marca, modello e alimentazione; poi, se ce ne sono almeno 3, stesso allestimento,
 //     stessa potenza (+-12%) e stesso cambio, vendute negli ultimi 12 mesi; se non bastano si allarga per gradi
 //     (24 mesi, poi allestimento diverso, poi solo modello). Escluse le cessioni a commercianti (vendite-escluse.json).
-//  2. prezzo di vendita = prezzo esposto nella stampa il giorno della prenotazione (lo sconto finale non e' nelle stampe).
+//  2. prezzo di vendita = prezzo veicolo il giorno della prenotazione (lo sconto finale non e' nelle stampe). La stampa
+//     ha il totale con il passaggio: il prezzo veicolo, che finisce sempre in 450 o 950, si ricava togliendo il passaggio.
 //  3. ogni prezzo viene adeguato all'anno e ai km dell'auto da prezzare, con quanto pesano anno e km nelle nostre
 //     vendite degli ultimi 2 anni (calcolato modello per modello, se ci sono abbastanza vendite, altrimenti su tutto).
 //  4. consigliato = mediana delle 8 simili piu' vicine (per anno, km, data di vendita e prezzo speciale), arrotondata
-//     al prezzo veicolo che finisce in 450 o 950. Il totale in stampa aggiunge il passaggio (stimato dalla potenza).
+//     al prezzo veicolo che finisce in 450 o 950, come li mette chi prezza.
 const fs = require('fs'), path = require('path');
 const { stampaPdf } = require('./stampa-pdf');
 const { esclusa } = require('./storico-lungo');
@@ -33,12 +34,28 @@ const trim = m => { const x = parole(m); return TRIM.find(t => x.includes(' ' + 
 const plus = m => parole(m).includes(' PLUS ');
 const cambio = c => (c === 'Automatico' || c === 'Manuale') ? c : '';
 
-// vendite degli ultimi 2 anni (prenotazioni rimaste tali, senza cessioni escluse)
+// passaggio di proprieta' tipico per potenza, dalle auto prezzate oggi
+const passPerKw = {}; s.cars.filter(c => c.prezzo && c.kw && c.pp).forEach(c => { (passPerKw[c.kw] = passPerKw[c.kw] || {})[c.pp] = (passPerKw[c.kw][c.pp] || 0) + 1; });
+function passaggio(kw) {
+  const kws = Object.keys(passPerKw).map(Number); if (!kw || !kws.length) return 700;
+  const vicino = kws.sort((a, b) => Math.abs(a - kw) - Math.abs(b - kw))[0];
+  return +Object.entries(passPerKw[vicino]).sort((a, b) => b[1] - a[1])[0][0];
+}
+// I prezzi si mettono sul veicolo e finiscono sempre in 450 o 950; la stampa mostra il totale con il passaggio
+// (500, 650, 700, 750, 800 o 1000). Dal totale si ricava il prezzo veicolo: giusto per 811 auto su 816 di oggi.
+function veicolo(tot, kw) {
+  const r = ((tot % 500) + 500) % 500, perResto = { 100: 650, 150: 700, 200: 750, 250: 800 };
+  const pass = perResto[r] || (r === 450 ? (kw >= 100 ? 1000 : 500) : passaggio(kw));
+  return tot - pass;
+}
+
+// vendite degli ultimi 2 anni (prenotazioni rimaste tali, senza cessioni escluse), con il prezzo veicolo
 const da2 = new Date(Date.parse(OGGI) - 730 * 864e5).toISOString().slice(0, 10);
-const V = Object.entries(L).filter(([, a]) => a.pren && a.pp > 0 && a.imm && a.pren >= da2 && !esclusa(a)).map(([t, a]) => ({
-  t, b: a.b, f: a.f, fu: a.fu, ca: cambio(a.ca), m: a.m, imm: a.imm, km: a.km || 0, kw: kwDa(a.m), tr: trim(a.m), pl: plus(a.m),
-  pren: a.pren, pp: a.pp, eta: mesi(a.pren, a.imm) / 12, d0: (a.p[0] || [])[0], spec: !!(A[t] && A[t].spec),
-})).filter(v => v.eta >= 0);
+const V = Object.entries(L).filter(([, a]) => a.pren && a.pp > 0 && a.imm && a.pren >= da2 && !esclusa(a)).map(([t, a]) => {
+  const kw = kwDa(a.m);
+  return { t, b: a.b, f: a.f, fu: a.fu, ca: cambio(a.ca), m: a.m, imm: a.imm, km: a.km || 0, kw, tr: trim(a.m), pl: plus(a.m),
+    pren: a.pren, pp: veicolo(a.pp, kw), eta: mesi(a.pren, a.imm) / 12, d0: (a.p[0] || [])[0], spec: !!(A[t] && A[t].spec) };
+}).filter(v => v.eta >= 0 && v.pp > 0);
 
 // quanto pesano un anno e 10.000 km sul prezzo: regressione sul logaritmo del prezzo dentro gruppi di auto uguali
 function coeff(lista) {
@@ -57,13 +74,6 @@ function coeff(lista) {
 const GLOB = coeff(V), perModello = {};
 for (const f of new Set(V.map(v => v.b + '|' + v.f))) { const c = coeff(V.filter(v => v.b + '|' + v.f === f)); if (c && c.eta < 0 && c.km < 0) perModello[f] = c; }
 
-// passaggio di proprieta' tipico per potenza, dalle auto prezzate oggi
-const passPerKw = {}; s.cars.filter(c => c.prezzo && c.kw && c.pp).forEach(c => { (passPerKw[c.kw] = passPerKw[c.kw] || {})[c.pp] = (passPerKw[c.kw][c.pp] || 0) + 1; });
-function passaggio(kw) {
-  const kws = Object.keys(passPerKw).map(Number); if (!kw || !kws.length) return 700;
-  const vicino = kws.sort((a, b) => Math.abs(a - kw) - Math.abs(b - kw))[0];
-  return +Object.entries(passPerKw[vicino]).sort((a, b) => b[1] - a[1])[0][0];
-}
 const arrotonda = v => Math.max(450, Math.round((v + 50) / 500) * 500 - 50);   // prezzo veicolo che finisce in 450 o 950
 
 const LIVELLI = [
@@ -99,7 +109,7 @@ const righe = s.cars.filter(c => c.free && !c.prezzo).map(c => {
   }).sort((a, b) => a.dist - b.dist).slice(0, 8);
   const pass = passaggio(kw);
   let cons = null;
-  if (usate.length >= 3) { const tot = med(usate.map(v => v.adeg)); const veic = arrotonda(tot - pass); cons = { veic, tot: veic + pass }; }
+  if (usate.length >= 3) { const veic = arrotonda(med(usate.map(v => v.adeg))); cons = { veic, tot: veic + pass }; }
   const aff = !cons ? 'nessuna' : (liv <= 1 && usate.length >= 5 ? 'alta' : liv <= 2 ? 'media' : 'bassa');
   // simili in vendita oggi (stesso modello, alimentazione, allestimento e potenza)
   const inStock = libere.filter(x => x.targa !== c.targa && x.brand === c.brand && x.family === c.family && x.fuel === c.fuel && trim(x.modello) === tr && (!kw || !x.kw || Math.abs(x.kw - kw) / kw <= 0.12)
@@ -118,7 +128,7 @@ let n = 0;
 const tab = righe.map(r => {
   const { c, usate, cons } = r, diff = cons && r.costo ? cons.veic - r.costo : null;
   const min = usate.length ? Math.min(...usate.map(v => v.pp)) : 0, max = usate.length ? Math.max(...usate.map(v => v.pp)) : 0;
-  const stock = r.inStock.length ? `<br><small>in vendita oggi: ${r.inStock.length} simili da ${E(Math.min(...r.inStock.map(x => x.prezzo)))}</small>` : '';
+  const stock = r.inStock.length ? `<br><small>in vendita oggi: ${r.inStock.length} simili da ${E(Math.min(...r.inStock.map(x => x.prezzoV || veicolo(x.prezzo, x.kw))))}</small>` : '';
   return `<tr>
   <td class="n">${++n}</td>
   <td class="t">${esc(c.targa)}${c.spec ? '<br><span class="ps">PREZZO SPECIALE</span>' : ''}</td>
@@ -128,14 +138,14 @@ const tab = righe.map(r => {
   <td class="r">${r.cN ? E(r.cN) : c.spec ? '<small>così com\'è</small>' : '<small>-</small>'}${r.aN ? `<br><small>altri lavori ${E(r.aN)}</small>` : ''}</td>
   <td class="r b">${E(r.costo)}</td>
   <td>${usate.length ? `<b>${usate.length}</b> vendute a ${min === max ? E(min) : E(min) + ' – ' + E(max)}<br><small>${esc(LIVELLI[r.liv].nome)}${r.gg != null && usate.length ? ' · vendute in ' + N(r.gg) + ' giorni (tipico)' : ''}</small>` : '<small>nessuna vendita simile</small>'}${stock}</td>
-  <td class="r cons">${cons ? `${E(cons.veic)}<br><small>in stampa ${E(cons.tot)}</small>` : '<small>da valutare<br>a mano</small>'}</td>
+  <td class="r cons">${cons ? E(cons.veic) : '<small>da valutare<br>a mano</small>'}</td>
   <td class="r ${diff != null && diff < 0 ? 'neg' : ''}">${diff != null ? (diff < 0 ? '−' : '+') + E(Math.abs(diff)) : ''}</td>
   <td class="aff ${r.aff}">${affTxt[r.aff]}</td></tr>`;
 }).join('');
 
 // dettaglio: le auto simili usate per ogni prezzo, cosi' ogni numero si puo' controllare
-const dett = righe.map((r, i) => !r.usate.length ? '' : `<div class="det"><div class="dh"><b>${i + 1}. ${esc(r.c.targa)} · ${esc(r.c.brand)} ${esc(r.c.family)}</b> <small>${esc(r.c.modello)} · ${mIt(r.c.imm)} · ${r.c.km ? N(r.c.km) + ' km' : 'km non indicati'}</small><span>${r.cons ? 'consigliato ' + E(r.cons.veic) + ' (in stampa ' + E(r.cons.tot) + ')' : 'da valutare a mano'}</span></div>
-<table><thead><tr><th>Targa</th><th>Versione</th><th>Immatr.</th><th class="r">Km</th><th>Venduta il</th><th class="r">Giorni in vendita</th><th class="r">Prezzo in stampa</th><th class="r">Adeguato a anno e km</th></tr></thead><tbody>
+const dett = righe.map((r, i) => !r.usate.length ? '' : `<div class="det"><div class="dh"><b>${i + 1}. ${esc(r.c.targa)} · ${esc(r.c.brand)} ${esc(r.c.family)}</b> <small>${esc(r.c.modello)} · ${mIt(r.c.imm)} · ${r.c.km ? N(r.c.km) + ' km' : 'km non indicati'}</small><span>${r.cons ? 'consigliato ' + E(r.cons.veic) : 'da valutare a mano'}</span></div>
+<table><thead><tr><th>Targa</th><th>Versione</th><th>Immatr.</th><th class="r">Km</th><th>Venduta il</th><th class="r">Giorni in vendita</th><th class="r">Prezzo alla vendita</th><th class="r">Adeguato a anno e km</th></tr></thead><tbody>
 ${r.usate.map(v => `<tr><td>${esc(v.t)}${v.spec ? ' <span class="ps">PS</span>' : ''}</td><td><small>${esc(v.m)}</small></td><td>${mIt(v.imm)}</td><td class="r">${v.km ? N(v.km) : '-'}</td><td>${dIt(v.pren)}</td><td class="r">${v.gg ?? '-'}</td><td class="r">${E(v.pp)}</td><td class="r b">${E(v.adeg)}</td></tr>`).join('')}
 </tbody></table></div>`).join('');
 
@@ -159,10 +169,10 @@ td.cons { font-weight: 800; font-size: 12px; background: #eef4fc; white-space: n
 </style></head><body>
 <div class="top"><div><h1>Le ${righe.length} auto libere senza prezzo · prezzi consigliati</h1><div class="sub">Stampa stock del ${dIt(OGGI)} · acquisto e carrozzeria da CROSS · auto simili vendute da noi negli ultimi mesi · riservato</div></div><div class="sub">Valentino Automobili · Usato</div></div>
 <div class="boxes">${box(righe.length, 'auto senza prezzo')}${box(conCons.length, 'con un prezzo consigliato')}${box(alta.length, 'con stima affidabile (5 o più vendite identiche)')}${box(righe.length - conCons.length, 'da valutare a mano (poche vendite simili)')}${box(E(valore), 'valore ai prezzi consigliati (prezzo veicolo)')}</div>
-<p class="note"><b>Come leggere la tabella.</b> <b>Costo</b> = acquisto IVA compresa (fattura per VTI ed estero, ritiro per privati e permute) + carrozzeria e altri lavori registrati in CROSS. <b>Vendute simili</b>: auto dello stesso modello, alimentazione, allestimento, potenza e cambio vendute da noi, con il prezzo che avevano in stampa il giorno della prenotazione (l'eventuale sconto finale non è nelle stampe). <b>Prezzo consigliato</b>: il prezzo delle simili adeguato all'anno e ai km di questa auto (dalle nostre vendite: circa ${pct(kMed.eta)}% in meno per ogni anno in più e ${pct(kMed.km)}% ogni 10.000 km in più, calcolato modello per modello), poi la mediana delle 8 più vicine, arrotondata a 450 o 950. In grande il prezzo veicolo, sotto il totale come appare in stampa (con il passaggio). <b>Differenza</b> = prezzo veicolo consigliato meno costo, indicativa. <b>Affidabilità</b>: alta con 5 o più vendite identiche, media con meno vendite o allestimento diverso, bassa con il solo modello. Le auto sono ordinate per modello, così le simili stanno vicine. Dopo la tabella, per ogni auto, l'elenco delle vendite usate per il calcolo.</p>
+<p class="note"><b>Come leggere la tabella.</b> <b>Costo</b> = acquisto IVA compresa (fattura per VTI ed estero, ritiro per privati e permute) + carrozzeria e altri lavori registrati in CROSS. <b>Vendute simili</b>: auto dello stesso modello, alimentazione, allestimento, potenza e cambio vendute da noi, con il prezzo che avevano il giorno della prenotazione (l'eventuale sconto finale non è nelle stampe). <b>Tutti i prezzi sono prezzi veicolo, quelli che finiscono in 450 o 950</b>: il totale in stampa aggiunge il passaggio. <b>Prezzo consigliato</b>: il prezzo delle simili adeguato all'anno e ai km di questa auto (dalle nostre vendite: circa ${pct(kMed.eta)}% in meno per ogni anno in più e ${pct(kMed.km)}% ogni 10.000 km in più, calcolato modello per modello), poi la mediana delle 8 più vicine, arrotondata a 450 o 950. <b>Differenza</b> = prezzo veicolo consigliato meno costo, indicativa. <b>Affidabilità</b>: alta con 5 o più vendite identiche, media con meno vendite o allestimento diverso, bassa con il solo modello. Le auto sono ordinate per modello, così le simili stanno vicine. Dopo la tabella, per ogni auto, l'elenco delle vendite usate per il calcolo.</p>
 <table><thead><tr><th>#</th><th>Targa</th><th>Auto</th><th>Immatr. · km</th><th class="r">Acquisto</th><th class="r">Carrozzeria</th><th class="r">Costo</th><th>Vendute simili</th><th class="r">Prezzo consigliato</th><th class="r">Differenza</th><th>Affid.</th></tr></thead><tbody>${tab}</tbody></table>
 <div class="pag"></div><h2>Le vendite usate per ogni prezzo</h2>
-<p class="note">Per ogni auto, le vendite simili più vicine (per anno, km, data di vendita e prezzo speciale), con il prezzo in stampa al giorno della prenotazione e lo stesso prezzo adeguato all'anno e ai km dell'auto da prezzare. PS = era a prezzo speciale.</p>
+<p class="note">Per ogni auto, le vendite simili più vicine (per anno, km, data di vendita e prezzo speciale), con il prezzo veicolo al giorno della prenotazione e lo stesso prezzo adeguato all'anno e ai km dell'auto da prezzare. PS = era a prezzo speciale.</p>
 ${dett}
 </body></html>`;
 
