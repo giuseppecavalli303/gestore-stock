@@ -41,3 +41,6 @@ agente/promo-vendute.json
 agente/storico-lungo-cache.json
 agente/promo-destinatari.txt
 agente/vendite-escluse.json
+# prezzi di acquisto e costi letti da CROSS: riservati
+agente/cross-ingresso.json
+agente/cross-*.txt
