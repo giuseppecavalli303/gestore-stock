@@ -53,11 +53,13 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
 
 - Dopo ogni modifica a `sorgenti/`: `npm run build`, poi `npm test`, che deve dire "Tutto in ordine".
 - Commit piccoli con messaggi in italiano che dicono cosa cambia per chi usa l'app.
+- La copia di sicurezza su Google Drive la aggiorna l'agente da solo ogni 10 minuti (`agente/backup-drive.ps1`). Dopo un lavoro importante si può lanciare anche a mano.
 - **Tenere aggiornati README.md e questo file** con quello che si fa, così ogni assistente sa a che punto è il progetto. Le informazioni riservate restano fuori.
 
 ## Diario delle novità
 
 - **18/11/2026:**
+  - copia di sicurezza di tutto il progetto su Google Drive, aggiornata a ogni giro dell'agente;
   - controllo prezzi automatico ogni mattina;
   - "Prezzo da verificare" anche per i totali che non tornano (es. GW745CE);
   - tassi allineati al simulatore;

@@ -5,6 +5,7 @@
 #  4. dalle 13, se la stampa di oggi non e' arrivata, ti avvisa una volta
 #  5. con la stampa nuova prepara la presentazione per Giuseppe (il lunedi' anche il riepilogo settimanale)
 #  6. con la stampa nuova e ogni 6 ore rilegge i listini VW del Desktop e aggiorna i codici modello delle auto
+#  7. a ogni giro aggiorna la copia di sicurezza di tutto il progetto su Google Drive (agente\backup-drive.ps1)
 # Uso:  powershell -ExecutionPolicy Bypass -File agente\aggiorna-stock.ps1 [-NonPubblicare] [-NonInviare]
 # -Riepilogo rimanda subito il riepilogo dell'ultima stampa pubblicata; -Rapporto rimanda subito la presentazione a Giuseppe (-Settimana aggiunge il riepilogo settimanale)
 param([switch]$NonPubblicare, [switch]$NonInviare, [switch]$Riepilogo, [switch]$Rapporto, [switch]$Settimana)
@@ -264,5 +265,11 @@ catch {
             if ($p.Codice -eq 0) { InviaPosta }
         } catch {}
     }
+    try { & (Join-Path $PSScriptRoot 'backup-drive.ps1') | Out-Null } catch {}
     exit 1
+}
+
+# copia di sicurezza su Google Drive a ogni giro: copia solo cio' che e' cambiato (pochi secondi). Se fallisce, lo scrivo e basta.
+if (-not $NonPubblicare) {
+    try { $b = & (Join-Path $PSScriptRoot 'backup-drive.ps1'); if ($b -match 'errore|saltata') { Scrivi ($b -join ' ') } } catch { Scrivi "Copia su Drive non riuscita: $($_.Exception.Message)" }
 }

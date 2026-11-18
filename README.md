@@ -30,6 +30,9 @@ Un'operazione pianificata di Windows lancia `agente\avvia-nascosto.vbs` ogni 10 
 3. con la stampa pubblicata manda le mail della giornata (una volta sola per tipo, stato in `agente/stato.json`): riepilogo e avvisi ai colleghi, mail promo senza sconto, **controllo prezzi** a Giuseppe (solo se ci sono totali che non tornano, prezzi diversi dal sito o libere senza prezzo), presentazione giornaliera per Giuseppe (il lunedì anche la settimanale), rapporto mensile sui venditori solo a Giuseppe
 4. ogni 6 ore riallinea foto e annunci dal sito e il giudizio di AutoScout
 5. dalle 13, se la stampa del giorno non è arrivata, avvisa una volta
+6. a ogni giro aggiorna la **copia di sicurezza su Google Drive** (`agente\backup-drive.ps1`, cartella `Il mio Drive\lavoro\Gestore stock - copia di sicurezza`): tutti i file, anche quelli riservati che non vanno nel repo, la storia git in un unico file `repo-git.bundle` e le note dell'assistente. Copia solo quello che cambia e non cancella mai niente. Restano fuori `node_modules` e `video\out`, che si possono rigenerare.
+
+Per rimettere in piedi il progetto dalla copia: copiare la cartella `progetto`, poi `npm install`; la storia git si recupera con `git clone repo-git.bundle`.
 
 Le mail passano da una coda (`agente/posta-da-inviare.json`): restano lì finché non partono davvero. Esiste anche un agente online di prova (`agente/cloud.js`, GitHub Actions), che però non ha ancora sostituito quello del PC.
 
