@@ -51,18 +51,21 @@ function prezziPrima() {
   const riga = ({ c, prima: p }) => `<tr><td><b>${esc(c.targa)}</b></td><td>${esc(c.brand)} ${esc(c.family)}<br><small>${esc(c.modello)}</small></td>
     <td class="r">${p ? N(p) + ' €' : '<small>senza prezzo</small>'}</td><td class="r"><b>${N(c.prezzo)} €</b></td>
     <td class="r ${p && c.prezzo < p ? 'giu' : ''}">${p ? (c.prezzo < p ? '−' : '+') + N(Math.abs(c.prezzo - p)) + ' €' : 'nuovo'}</td><td>${c.spec ? 'prezzo speciale' : ''}</td><td class="spunta"></td></tr>`;
-  const html = `<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Cartelli da cambiare</title><style>
+  // un PDF per sede: l'elenco della sede e poi i suoi cartelli, cosi' ogni sede ha il suo file
+  const dir = path.join(__dirname, 'rapporti', 'cartelli'); fs.mkdirSync(dir, { recursive: true });
+  const dataF = dIt(OGGI).replace(/\//g, '-') + (giorni ? ` (ultimi ${giorni} giorni)` : '');
+  async function fileSede(sede, l) {
+  const html = `<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Cartelli da cambiare ${esc(sede)}</title><style>
   @page { size: A4; } body { font-family: Segoe UI, Helvetica, Arial, sans-serif; color: #0c1a2b; font-size: 11px; margin: 0; }
   h1 { font-size: 20px; margin: 0 0 2px; } .sub { color: #5b6b80; margin-bottom: 10px; } h2 { font-size: 14px; margin: 16px 0 4px; break-after: avoid; }
   table { width: 100%; border-collapse: collapse; } th { text-align: left; font-size: 9.5px; color: #5b6b80; border-bottom: 2px solid #0c1a2b; padding: 4px 5px; }
   td { border-bottom: 1px solid #dde3ea; padding: 5px; vertical-align: top; } tr { break-inside: avoid; } .r { text-align: right; } small { color: #5b6b80; }
   .giu { color: #0a7a3d; font-weight: 700; } .spunta { width: 22px; border: 1px solid #8a97a8; } .nota { color: #5b6b80; font-size: 10px; margin-top: 12px; }
-  </style></head><body><h1>Cartelli da cambiare · ${lista.length} auto</h1>
+  </style></head><body><h1>${esc(sede)} · cartelli da cambiare: ${l.length}</h1>
   <div class="sub">Stampa del ${dIt(OGGI)} · prezzi cambiati ${esc(prima.quando)} · dopo questo elenco ci sono i cartelli già compilati, nello stesso ordine</div>
-  ${perSede.map(([s, l]) => `<h2>${esc(s)} · ${l.length}</h2><table><thead><tr><th>Targa</th><th>Auto</th><th class="r">Prima</th><th class="r">Ora</th><th class="r">Differenza</th><th></th><th>Fatto</th></tr></thead><tbody>${l.map(riga).join('')}</tbody></table>`).join('')}
+  <table><thead><tr><th>Targa</th><th>Auto</th><th class="r">Prima</th><th class="r">Ora</th><th class="r">Differenza</th><th></th><th>Fatto</th></tr></thead><tbody>${l.map(riga).join('')}</tbody></table>
   <p class="nota">Sul cartello le righe delle dotazioni sono vuote: si scrivono a mano oppure si rifà il cartello completo dal tasto "Cartello salone" nella scheda dell'auto. Togliere il cartello vecchio dall'auto.</p></body></html>`;
 
-  const dir = path.join(__dirname, 'rapporti', 'cartelli'); fs.mkdirSync(dir, { recursive: true });
   const fileHtml = path.join(dir, 'elenco.html'), fileElenco = path.join(dir, 'elenco.pdf');
   fs.writeFileSync(fileHtml, html);
   await stampaPdf(fileHtml, fileElenco);
@@ -86,7 +89,7 @@ function prezziPrima() {
     const [pagina] = await out.embedPdf(bytes, [0]), { width, height } = doc.getPage(0).getSize();
     return (modelli[file] = { pagina, campi, width, height });
   }
-  for (const { c } of lista) {
+  for (const { c } of l) {
     const d = datiCartello(c, null), m = await modello(d.file);
     const pg = out.addPage([m.width, m.height]);
     pg.drawPage(m.pagina, { x: 0, y: 0, width: m.width, height: m.height });
@@ -101,16 +104,21 @@ function prezziPrima() {
       pg.drawText(testo, { x, y, size: dim, font, color: PDFLib.rgb(0, 0, 0) });
     }
   }
-  const filePdf = path.join(dir, `Cartelli da cambiare ${dIt(OGGI).replace(/\//g, '-')}${giorni ? ` (ultimi ${giorni} giorni)` : ''}.pdf`);
+  const filePdf = path.join(dir, `Cartelli da cambiare - ${sede} ${dataF}.pdf`);
   fs.writeFileSync(filePdf, await out.save());
+  return filePdf;
+  }
+  const files = [];
+  for (const [s, l] of perSede) files.push(await fileSede(s, l));
+  fs.rmSync(path.join(dir, 'elenco.pdf'), { force: true }); fs.rmSync(path.join(dir, 'elenco.html'), { force: true });
   const riassunto = perSede.map(([s, l]) => `${s} ${l.length}`).join(', ');
-  console.log(`Cartelli: ${lista.length} da cambiare (${riassunto}) -> ${filePdf}`);
+  console.log(`Cartelli: ${lista.length} da cambiare (${riassunto}), un PDF per sede in ${dir}`);
 
   if (arg.includes('--mail')) {
     const codaF = path.join(__dirname, 'posta-da-inviare.json'), coda = leggi(codaF, []);
     const corpo = `<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#0c1a2b"><p>Prezzi cambiati ${esc(prima.quando)}: <b>${lista.length}</b> cartelli da rifare (${esc(riassunto)}).</p>
-      <p>Nel PDF allegato c'è l'elenco per sede con prezzo vecchio e nuovo, e dopo i cartelli già compilati da stampare.</p></div>`;
-    coda.push({ to: IO, subject: `Cartelli da cambiare ${dIt(OGGI)}: ${lista.length} auto (${riassunto})`, html: corpo, allegati: [filePdf] });
+      <p>In allegato un PDF per sede: l'elenco con prezzo vecchio e nuovo e, dopo, i cartelli già compilati da stampare.</p></div>`;
+    coda.push({ to: IO, subject: `Cartelli da cambiare ${dIt(OGGI)}: ${lista.length} auto (${riassunto})`, html: corpo, allegati: files });
     fs.writeFileSync(codaF, JSON.stringify(coda, null, 1));
     console.log('Cartelli: mail in coda per Giuseppe.');
   }
