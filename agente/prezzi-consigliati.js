@@ -162,7 +162,7 @@ const kMed = perModello['Volkswagen|T-Roc'] || GLOB;
 let n = 0;
 const anno = iso => iso ? iso.slice(5, 7) + '/' + iso.slice(2, 4) : '';
 const riga = r => {
-  const { c, usate, cons } = r, diff = cons && r.costo ? cons.incasso - r.costo : null;
+  const { c, usate, cons } = r;
   const min = usate.length ? Math.min(...usate.map(v => v.pp)) : 0, max = usate.length ? Math.max(...usate.map(v => v.pp)) : 0;
   const stock = r.inStock.length ? '<br><small>oggi in vendita ' + r.inStock.length + ' da ' + E(Math.min(...r.inStock.map(x => x.prezzoV || veicolo(x.prezzo, x.kw)))) + '</small>' : '';
   return '<tr><td class="n">' + (++n) + '</td>'
@@ -175,10 +175,9 @@ const riga = r => {
     + '<td>' + (usate.length ? '<b>' + usate.length + '</b> · ' + (min === max ? E(min) : N(min) + '–' + E(max)) : '<small>nessuna</small>') + stock + '</td>'
     + '<td class="r cons">' + (cons ? E(cons.veic) + '<br><small>trattativa ' + pct(cons.trattativa) + '%</small>' : '<small>a mano</small>') + '</td>'
     + '<td class="r">' + (cons ? E(cons.incasso) + (cons.daCross ? '' : '*') : '') + '</td>'
-    + '<td class="r ' + (diff != null && diff < 0 ? 'neg' : '') + '">' + (diff != null ? (diff < 0 ? '−' : '+') + E(Math.abs(diff)) : '') + '</td>'
     + '<td class="aff ' + r.aff + '">' + affTxt[r.aff] + '</td></tr>';
 };
-const THEAD = '<thead><tr><th>#</th><th>Targa</th><th class="r">In casa</th><th>Auto</th><th class="r">Imm. · km</th><th class="r">Acquisto</th><th class="r">Costo</th><th>Simili vendute</th><th class="r">Prezzo consigliato</th><th class="r">Incasso atteso</th><th class="r">Differenza</th><th>Affid.</th></tr></thead>';
+const THEAD = '<thead><tr><th>#</th><th>Targa</th><th class="r">In casa</th><th>Auto</th><th class="r">Imm. · km</th><th class="r">Acquisto</th><th class="r">Costo</th><th>Simili vendute</th><th class="r">Prezzo consigliato</th><th class="r">Incasso atteso</th><th>Affid.</th></tr></thead>';
 const SEZIONI = [
   ['Pronte e in casa da più di ' + SOGLIA + ' giorni', 'carrozzeria fatta (fattura in CROSS) o prezzo speciale: si possono prezzare subito. Dalla più vecchia.'],
   ['In casa da più di ' + SOGLIA + ' giorni, senza fattura di carrozzeria in CROSS', 'da verificare: ancora in carrozzeria, fattura non registrata o lavoro non necessario.'],
@@ -249,7 +248,7 @@ const CSS = '@page { size: A4 landscape; margin: 9mm 9mm; }'
   + 'td { border-bottom: 1px solid #dde3ea; padding: 2.5px 4px; vertical-align: top; line-height: 1.25; } tr { break-inside: avoid; }'
   + 'small { color: #5b6b80; font-size: 8px; } .r { text-align: right; } td.r { white-space: nowrap; } .n { color: #8a97a8; } .t { font-weight: 700; white-space: nowrap; } .b { font-weight: 700; }'
   + 'td.auto { max-width: 280px; } td.auto small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }'
-  + 'td.cons { font-weight: 800; font-size: 11.5px; background: #eef4fc; } td.cons small { font-weight: 400; } td.neg { color: #8a4b00; font-weight: 700; }'
+  + 'td.cons { font-weight: 800; font-size: 11.5px; background: #eef4fc; } td.cons small { font-weight: 400; }'
   + '.aff { font-size: 8.5px; font-weight: 700; } .aff.alta { color: #0a7a3d; } .aff.media { color: #a35a00; } .aff.bassa { color: #b3261e; }'
   + '.ps { display: inline-block; background: #0a5cf5; color: #fff; border-radius: 3px; padding: 0 3px; font-size: 7px; font-weight: 700; }'
   + '.colonne { column-count: 2; column-gap: 14px; } .det { break-inside: avoid; margin: 0 0 7px; } .dh { display: flex; gap: 6px; align-items: baseline; border-bottom: 1px solid #0c1a2b; padding: 1px 0; } .dh span { margin-left: auto; font-weight: 800; }'
@@ -264,7 +263,7 @@ const testata = (t, sotto) => '<div class="top"><div><h1>' + t + '</h1><div clas
 
 const html = pagina('Prezzi consigliati ' + dIt(OGGI), infografica() + testata('Le ' + righe.length + ' auto libere senza prezzo · prezzi consigliati', 'Stampa stock del ' + dIt(OGGI) + ' · costi da CROSS · confronto con le auto simili vendute da noi')
   + '<div class="boxes">' + box(conCons.length + ' su ' + righe.length, 'con prezzo consigliato (' + alta.length + ' con stima affidabile)') + box(E(valore), 'valore ai prezzi consigliati') + box(E(conCons.reduce((t, r) => t + r.cons.incasso, 0)), 'incasso atteso dopo la trattativa') + box('−' + pct(kMed.eta) + '% · −' + pct(kMed.km) + '%', 'quanto toglie un anno in più · 10.000 km in più') + '</div>'
-  + '<p class="note">Prezzi veicolo (finiscono in 450 o 950; in stampa si aggiunge il passaggio). <b>In casa</b>: giorni dalla data di ingresso. <b>Costo</b>: acquisto IVA compresa + carrozzeria e altri lavori da CROSS. <b>Simili vendute</b>: quante auto uguali (modello, allestimento, potenza, cambio) abbiamo venduto e a che prezzi; sotto, quante simili sono in vendita oggi. <b>Prezzo consigliato</b>: il primo prezzo dato alle simili al loro arrivo (8 su 10 si vendono a quel prezzo), adeguato ad anno e km; sotto, il margine di trattativa. <b>Incasso atteso</b>: quanto si incassa dopo la trattativa, dai prezzi di vendita veri in CROSS (* = stima media). <b>Differenza</b>: incasso atteso meno costo. PS = prezzo speciale. Le vendite usate per ogni calcolo sono nel file "vendute simili".</p>'
+  + '<p class="note">Prezzi veicolo (finiscono in 450 o 950; in stampa si aggiunge il passaggio). <b>In casa</b>: giorni dalla data di ingresso. <b>Costo</b>: acquisto IVA compresa + carrozzeria e altri lavori da CROSS. <b>Simili vendute</b>: quante auto uguali (modello, allestimento, potenza, cambio) abbiamo venduto e a che prezzi; sotto, quante simili sono in vendita oggi. <b>Prezzo consigliato</b>: il primo prezzo dato alle simili al loro arrivo (8 su 10 si vendono a quel prezzo), adeguato ad anno e km; sotto, il margine di trattativa. <b>Incasso atteso</b>: quanto si incassa dopo la trattativa, dai prezzi di vendita veri in CROSS (* = stima media). PS = prezzo speciale. Le vendite usate per ogni calcolo sono nel file "vendute simili".</p>'
   + tab);
 const htmlDett = pagina('Vendute simili ' + dIt(OGGI), testata('Le vendite usate per i prezzi consigliati', 'Per ogni auto le 5 simili più vicine: primo prezzo all\'arrivo (e ribasso, se c\'è stato), lo stesso adeguato ad anno e km dell\'auto da prezzare, incasso vero da CROSS · stampa del ' + dIt(OGGI)) + '<div class="colonne" style="margin-top:8px">' + dett + '</div>');
 
