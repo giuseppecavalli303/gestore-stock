@@ -65,7 +65,7 @@ Elenchi, controlli e rapporti si consegnano sempre in **PDF** (`agente/stampa-pd
 - `node agente/prezzi-ingresso.js`: prezzo di acquisto, ripristino carrozzeria e altri lavori delle libere senza prezzo, IVA compresa, con la casella delle auto passate in carrozzeria. I dati si leggono a mano da CROSS Sales e stanno in `agente/cross-ingresso.json` (escluso dal repo)
 - `node agente/rapporto.js`, `agente/venditori.js`, `agente/rapporto-venditore.js`: presentazione giornaliera, rapporto mensile e rapporti personali dei venditori (solo per Giuseppe)
 - `node agente/posta.js prezzi`: controllo prezzi del mattino
-- `node agente/cartelli-da-cambiare.js [--giorni N] [--mail]`: auto con il prezzo cambiato o appena messo (rispetto a ieri, o negli ultimi N giorni), PDF con elenco per sede e cartelli salone già compilati. Ogni mattina l'agente lo manda a Giuseppe (stato `cartelli`)
+- `node agente/cartelli-da-cambiare.js [--giorni N] [--mail]`: auto con il prezzo cambiato o appena messo (rispetto a ieri, o negli ultimi N giorni), PDF con elenco per sede e cartelli salone già compilati. Solo Prenestina e Tuscolana, dove il cartello va anche sulle auto fuori dal salone; a Tiburtina i cartelli del salone li curano i venditori. Ogni mattina l'agente lo manda a Giuseppe (stato `cartelli`)
 - `node agente/analisi-prezzi-raccogli.js`: rilegge tutte le stampe su Drive e ricostruisce per ogni auto sedi, prezzi, attese senza prezzo e prenotazioni (cache locale `agente/analisi-prezzi-cache.json`). Su questi dati lavora l'analisi interna delle sedi (`agente/analisi-stock.js`, solo sul PC e nella copia su Drive)
 
 ## File

@@ -61,6 +61,7 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
 
 - **19/11/2026:**
   - prezzi consigliati: prima pagina con il grafico delle auto da prezzare per prime. Sono "pronte" quelle con fattura di carrozzeria in CROSS o con prezzo speciale; oltre i 45 giorni in casa (campo `giorni` della stampa) l'auto comincia a essere un problema. La tabella è divisa in tre gruppi, ognuno dalla più vecchia.
+  - cartelli da cambiare solo per Prenestina e Tuscolana: lì il cartello va anche sulle auto fuori dal salone (piazzale esterno a Prenestina, secondo piano a Tuscolana). A Tiburtina c'è solo sulle poche auto del salone e lo curano i venditori, quindi la sede non è più nell'elenco (nemmeno i depositi Tiburtina 2 e 1128).
 - **18/11/2026:**
   - i cartelli da cambiare escono con le dotazioni: per ogni auto con annuncio sul sito lo script chiede nome e righe al servizio Google, come il tasto "Cartello salone", una richiesta alla volta (insieme vengono rifiutate); le scelte restano in `agente/cartelli-dotazioni.json` (locale). Senza annuncio, o se l'annuncio non elenca le dotazioni (es. 500 km0), le righe restano vuote e il PDF elenca le targhe;
   - prezzi consigliati per le libere senza prezzo (`agente/prezzi-consigliati.js`, PDF): vendite simili dalle stampe, prezzo adeguato ad anno e km (circa 5% all'anno e 2,5% ogni 10.000 km, calcolato modello per modello), prezzo veicolo arrotondato a 450/950. Il prezzo delle vendite è quello in stampa alla prenotazione: lo sconto finale non c'è;

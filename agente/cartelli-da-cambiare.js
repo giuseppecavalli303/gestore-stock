@@ -17,7 +17,9 @@ const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, m => ({ '&': '&am
 const N = n => Math.round(n || 0).toLocaleString('it-IT', { useGrouping: 'always' });
 const dIt = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 const IO = 'giuseppe.cavalli@valentinoautomobili.it';
-const ORDINE = ['Prenestina', 'Tuscolana', 'Tiburtina 1128', 'Tiburtina', 'Tiburtina 2'];
+// solo Prenestina e Tuscolana: li' il cartello va anche sulle auto fuori dal salone (piazzale esterno a Prenestina,
+// esposizione al secondo piano a Tuscolana). A Tiburtina il cartello c'e' solo sulle poche auto del salone e lo curano i venditori.
+const ORDINE = ['Prenestina', 'Tuscolana'];
 
 // stesso servizio e stessa chiave dell'app (sorgenti/ui.js): cosi' se cambiano li' cambiano anche qui
 const UI = src('ui.js'), AI_URL = (/const AI_URL = '([^']+)'/.exec(UI) || [])[1], AI_TOKEN = (/const AI_TOKEN = '([^']+)'/.exec(UI) || [])[1];
