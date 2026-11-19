@@ -1,6 +1,7 @@
 // Prezzi consigliati per le auto libere senza prezzo: per ognuna acquisto e carrozzeria (da CROSS), le auto simili
 // vendute da noi negli ultimi mesi (dalle stampe dello stock) e un prezzo consigliato. PDF riservato, mai sul sito.
-// Uso: node agente/prezzi-consigliati.js -> agente/rapporti/Prezzi consigliati GG-MM-AAAA.pdf (tabella, 4 pagine)
+// Uso: node agente/prezzi-consigliati.js -> agente/rapporti/Prezzi consigliati GG-MM-AAAA.pdf (prima pagina: grafico
+//      delle piu' urgenti, cioe' pronte e in casa da piu' di 45 giorni; poi la tabella divisa in tre gruppi)
 //      e "Prezzi consigliati - vendute simili GG-MM-AAAA.pdf" (le vendite usate per ogni calcolo)
 //
 // Come si calcola il prezzo consigliato:
@@ -143,7 +144,13 @@ const righe = s.cars.filter(c => c.free && !c.prezzo).map(c => {
   const inStock = libere.filter(x => x.targa !== c.targa && x.brand === c.brand && x.family === c.family && x.fuel === c.fuel && trim(x.modello) === tr && (!kw || !x.kw || Math.abs(x.kw - kw) / kw <= 0.12)
     && x.imm && c.imm && Math.abs(mesi(x.imm, c.imm)) <= 18);
   return { c, l, acq, cN, aN, costo: acq + cN + aN, kw, tr, usate, liv, cons, aff, pass, inStock, gg: med(usate.map(v => v.gg).filter(x => x != null)) };
-}).sort((a, b) => (a.c.brand + a.c.family).localeCompare(b.c.brand + b.c.family) || a.kw - b.kw || (a.c.imm || '').localeCompare(b.c.imm || ''));
+});
+// urgenza: pronte (fattura di carrozzeria in CROSS o prezzo speciale, che non va in carrozzeria) e in casa da piu' di
+// 45 giorni = da prezzare per prime; poi le vecchie senza fattura di carrozzeria; poi quelle entrate da poco
+const SOGLIA = 45, pronta = r => !!(r.c.spec || r.cN > 0);
+righe.forEach(r => { r.casa = r.c.giorni || 0; r.pronta = pronta(r); r.gruppo = r.casa > SOGLIA ? (r.pronta ? 1 : 2) : 3; });
+righe.sort((a, b) => a.gruppo - b.gruppo || b.casa - a.casa);
+const G = [1, 2, 3].map(g => righe.filter(r => r.gruppo === g));
 
 // ---------- PDF ----------
 const box = (n, t) => `<div class="box"><b>${n}</b><span>${t}</span></div>`;
@@ -154,12 +161,13 @@ const pct = x => (Math.abs(x) * 100).toFixed(1).replace('.', ',');
 const kMed = perModello['Volkswagen|T-Roc'] || GLOB;
 let n = 0;
 const anno = iso => iso ? iso.slice(5, 7) + '/' + iso.slice(2, 4) : '';
-const tab = righe.map(r => {
+const riga = r => {
   const { c, usate, cons } = r, diff = cons && r.costo ? cons.incasso - r.costo : null;
   const min = usate.length ? Math.min(...usate.map(v => v.pp)) : 0, max = usate.length ? Math.max(...usate.map(v => v.pp)) : 0;
   const stock = r.inStock.length ? '<br><small>oggi in vendita ' + r.inStock.length + ' da ' + E(Math.min(...r.inStock.map(x => x.prezzoV || veicolo(x.prezzo, x.kw)))) + '</small>' : '';
   return '<tr><td class="n">' + (++n) + '</td>'
     + '<td class="t">' + esc(c.targa) + (c.spec ? ' <span class="ps">PS</span>' : '') + '</td>'
+    + '<td class="r b">' + r.casa + ' gg</td>'
     + '<td class="auto"><b>' + esc(c.brand === 'Volkswagen' ? '' : c.brand + ' ') + esc(c.family) + '</b><small>' + esc(c.modello) + '</small></td>'
     + '<td class="r">' + anno(c.imm) + '<br><small>' + (c.km ? N(c.km) + ' km' : 'km n.d.') + '</small></td>'
     + '<td class="r">' + (r.acq ? E(r.acq) : '-') + (r.cN ? '<br><small>carr. ' + E(r.cN) + '</small>' : '') + (r.aN ? '<br><small>altri ' + E(r.aN) + '</small>' : '') + '</td>'
@@ -169,7 +177,60 @@ const tab = righe.map(r => {
     + '<td class="r">' + (cons ? E(cons.incasso) + (cons.daCross ? '' : '*') : '') + '</td>'
     + '<td class="r ' + (diff != null && diff < 0 ? 'neg' : '') + '">' + (diff != null ? (diff < 0 ? '−' : '+') + E(Math.abs(diff)) : '') + '</td>'
     + '<td class="aff ' + r.aff + '">' + affTxt[r.aff] + '</td></tr>';
-}).join('');
+};
+const THEAD = '<thead><tr><th>#</th><th>Targa</th><th class="r">In casa</th><th>Auto</th><th class="r">Imm. · km</th><th class="r">Acquisto</th><th class="r">Costo</th><th>Simili vendute</th><th class="r">Prezzo consigliato</th><th class="r">Incasso atteso</th><th class="r">Differenza</th><th>Affid.</th></tr></thead>';
+const SEZIONI = [
+  ['Pronte e in casa da più di ' + SOGLIA + ' giorni', 'carrozzeria fatta (fattura in CROSS) o prezzo speciale: si possono prezzare subito. Dalla più vecchia.'],
+  ['In casa da più di ' + SOGLIA + ' giorni, senza fattura di carrozzeria in CROSS', 'da verificare: ancora in carrozzeria, fattura non registrata o lavoro non necessario.'],
+  ['Entrate da ' + SOGLIA + ' giorni o meno', G[2].filter(r => r.pronta).length + ' già pronte (carrozzeria fatta o prezzo speciale). Dalla più vecchia.'],
+];
+const tab = G.map((g, i) => !g.length ? '' : '<h2 class="sez g' + (i + 1) + '">' + SEZIONI[i][0] + ' · ' + g.length + ' auto <small>' + SEZIONI[i][1] + '</small></h2>'
+  + '<table>' + THEAD + '<tbody>' + g.map(riga).join('') + '</tbody></table>').join('');
+
+// ---------- prima pagina: le piu' urgenti ----------
+const C = { ar: '#eb6834', bl: '#2a78d6', gr: '#c3c2b7', grid: '#e1e0d9', ink: '#0b0b0b', ink2: '#52514e', mute: '#898781' };
+const barra = (x, y, w, h, col) => { const r = h / 2, l = Math.max(0, w - r); return '<path d="M' + x + ' ' + y + 'h' + l + 'a' + r + ' ' + r + ' 0 0 1 0 ' + h + 'h-' + l + 'z" fill="' + col + '"/>'; };
+function grafico() {
+  const lista = G[0].concat(G[1]), W = 770, H = 605, top = 34, gap = G[1].length ? 22 : 0, lx = 205, rx = 46;
+  const rh = Math.min(16, (H - top - gap - 6) / lista.length), max = Math.ceil(Math.max(...lista.map(r => r.casa), 60) / 50) * 50;
+  const X = d => lx + (W - lx - rx) * d / max, bh = Math.min(9, rh - 4);
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">';
+  for (let d = 0; d <= max; d += 50) s += '<line x1="' + X(d) + '" x2="' + X(d) + '" y1="' + (top - 6) + '" y2="' + (H - 4) + '" stroke="' + C.grid + '" stroke-width="1"/><text x="' + X(d) + '" y="' + (top - 10) + '" font-size="9" fill="' + C.mute + '" text-anchor="middle">' + d + '</text>';
+  s += '<text x="0" y="' + (top - 10) + '" font-size="9" fill="' + C.mute + '">giorni in casa →</text>';
+  s += '<line x1="' + X(SOGLIA) + '" x2="' + X(SOGLIA) + '" y1="' + (top - 6) + '" y2="' + (H - 4) + '" stroke="' + C.ink2 + '" stroke-width="1.2" stroke-dasharray="3 3"/>'
+    + '<text x="' + (X(SOGLIA) + 4) + '" y="' + (top - 22) + '" font-size="9" font-weight="700" fill="' + C.ink2 + '">' + SOGLIA + ' giorni</text>';
+  let y = top;
+  lista.forEach((r, i) => {
+    if (i === G[0].length && gap) { s += '<text x="0" y="' + (y + 13) + '" font-size="9.5" font-weight="700" fill="' + C.ink2 + '">Senza fattura di carrozzeria in CROSS: da verificare</text>'; y += gap; }
+    const cy = y + rh / 2, col = r.gruppo === 1 ? C.ar : C.gr, nome = (r.c.brand === 'Volkswagen' ? '' : r.c.brand + ' ') + r.c.family;
+    s += '<text x="0" y="' + (cy + 3.3) + '" font-size="9.5" fill="' + C.ink + '"><tspan font-weight="700">' + esc(r.c.targa) + '</tspan> <tspan fill="' + C.ink2 + '">' + esc(nome.length > 22 ? nome.slice(0, 21) + '…' : nome) + '</tspan>' + (r.c.spec ? ' <tspan font-size="7.5" font-weight="700" fill="' + C.bl + '">PS</tspan>' : '') + '</text>'
+      + barra(lx, cy - bh / 2, X(r.casa) - lx, bh, col)
+      + '<text x="' + (X(r.casa) + 4) + '" y="' + (cy + 3.2) + '" font-size="9" fill="' + C.ink2 + '">' + r.casa + '</text>';
+    y += rh;
+  });
+  return s + '</svg>';
+}
+// le entrate da poco su una riga da 0 a 45 giorni: un punto per auto (blu = gia' pronta)
+function striscia() {
+  const W = 230, H = 64, b = 44, X = d => 8 + (W - 30) * d / SOGLIA, conta = {};
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">'
+    + '<line x1="6" x2="' + (W - 6) + '" y1="' + (b + 5) + '" y2="' + (b + 5) + '" stroke="' + C.gr + '"/>';
+  G[2].slice().sort((a, c) => a.pronta - c.pronta).forEach(r => { const k = Math.round(r.casa / 2); conta[k] = (conta[k] || 0) + 1;
+    s += '<circle cx="' + X(r.casa) + '" cy="' + (b - (conta[k] - 1) * 7.5) + '" r="3.2" fill="' + (r.pronta ? C.bl : '#fff') + '" stroke="' + (r.pronta ? '#fcfcfb' : C.mute) + '" stroke-width="1"/>'; });
+  [0, 15, 30, 45].forEach(d => { s += '<text x="' + X(d) + '" y="' + (H - 2) + '" font-size="8.5" fill="' + C.mute + '" text-anchor="middle">' + d + (d === SOGLIA ? ' gg' : '') + '</text>'; });
+  return s + '</svg>';
+}
+const valG1 = G[0].reduce((t, r) => t + (r.cons ? r.cons.veic : 0), 0), entro7 = G[2].filter(r => r.casa > SOGLIA - 7);
+const tile = (n, t, cl) => '<div class="tile ' + (cl || '') + '"><b>' + n + '</b><span>' + t + '</span></div>';
+const infografica = () => '<section class="info">' + testata('Le ' + righe.length + ' auto senza prezzo: quali prezzare per prime', 'Stampa stock del ' + dIt(OGGI) + ' · giorni in casa dalla data di ingresso · carrozzeria dalle fatture in CROSS')
+  + '<div class="ig"><div class="lato">'
+  + tile(G[0].length, 'auto <b>pronte</b> e in casa da più di ' + SOGLIA + ' giorni: carrozzeria fatta o prezzo speciale, manca solo il prezzo', 'forte')
+  + tile(E(valG1), 'il loro valore ai prezzi consigliati')
+  + tile(med(G[0].map(r => r.casa)) + ' giorni', 'metà di queste auto è in casa da più di ' + med(G[0].map(r => r.casa)) + ' giorni')
+  + tile(G[1].length, 'in casa da più di ' + SOGLIA + ' giorni senza fattura di carrozzeria in CROSS (in grigio): da verificare')
+  + '<div class="tile"><b>' + G[2].length + '</b><span>entrate da ' + SOGLIA + ' giorni o meno, ' + G[2].filter(r => r.pronta).length + ' già pronte (punti blu)' + (entro7.length ? '. <b>' + entro7.length + '</b> passano i ' + SOGLIA + ' giorni entro una settimana' : '') + '</span>' + striscia() + '</div>'
+  + '</div><div class="graf"><div class="leg"><i style="background:' + C.ar + '"></i>pronte <i style="background:' + C.gr + '"></i>senza fattura di carrozzeria <span>· PS = prezzo speciale · i numeri sono i giorni in casa</span></div>' + grafico() + '</div></div>'
+  + '<p class="note">Nelle pagine seguenti le stesse auto divise in tre gruppi, ognuno dalla più vecchia, con costo, vendite simili e prezzo consigliato.</p></section>';
 
 // dettaglio in un file a parte: le 5 simili piu' vicine per ogni auto, per controllare i numeri
 const dett = righe.map((r, i) => !r.usate.length ? '' : '<div class="det"><div class="dh"><b>' + (i + 1) + '. ' + esc(r.c.targa) + ' · ' + esc(r.c.family) + '</b> <small>' + anno(r.c.imm) + ' · ' + (r.c.km ? N(r.c.km) + ' km' : 'km n.d.') + '</small><span>' + (r.cons ? E(r.cons.veic) : 'a mano') + '</span></div>'
@@ -192,14 +253,19 @@ const CSS = '@page { size: A4 landscape; margin: 9mm 9mm; }'
   + '.aff { font-size: 8.5px; font-weight: 700; } .aff.alta { color: #0a7a3d; } .aff.media { color: #a35a00; } .aff.bassa { color: #b3261e; }'
   + '.ps { display: inline-block; background: #0a5cf5; color: #fff; border-radius: 3px; padding: 0 3px; font-size: 7px; font-weight: 700; }'
   + '.colonne { column-count: 2; column-gap: 14px; } .det { break-inside: avoid; margin: 0 0 7px; } .dh { display: flex; gap: 6px; align-items: baseline; border-bottom: 1px solid #0c1a2b; padding: 1px 0; } .dh span { margin-left: auto; font-weight: 800; }'
-  + '.det td, .det th { padding: 1.5px 3px; font-size: 8.5px; }';
+  + '.det td, .det th { padding: 1.5px 3px; font-size: 8.5px; }'
+  + '.info { break-after: page; } .ig { display: flex; gap: 14px; margin-top: 8px; } .lato { width: 250px; flex: none; display: flex; flex-direction: column; gap: 6px; }'
+  + '.tile { background: #f4f3ef; border-radius: 6px; padding: 6px 9px; } .tile > b { display: block; font-size: 20px; line-height: 1.15; } .tile span { color: #52514e; font-size: 9.5px; line-height: 1.35; display: block; } .tile span b { color: #0b0b0b; }'
+  + '.tile.forte { background: #fdeee7; border-left: 4px solid #eb6834; } .tile.forte > b { font-size: 30px; } .tile svg { display: block; margin-top: 4px; }'
+  + '.graf { flex: 1; } .leg { font-size: 9.5px; color: #0b0b0b; margin-bottom: 2px; } .leg i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin: 0 3px -1px 8px; } .leg i:first-child { margin-left: 0; } .leg span { color: #898781; }'
+  + 'h2.sez { font-size: 13px; margin: 10px 0 3px; padding-left: 7px; border-left: 4px solid #c3c2b7; break-after: avoid; } h2.sez.g1 { border-color: #eb6834; } h2.sez small { font-size: 9px; font-weight: 400; margin-left: 4px; }';
 const pagina = (titolo, corpo) => '<!doctype html><html lang="it"><head><meta charset="utf-8"><title>' + titolo + '</title><style>' + CSS + '</style></head><body>' + corpo + '</body></html>';
 const testata = (t, sotto) => '<div class="top"><div><h1>' + t + '</h1><div class="sub">' + sotto + '</div></div><div class="sub">Valentino Automobili · Usato · riservato</div></div>';
 
-const html = pagina('Prezzi consigliati ' + dIt(OGGI), testata('Le ' + righe.length + ' auto libere senza prezzo · prezzi consigliati', 'Stampa stock del ' + dIt(OGGI) + ' · costi da CROSS · confronto con le auto simili vendute da noi')
+const html = pagina('Prezzi consigliati ' + dIt(OGGI), infografica() + testata('Le ' + righe.length + ' auto libere senza prezzo · prezzi consigliati', 'Stampa stock del ' + dIt(OGGI) + ' · costi da CROSS · confronto con le auto simili vendute da noi')
   + '<div class="boxes">' + box(conCons.length + ' su ' + righe.length, 'con prezzo consigliato (' + alta.length + ' con stima affidabile)') + box(E(valore), 'valore ai prezzi consigliati') + box(E(conCons.reduce((t, r) => t + r.cons.incasso, 0)), 'incasso atteso dopo la trattativa') + box('−' + pct(kMed.eta) + '% · −' + pct(kMed.km) + '%', 'quanto toglie un anno in più · 10.000 km in più') + '</div>'
-  + '<p class="note">Prezzi veicolo (finiscono in 450 o 950; in stampa si aggiunge il passaggio). <b>Costo</b>: acquisto IVA compresa + carrozzeria e altri lavori da CROSS. <b>Simili vendute</b>: quante auto uguali (modello, allestimento, potenza, cambio) abbiamo venduto e a che prezzi; sotto, quante simili sono in vendita oggi. <b>Prezzo consigliato</b>: il primo prezzo dato alle simili al loro arrivo (8 su 10 si vendono a quel prezzo), adeguato ad anno e km; sotto, il margine di trattativa. <b>Incasso atteso</b>: quanto si incassa dopo la trattativa, dai prezzi di vendita veri in CROSS (* = stima media). <b>Differenza</b>: incasso atteso meno costo. PS = prezzo speciale. Le vendite usate per ogni calcolo sono nel file "vendute simili".</p>'
-  + '<table><thead><tr><th>#</th><th>Targa</th><th>Auto</th><th class="r">Imm. · km</th><th class="r">Acquisto</th><th class="r">Costo</th><th>Simili vendute</th><th class="r">Prezzo consigliato</th><th class="r">Incasso atteso</th><th class="r">Differenza</th><th>Affid.</th></tr></thead><tbody>' + tab + '</tbody></table>');
+  + '<p class="note">Prezzi veicolo (finiscono in 450 o 950; in stampa si aggiunge il passaggio). <b>In casa</b>: giorni dalla data di ingresso. <b>Costo</b>: acquisto IVA compresa + carrozzeria e altri lavori da CROSS. <b>Simili vendute</b>: quante auto uguali (modello, allestimento, potenza, cambio) abbiamo venduto e a che prezzi; sotto, quante simili sono in vendita oggi. <b>Prezzo consigliato</b>: il primo prezzo dato alle simili al loro arrivo (8 su 10 si vendono a quel prezzo), adeguato ad anno e km; sotto, il margine di trattativa. <b>Incasso atteso</b>: quanto si incassa dopo la trattativa, dai prezzi di vendita veri in CROSS (* = stima media). <b>Differenza</b>: incasso atteso meno costo. PS = prezzo speciale. Le vendite usate per ogni calcolo sono nel file "vendute simili".</p>'
+  + tab);
 const htmlDett = pagina('Vendute simili ' + dIt(OGGI), testata('Le vendite usate per i prezzi consigliati', 'Per ogni auto le 5 simili più vicine: primo prezzo all\'arrivo (e ribasso, se c\'è stato), lo stesso adeguato ad anno e km dell\'auto da prezzare, incasso vero da CROSS · stampa del ' + dIt(OGGI)) + '<div class="colonne" style="margin-top:8px">' + dett + '</div>');
 
 const dir = path.join(__dirname, 'rapporti'); fs.mkdirSync(dir, { recursive: true });

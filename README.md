@@ -61,7 +61,7 @@ Il registro è in `agente\agente.log`.
 Elenchi, controlli e rapporti si consegnano sempre in **PDF** (`agente/stampa-pdf.js`, Chrome via puppeteer-core).
 
 - `node agente/libere-senza-prezzo.js`: auto libere senza prezzo, divise in stock Valentino / remarketing / VTI, dalle più vecchie
-- `node agente/prezzi-consigliati.js`: per ogni libera senza prezzo acquisto e carrozzeria (CROSS), le auto simili vendute da noi (stesso modello, allestimento, potenza e cambio, prezzo in stampa alla prenotazione) e un prezzo consigliato adeguato ad anno e km, con l'elenco delle vendite usate per ogni stima
+- `node agente/prezzi-consigliati.js`: per ogni libera senza prezzo acquisto e carrozzeria (CROSS), le auto simili vendute da noi (stesso modello, allestimento, potenza e cambio, prezzo in stampa alla prenotazione) e un prezzo consigliato adeguato ad anno e km, con l'elenco delle vendite usate per ogni stima. La prima pagina è un grafico delle più urgenti (pronte e in casa da più di 45 giorni); la tabella è divisa in tre gruppi: pronte oltre 45 giorni, oltre 45 giorni senza fattura di carrozzeria, entrate da 45 giorni o meno
 - `node agente/prezzi-ingresso.js`: prezzo di acquisto, ripristino carrozzeria e altri lavori delle libere senza prezzo, IVA compresa, con la casella delle auto passate in carrozzeria. I dati si leggono a mano da CROSS Sales e stanno in `agente/cross-ingresso.json` (escluso dal repo)
 - `node agente/rapporto.js`, `agente/venditori.js`, `agente/rapporto-venditore.js`: presentazione giornaliera, rapporto mensile e rapporti personali dei venditori (solo per Giuseppe)
 - `node agente/posta.js prezzi`: controllo prezzi del mattino
