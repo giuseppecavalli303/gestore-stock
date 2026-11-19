@@ -186,6 +186,8 @@ try {
             Scrivi $s.Testo
             $sl = Esegui 'node agente\storico-lungo.js'               # storico degli anni passati: aggiunge la stampa di oggi ai grafici
             Scrivi $sl.Testo
+            $vd = Esegui 'node agente\valutatore-dati.js'             # nostre vendite per il valutatore permute (cifrate)
+            Scrivi $vd.Testo
             if (Test-Path (Join-Path $repo 'data\promo.json')) { $pp = Esegui 'node agente\promo-prezzi.js'; Scrivi $pp.Testo }   # prezzo barrato delle auto Black Friday
             $nuova = Pubblica "Stock aggiornato dalla stampa $($trovato.Allegato.FileName)"
 
@@ -249,6 +251,15 @@ try {
             Scrivi $m.Testo
             Pubblica 'Foto e annunci del sito aggiornati' | Out-Null
         }
+    }
+
+    # 3b. mercato per il valutatore permute: AutoScout e Subito per i modelli che entrano di piu', una volta al giorno dalle 14
+    #     (circa 8 minuti, a mattina finita). Se un giorno salta si va avanti con i dati del giorno prima.
+    if ($ora -ge 14 -and -not (GiaFatto 'mercatoValutatore')) {
+        SegnaStato 'mercatoValutatore' $oggi                         # una volta sola anche se qualcosa va storto
+        $mv = Esegui 'node agente\valutatore-mercato.js'
+        Scrivi $mv.Testo
+        if ($mv.Codice -eq 0) { Pubblica 'Mercato per il valutatore permute aggiornato' | Out-Null }
     }
 
     # 4. stampa di oggi non ancora arrivata (domenica esclusa)

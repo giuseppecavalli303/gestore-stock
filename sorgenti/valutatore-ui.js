@@ -8,9 +8,31 @@ const valKm = n => valEuro(n).replace(' €', ' km');
 // gli annunci salvati arrivano dal servizio, che chiunque abbia il link puo' riempire: link solo verso i tre portali
 const valLink = u => /^https:\/\/(www\.)?(autoscout24\.it|subito\.it|automobile\.it)\//.test(String(u || '')) ? u : '';
 const valNum = n => Number(n) || 0;
+const valGiorno = iso => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '';
+
+// dati che l'agente del PC pubblica accanto all'app: le nostre vendite (compresse e cifrate con la chiave dei nomi clienti,
+// agente/valutatore-dati.js) e il mercato letto ogni giorno (agente/valutatore-mercato.js). Se mancano si va avanti senza.
+let VAL_DATI = null;
+async function valVendite() {
+  let k = null;
+  try { k = localStorage.getItem('su.chiaveClienti'); } catch (e) {}
+  if (!k || !window.crypto || !crypto.subtle || typeof DecompressionStream === 'undefined') return null;
+  const r = await fetch('data/valutatore-vendite.json?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) return null;
+  const j = await r.json(), b = s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0));
+  const key = await crypto.subtle.importKey('raw', b(k), 'AES-GCM', false, ['decrypt']), x = b(j.x);
+  const testo = new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: x.slice(0, 12) }, key, x.slice(12)));
+  return JSON.parse(await new Response(new Blob([b(testo)]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+}
+async function valMercato() {
+  const r = await fetch('data/valutatore-mercato.json?t=' + Date.now(), { cache: 'no-store' });
+  return r.ok ? r.json() : null;
+}
+const valDati = () => VAL_DATI || (VAL_DATI = Promise.all([valVendite().catch(() => null), valMercato().catch(() => null)]).then(([vendite, mercato]) => ({ vendite, mercato })));
 
 function montaValutatore(el, opz) {
-  const st = { frase: '', auto: null, mancano: [], annunci: [], venduti: [], portali: {}, cfg: null, rip: null, et: { giallo: '', blu: '' }, targa: '', id: null, r: null, lista: false };
+  const st = { frase: '', auto: null, mancano: [], annunci: [], venduti: [], portali: {}, cfg: null, rip: null, et: { giallo: '', blu: '' }, targa: '', id: null, r: null, lista: false, vendite: null, mercato: null, notte: null, nostre: null };
+  valDati().then(d => { st.vendite = d.vendite; st.mercato = d.mercato; });
   el.innerHTML = `<div class="val">
     <form class="val-in"><input type="text" placeholder="Es. Clio GPL Energy 120000 km del 2013" enterkeyhint="search" autocomplete="off" aria-label="Auto da valutare"><button class="btn btn-primary">Valuta</button></form>
     <div class="val-out" aria-live="polite"></div>
@@ -31,13 +53,20 @@ function montaValutatore(el, opz) {
   async function valutaOra(auto) {
     attesa('Leggo AutoScout, Subito e Automobile.it…');
     try {
-      const j = await chiama('valuta', auto ? { auto, frase: st.frase } : { frase: st.frase });
-      Object.assign(st, { auto: j.auto, mancano: j.mancano || [], annunci: j.annunci || [], venduti: j.venduti || [], portali: j.portali || {}, cfg: j.cfg, id: null, lista: false });
+      const [j, d] = await Promise.all([chiama('valuta', auto ? { auto, frase: st.frase } : { frase: st.frase }), valDati()]);
+      Object.assign(st, { auto: j.auto, mancano: j.mancano || [], annunci: j.annunci || [], venduti: j.venduti || [], portali: j.portali || {}, cfg: j.cfg, id: null, lista: false, vendite: d.vendite, mercato: d.mercato });
+      // Subito blocca il servizio Google: se non ha risposto uso gli annunci letti dal PC per lo stesso modello e anni vicini
+      st.notte = mercatoNotte(st.auto, st.mercato);
+      if (st.notte && st.notte.annunci.length && !(st.portali.subito > 0)) { st.annunci = st.annunci.concat(st.notte.annunci); st.portali = Object.assign({}, st.portali, { subito: 'pc' }); }
       if (!st.cfg) return errore('Margini non ancora impostati: aprili da "Margini" con la chiave di Giuseppe.');
       calcola(); disegna();
     } catch (e) { errore(e.message || 'Il servizio non risponde, riprova.'); }
   }
-  const calcola = () => { st.r = valuta(st.auto, st.annunci, st.cfg, st.rip); };
+  const calcola = () => {
+    const extra = { vendite: st.vendite && st.vendite.vendite, oggi: new Date().toISOString() };
+    st.nostre = nostreVendite(st.auto, extra.vendite, extra.oggi);
+    st.r = valuta(st.auto, st.annunci, st.cfg, st.rip, extra);
+  };
 
   function chips() {
     const a = st.auto, voci = [['marca', a.marca], ['modello', a.serie && valNorm(a.serie).includes(valNorm(a.modello)) ? a.serie : [a.modello, a.serie].filter(Boolean).join(' ')], ['versione', a.versione], ['alimentazione', a.alimentazione], ['anno', a.anno || ''], ['km', a.km ? valKm(a.km) : '']];
@@ -47,7 +76,7 @@ function montaValutatore(el, opz) {
 
   function fonti() {
     const r = st.r, ps = Object.keys(VAL_PORTALI);
-    const conti = ps.filter(p => r.perPortale && r.perPortale[p]).map(p => `${VAL_PORTALI[p]} ${r.perPortale[p]}`).join(' · ');
+    const conti = ps.filter(p => r.perPortale && r.perPortale[p]).map(p => `${VAL_PORTALI[p]} ${r.perPortale[p]}${p === 'subito' && st.portali.subito === 'pc' && st.notte ? ` (letti il ${valGiorno(st.notte.giorno)})` : ''}`).join(' · ');
     const giu = ps.filter(p => st.portali[p] === 'errore').map(p => VAL_PORTALI[p]);
     return `da ${r.n} auto simili in vendita${r.qualita ? ` · confronto ${r.qualita}` : ''}${conti ? ' · ' + conti : ''}${giu.length ? ` · <span class="val-warn">${giu.join(' e ')} non ${giu.length > 1 ? 'hanno' : 'ha'} risposto</span>` : ''}`;
   }
@@ -74,26 +103,39 @@ function montaValutatore(el, opz) {
       <button type="button" class="btn btn-ghost btn-sm" data-v="eurotax">Apri Eurotax</button></div>`;
   }
 
+  // le nostre vendite simili e il mercato degli ultimi giorni (dati dell'agente del PC)
+  function dati() {
+    const n = st.nostre, m = st.notte, righe = [];
+    if (n && n.n) righe.push(`<p><b>${n.n === 1 ? '1 vendita simile' : n.n + ' vendite simili'} da noi</b> negli ultimi 2 anni · ${valEuro(Math.round(n.prezzo / 50) * 50)} riportato a quest'auto${n.giorni != null ? ` · prenotate in media ${n.giorni} giorni dopo il primo prezzo` : ''}<br><span>Prezzo veicolo alla prenotazione, adeguato ad anno e km${n.n < 3 ? ': sotto le 3 vendite non lo uso per la rivendita' : ''}.</span></p>`);
+    else if (st.vendite) righe.push('<p>Nessuna vendita simile da noi negli ultimi 2 anni.</p>');
+    if (m && m.totAS) righe.push(`<p><b>${m.totAS} in vendita su AutoScout</b> per l'anno ${st.auto.anno} e quelli vicini<span> · contate il ${valGiorno(m.giorno)}</span></p>`);
+    if (m && m.andamento != null) righe.push(`<p><b>${Math.abs(m.andamento) < 0.02 ? 'Prezzi stabili' : m.andamento > 0 ? 'Prezzi in salita' : 'Prezzi in calo'}</b> nell'ultimo mese${Math.abs(m.andamento) < 0.02 ? '' : ` (${m.andamento > 0 ? '+' : '−'}${Math.round(Math.abs(m.andamento) * 100)}%)`}<span> · prezzo mediano degli annunci di AutoScout e Subito</span></p>`);
+    return righe.length ? `<div class="val-dati"><div class="val-lab">Da noi e sul mercato</div>${righe.join('')}</div>` : '';
+  }
+
   function grafico() {
     const pts = (st.r.simili || st.annunci).filter(a => a.km && a.prezzo);
     const vend = simili(st.auto, st.venduti).filter(a => a.km && a.prezzo);
-    const tutti = pts.concat(vend);
+    // delle nostre vendite solo le 25 piu' vicine per eta' e km, se no coprono gli annunci
+    const nos = ((st.nostre && st.nostre.simili) || []).filter(a => a.km && a.prezzo).sort((a, b) => b.peso - a.peso).slice(0, 25);
+    const tutti = pts.concat(vend, nos);
     if (tutti.length < 2) return '';
     const W = 340, H = 170, L = 38, B = 22, T = 8, R = 8;
     const kms = tutti.map(a => a.km).concat(st.auto.km ? [st.auto.km] : []), ps = tutti.map(a => a.prezzo);
     const dk = (Math.max(...kms) - Math.min(...kms)) * 0.04 || 1000, dp = (Math.max(...ps) - Math.min(...ps)) * 0.08 || 200;
-    const k0 = Math.min(...kms) - dk, k1 = Math.max(...kms) + dk, p0 = Math.min(...ps) - dp, p1 = Math.max(...ps) + dp;
+    const k0 = Math.max(0, Math.min(...kms) - dk), k1 = Math.max(...kms) + dk, p0 = Math.min(...ps) - dp, p1 = Math.max(...ps) + dp;
     const x = k => L + (k1 > k0 ? (k - k0) / (k1 - k0) : 0.5) * (W - L - R), y = p => T + (p1 > p0 ? 1 - (p - p0) / (p1 - p0) : 0.5) * (H - T - B);
     const tua = st.auto.km ? `<rect x="${x(st.auto.km * 0.9)}" y="${T}" width="${Math.max(2, x(st.auto.km * 1.1) - x(st.auto.km * 0.9))}" height="${H - T - B}" class="val-fascia"/><line x1="${x(st.auto.km)}" x2="${x(st.auto.km)}" y1="${T}" y2="${H - B}" class="val-tua"/>` : '';
+    const quadro = a => `<rect x="${(x(a.km) - 4).toFixed(1)}" y="${(y(a.prezzo) - 4).toFixed(1)}" width="8" height="8" rx="1.5" class="val-nos"><title>Venduta da noi · ${valEuro(a.prezzo)} · ${valKm(a.km)} · ${a.anno} · prenotata ${valEsc(String(a.pren).slice(5, 7) + '/' + String(a.pren).slice(0, 4))}</title></rect>`;
     const punto = (a, v) => `<circle cx="${x(a.km).toFixed(1)}" cy="${y(a.prezzo).toFixed(1)}" r="${v ? 5.5 : 3.6}" ${v ? `fill="none" stroke="${VAL_COLORI[a.portale]}" stroke-width="2"` : `fill="${VAL_COLORI[a.portale]}"`}><title>${valEsc(a.titolo)} · ${valEuro(a.prezzo)} · ${valKm(a.km)}${v ? ' · annuncio non più presente' : ''}</title></circle>`;
     return `<div class="val-graf"><div class="val-lab">Le auto simili, per km e prezzo</div>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafico km e prezzo delle auto simili">
         <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" class="val-asse"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" class="val-asse"/>
         <text x="${L}" y="${H - 6}" class="val-t">${valKm(k0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end" class="val-t">${valKm(k1)}</text>
         <text x="${L - 4}" y="${T + 8}" text-anchor="end" class="val-t">${Math.round(p1 / 1000)}k</text><text x="${L - 4}" y="${H - B}" text-anchor="end" class="val-t">${Math.round(p0 / 1000)}k</text>
-        ${tua}${pts.map(a => punto(a, false)).join('')}${vend.map(a => punto(a, true)).join('')}
+        ${tua}${pts.map(a => punto(a, false)).join('')}${vend.map(a => punto(a, true)).join('')}${nos.map(quadro).join('')}
       </svg>
-      <div class="val-leg">${Object.keys(VAL_PORTALI).map(p => `<span><i style="background:${VAL_COLORI[p]}"></i>${VAL_PORTALI[p]}</span>`).join('')}<span><i class="anello"></i>${vend.length ? 'annunci non più presenti (di solito vendute)' : 'annunci non più presenti: compaiono rifacendo la stessa ricerca nei prossimi giorni'}</span></div></div>`;
+      <div class="val-leg">${Object.keys(VAL_PORTALI).map(p => `<span><i style="background:${VAL_COLORI[p]}"></i>${VAL_PORTALI[p]}</span>`).join('')}${nos.length ? `<span><i class="quadro"></i>vendute da noi${st.nostre.n > nos.length ? ` (le ${nos.length} più vicine)` : ''}</span>` : ''}<span><i class="anello"></i>${vend.length ? 'annunci non più presenti (di solito vendute)' : 'annunci non più presenti: compaiono rifacendo la stessa ricerca nei prossimi giorni'}</span></div></div>`;
   }
 
   function elenco() {
@@ -109,7 +151,7 @@ function montaValutatore(el, opz) {
       ${r.ok ? `<div class="val-big"><div class="val-lab">Valore di mercato</div><div class="val-valore">${valEuro(r.mercato)}</div><div class="val-fonti">${fonti()}</div></div>` : `<div class="val-big"><div class="val-fonti">${fonti()}</div></div>`}
       <div class="val-note"><div class="val-lab">Note</div><div class="val-note-testo">${note()}</div>
         <label class="val-riga">Ripristino <input type="number" inputmode="numeric" class="val-rip" value="${st.rip == null ? '' : valEsc(st.rip)}" placeholder="${st.cfg.ripristino} (standard)"> €</label></div>
-      ${eurotax()}${grafico()}<div class="val-el">${elenco()}</div>
+      ${dati()}${eurotax()}${grafico()}<div class="val-el">${elenco()}</div>
       <div class="val-salva"><input type="text" class="val-targa" maxlength="10" placeholder="Targa (facoltativa)" value="${valEsc(st.targa)}"><button type="button" class="btn btn-ghost btn-sm" data-v="salva">${st.id ? 'Aggiorna' : 'Salva'}</button></div>`;
   }
 
@@ -169,9 +211,10 @@ function montaValutatore(el, opz) {
   async function apri(id) {
     attesa('Apro la valutazione…'); extra.innerHTML = '';
     try {
-      const j = await chiama('apri', { id });
+      const [j, d] = await Promise.all([chiama('apri', { id }), valDati()]);
       if (!st.cfg) st.cfg = (await chiama('margini', {})).cfg;
-      Object.assign(st, { id: j.id, frase: j.frase, targa: j.targa || '', auto: j.auto, annunci: j.annunci || [], venduti: j.venduti || [], portali: {}, et: j.eurotax || { giallo: '', blu: '' }, rip: j.ripristino == null ? null : j.ripristino, lista: false });
+      Object.assign(st, { id: j.id, frase: j.frase, targa: j.targa || '', auto: j.auto, annunci: j.annunci || [], venduti: j.venduti || [], portali: {}, et: j.eurotax || { giallo: '', blu: '' }, rip: j.ripristino == null ? null : j.ripristino, lista: false, vendite: d.vendite, mercato: d.mercato });
+      st.notte = mercatoNotte(st.auto, st.mercato);
       q('.val-in input').value = j.frase;
       calcola(); disegna();
     } catch (e) { errore(e.message); }

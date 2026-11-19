@@ -120,6 +120,30 @@ async function leggi(file) {
   ok(am.length === 1 && am[0].prezzo === 4400 && am[0].anno === 2013 && am[0].km === 123000 && am[0].alimentazione === 'GPL' && am[0].venditore === 'concessionario' && am[0].modello === 'Clio', 'portali: annuncio Automobile.it letto');
   ok(P.leggiSubito('<html>niente</html>').length === 0 && P.leggiAutomobile('', CLIO).length === 0 && P.leggiAutoscout('<script id="__NEXT_DATA__">{rotto').length === 0, 'portali: pagina cambiata o vuota non fa saltare la valutazione');
   ok(rv.note.some(n => /margine 1\.111 €/.test(n)), 'valutatore: cifre con il punto delle migliaia (1.111 €)');
+  // valutatore permute: le nostre vendite (dati di prova inventati) e il mercato letto dal PC
+  const V2 = new Function(src('valuta.js') + '\nreturn { valuta, nostreVendite, mercatoNotte, valChiave };')();
+  const vend2 = (prezzo, km, imm, pren, extra) => Object.assign(['Renault', 'Clio', 'GPL', imm, km, prezzo, prezzo + 500, 40, pren, 'CLIO 0.9 TCE GPL ENERGY'], extra);
+  const nostre = [vend2(7450, 120000, '2013-06', '2026-06'), vend2(7950, 110000, '2013-03', '2026-03'), vend2(6950, 130000, '2012-09', '2025-09'),
+    vend2(9950, 60000, '2013-06', '2026-06', { 2: 'Benzina' }), vend2(9950, 60000, '2018-06', '2026-06'), vend2(9950, 60000, '2013-06', '2026-06', { 1: 'Captur' })];
+  const nv = V2.nostreVendite(CLIO, nostre, '2026-11-19');
+  ok(nv.n === 3 && nv.giorni === 40 && nv.prezzo > 7000 && nv.prezzo < 8000, `valutatore: nostre vendite simili solo stesso modello, carburante ed eta' (${nv.n}, ${Math.round(nv.prezzo)})`);
+  const rn = V2.valuta(CLIO, lotto, CFG, null, { vendite: nostre, oggi: '2026-11-19' });
+  ok(rn.ok && rn.daNostre && rn.rivendita === Math.round(nv.prezzo / 100) * 100 && rn.mercato === rv.mercato && rn.note.some(n => /nostre 3 vendite simili/.test(n)), `valutatore: con almeno 3 vendite nostre la rivendita viene da li' (${rn.rivendita} invece di ${rv.rivendita})`);
+  const r2v = V2.valuta(CLIO, lotto, CFG, null, { vendite: nostre.slice(0, 2), oggi: '2026-11-19' });
+  ok(!r2v.daNostre && r2v.rivendita === rv.rivendita && r2v.note.some(n => /Solo 2 vendite simili/.test(n)), 'valutatore: con meno di 3 vendite nostre resta la rivendita dagli annunci');
+  ok(V2.valuta(CLIO, lotto, CFG, null, {}).rivendita === rv.rivendita, 'valutatore: senza chiave (niente vendite) funziona come prima');
+  const merc = { giorno: '2026-11-19', modelli: { [V2.valChiave(CLIO)]: { 2013: { su: [['Clio', 'Clio TCe GPL', 2013, 118000, 5900, 0, 12]], totAS: 40, storia: [['2026-10-15', 6000, 20], ['2026-11-19', 6300, 22]] }, 2014: { su: [], totAS: 25, storia: [] } } } };
+  const mn = V2.mercatoNotte(CLIO, merc);
+  ok(V2.valChiave({ marca: 'VW', modello: 'T Roc', alimentazione: 'benzina' }) === V2.valChiave({ marca: 'Volkswagen', modello: 'T-Roc', alimentazione: 'Benzina' }), 'mercato: stessa chiave per VW/Volkswagen e T Roc/T-Roc');
+  ok(mn && mn.annunci.length === 1 && mn.annunci[0].portale === 'subito' && mn.annunci[0].prezzo === 5900 && mn.annunci[0].km === 118000 && mn.totAS === 65 && Math.abs(mn.andamento - 0.05) < 0.001, 'mercato: annunci Subito letti dal PC, auto in vendita e prezzo in salita del 5%');
+  ok(V2.mercatoNotte(Object.assign({}, CLIO, { anno: 2020 }), merc) === null && V2.mercatoNotte(CLIO, null) === null, 'mercato: niente dati per anni lontani o senza file');
+  const VM = require('./valutatore-mercato');
+  ok(VM.chiave('Mercedes', 'Classe A', 'Benzina') === V2.valChiave({ marca: 'Mercedes-Benz', modello: 'Classe A', alimentazione: 'Benzina' }) && VM.chiave('Volkswagen', 'Golf', 'Plug-in') === V2.valChiave({ marca: 'Volkswagen', modello: 'Golf', alimentazione: 'Ibrida' }), 'mercato: la chiave del PC e quella del valutatore coincidono');
+  const ag = VM.aggiorna({ modelli: { k: { 2013: { su: [['Clio', '', 2013, 1, 5000, 0, 3]], suGiorno: '2026-11-18', totAS: 9, storia: [['2026-06-01', 1, 1], ['2026-11-18', 6000, 20]] } } } }, [{ k: 'k', anno: 2013, subito: null, totAS: 10, mediana: 6100, n: 21 }], '2026-11-19');
+  ok(ag.modelli.k[2013].su.length === 1 && ag.modelli.k[2013].suGiorno === '2026-11-18' && ag.modelli.k[2013].storia.length === 2 && ag.modelli.k[2013].storia[1][1] === 6100, 'mercato: se Subito non risponde tengo gli annunci di ieri; storico prezzi degli ultimi 150 giorni');
+  const VD = require('./valutatore-dati');
+  const dv = VD.vendite({ AA111AA: { b: 'Renault', f: 'Clio', fu: 'GPL', m: 'CLIO 66 KW', imm: '2013-06', ingr: '2026-05-01', km: 120000, p: [['2026-05-02', 8450]], pren: '2026-06-10', pp: 7950, vend: 'Nome Venditore' } }, [], '2026-11-19', new Map());
+  ok(dv.vendite.length === 1 && dv.vendite[0][5] === 7450 && dv.vendite[0][6] === 7950 && dv.vendite[0][7] === 39 && !JSON.stringify(dv).includes('AA111AA') && !JSON.stringify(dv).includes('Nome Venditore'), 'valutatore: vendite pubblicate con prezzo veicolo, senza targa e senza venditore');
   // valutatore permute: storico delle ricerche e auto vendute
   const Q = new Function(fs.readFileSync(path.join(root, 'assistente', 'Valutatore.gs'), 'utf8') + '\nreturn { chiaveRicerca, venduti, completo };')();
   ok(Q.chiaveRicerca(CLIO) === Q.chiaveRicerca({ marca: ' RENAULT', modello: 'clio ', alimentazione: 'gpl', anno: 2013, km: 90000 }), 'storico: stessa ricerca, stessa chiave (maiuscole, spazi e km non contano)');

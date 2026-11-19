@@ -31,7 +31,7 @@ const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, m => ({ '&': '&am
 const N = n => Math.round(n || 0).toLocaleString('it-IT', { useGrouping: 'always' }), E = n => N(n) + ' €';
 const med = a => { const b = a.slice().sort((x, y) => x - y), n = b.length; return n ? (n % 2 ? b[(n - 1) / 2] : (b[n / 2 - 1] + b[n / 2]) / 2) : 0; };
 const mesi = (a, b) => (Date.parse(a.slice(0, 7) + '-15') - Date.parse(b.slice(0, 7) + '-15')) / (30.44 * 864e5);
-const kwDa = (m, kw) => { if (kw) return kw; const k = /(\d{2,3})\s*KW/i.exec(m); if (k) return +k[1]; const c = /(\d{2,3})\s*CV/i.exec(m); return c ? Math.round(c[1] / 1.36) : 0; };
+const { kwDa, creaVeicolo } = require('./prezzo-veicolo');
 // allestimento principale (uno solo) e "plus" come dettaglio: "R-LINE PLUS" resta un R-Line
 const TRIM = ['GTI', 'GTD', 'RLINE', 'SLINE', 'HIGHLINE', 'STYLE', 'SPORT', 'ADVANCED', 'ELEGANCE', 'EXECUTIVE', 'DESIGN', 'ADMIRAL', 'GOLD', 'UNITED', 'COMFORTLINE', 'LIFE', 'BUSINESS', 'URBAN', 'MOVE', 'TRENDLINE', 'EDITION'];
 const parole = m => ' ' + String(m).toUpperCase().replace(/R\s*-\s*LINE/g, 'RLINE').replace(/S\s+LINE/g, 'SLINE').replace(/[^A-Z0-9]+/g, ' ') + ' ';
@@ -39,20 +39,8 @@ const trim = m => { const x = parole(m); return TRIM.find(t => x.includes(' ' + 
 const plus = m => parole(m).includes(' PLUS ');
 const cambio = c => (c === 'Automatico' || c === 'Manuale') ? c : '';
 
-// passaggio di proprieta' tipico per potenza, dalle auto prezzate oggi
-const passPerKw = {}; s.cars.filter(c => c.prezzo && c.kw && c.pp).forEach(c => { (passPerKw[c.kw] = passPerKw[c.kw] || {})[c.pp] = (passPerKw[c.kw][c.pp] || 0) + 1; });
-function passaggio(kw) {
-  const kws = Object.keys(passPerKw).map(Number); if (!kw || !kws.length) return 700;
-  const vicino = kws.sort((a, b) => Math.abs(a - kw) - Math.abs(b - kw))[0];
-  return +Object.entries(passPerKw[vicino]).sort((a, b) => b[1] - a[1])[0][0];
-}
-// I prezzi si mettono sul veicolo e finiscono sempre in 450 o 950; la stampa mostra il totale con il passaggio
-// (500, 650, 700, 750, 800 o 1000). Dal totale si ricava il prezzo veicolo: giusto per 811 auto su 816 di oggi.
-function veicolo(tot, kw) {
-  const r = ((tot % 500) + 500) % 500, perResto = { 100: 650, 150: 700, 200: 750, 250: 800 };
-  const pass = perResto[r] || (r === 450 ? (kw >= 100 ? 1000 : 500) : passaggio(kw));
-  return tot - pass;
-}
+// passaggio tipico per potenza (dalle auto prezzate oggi) e prezzo veicolo dal totale in stampa
+const { veicolo, passaggio } = creaVeicolo(s.cars);
 
 // prezzo di vendita vero (PV-lordo) dalle pratiche concluse di CROSS: lista pratiche VU (F8), stato "Concluso",
 // colonne Targa, PV-lordo e Data consegna, esportata in agente/cross-vendute.txt (escluso dal repo)

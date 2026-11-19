@@ -303,6 +303,11 @@ html.cliente .col-gg,html.cliente [data-tab="stat"],html.cliente [data-tab="stor
 .val-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--ink2)}
 .val-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .val-leg i.anello{border:2px solid var(--ink2);width:7px;height:7px}
+.val-leg i.quadro{border-radius:2px;background:var(--ink)}
+.val-nos{fill:var(--ink);stroke:var(--field);stroke-width:1.5;opacity:.85}
+.val-dati{background:var(--mute-soft);border:1px solid var(--hair);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:6px}
+.val-dati p{margin:0;font-size:13.5px}
+.val-dati p span{color:var(--ink2);font-size:12.5px}
 .val-link{color:var(--accent);font-weight:600;font-size:13px;text-align:left;justify-self:start}
 .val-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .val-lista li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-top:1px solid var(--hair);font-size:13px}
@@ -1359,8 +1364,60 @@ function valMedianaPesata(xs) {
   return s.length ? s[s.length - 1].p : 0;
 }
 
-function valuta(auto, annunci, cfg, ripristino) {
+/* ---------- dati pubblicati dall'agente del PC: le nostre vendite (cifrate) e il mercato letto di notte ---------- */
+const valMarca = s => valNorm(s).replace(/^vw$/, 'volkswagen').replace(/^mercedes$/, 'mercedesbenz');
+const valChiave = auto => [valMarca(auto.marca), valNorm(auto.modello), valAlim(auto.alimentazione)].join('|');
+const valAnni = (da, a) => (Date.parse(a + '-15') - Date.parse(da + '-15')) / (365.25 * 864e5);
+
+// Le nostre vendite simili (agente/valutatore-dati.js): righe [marca, modello, alimentazione, imm, km, prezzo, primo, giorni,
+// pren, versione]. Stessa marca, modello e carburante, eta' alla vendita entro 1 anno e mezzo da quella di oggi.
+// Ogni prezzo e' riportato all'auto da valutare: circa 5% per ogni anno di eta' (come nei prezzi consigliati, al massimo
+// +-10%) e 3% ogni 10.000 km (come per gli annunci, al massimo +-20%).
+function nostreVendite(auto, vendite, oggi) {
+  if (!auto || !auto.anno || !Array.isArray(vendite)) return { n: 0, simili: [] };
+  const marca = valMarca(auto.marca), modello = valNorm(auto.modello), alim = valAlim(auto.alimentazione);
+  const etaOggi = valAnni(auto.anno + '-07', String(oggi || new Date().toISOString()).slice(0, 7));
+  const el = vendite.filter(v => v && valMarca(v[0]) === marca && valNorm(v[1]) === modello && (!alim || valAlim(v[2] === 'Plug-in' ? 'Ibrida' : v[2]) === alim))
+    .map(v => {
+      const eta = valAnni(v[3], v[8]), d = eta - etaOggi;
+      const fEta = Math.max(-0.1, Math.min(0.1, 0.05 * d));
+      const fKm = auto.km && v[4] ? Math.max(-0.2, Math.min(0.2, 0.03 * (v[4] - auto.km) / 10000)) : 0;
+      let peso = Math.pow(0.5, Math.abs(d));
+      if (auto.km && v[4]) peso *= Math.pow(0.5, Math.abs(v[4] - auto.km) / 30000);
+      return { anno: +String(v[3]).slice(0, 4), km: v[4], prezzo: v[5], primo: v[6], giorni: v[7], pren: v[8], versione: v[9], d, pc: v[5] * (1 + fEta) * (1 + fKm), peso };
+    }).filter(v => Math.abs(v.d) <= 1.5);
+  if (!el.length) return { n: 0, simili: [] };
+  const gg = el.map(v => v.giorni).filter(g => g != null);
+  return { n: el.length, prezzo: valMedianaPesata(el.map(v => ({ p: v.pc, w: v.peso }))), giorni: gg.length ? Math.round(valMediana(gg)) : null, simili: el };
+}
+
+// Mercato letto di notte (agente/valutatore-mercato.js) per l'anno dell'auto e i due vicini: gli annunci di Subito (che il
+// servizio Google non vede) nella stessa forma degli altri, quante auto sono in vendita su AutoScout e come va il prezzo.
+function mercatoNotte(auto, mercato) {
+  const m = mercato && mercato.modelli && auto && auto.anno ? mercato.modelli[valChiave(auto)] : null;
+  if (!m) return null;
+  const anni = [auto.anno - 1, auto.anno, auto.anno + 1].filter(a => m[a]);
+  if (!anni.length) return null;
+  const annunci = [];
+  anni.forEach(a => (m[a].su || []).forEach((x, i) => annunci.push({
+    portale: 'subito', id: `sun:${a}:${i}`, url: '', titolo: `${auto.marca} ${x[1] || x[0]}`, marca: auto.marca, modello: x[0], versione: x[1],
+    alimentazione: auto.alimentazione, anno: x[2], km: x[3], prezzo: x[4], venditore: x[5] ? 'concessionario' : 'privato', citta: '', giorni: x[6], notte: m[a].suGiorno
+  })));
+  // prezzo mediano dell'anno dell'auto (o del piu' vicino) oggi e un mese fa: ultimi 7 giorni contro 28-42 giorni fa
+  const s = (m[auto.anno] || m[anni[0]]).storia || [];
+  let andamento = null;
+  if (s.length) {
+    const ult = s[s.length - 1][0], giorni = d => (Date.parse(ult) - Date.parse(d)) / 864e5;
+    const ora = s.filter(x => giorni(x[0]) <= 7).map(x => x[1]), prima = s.filter(x => giorni(x[0]) >= 28 && giorni(x[0]) <= 42).map(x => x[1]);
+    if (ora.length && prima.length) andamento = valMediana(ora) / valMediana(prima) - 1;
+  }
+  const tot = anni.reduce((t, a) => t + (m[a].totAS || 0), 0);
+  return { annunci, totAS: tot || null, andamento, giorno: mercato.giorno };
+}
+
+function valuta(auto, annunci, cfg, ripristino, extra) {
   if (!auto.anno) return { ok: false, n: 0, motivo: "Manca l'anno di immatricolazione: senza non do un valore (toccalo in \"Ho capito così\")" };
+  extra = extra || {};
   const el = simili(auto, annunci).map(a => Object.assign(a, { pc: valCorretto(a, auto.km) }));
   const med = el.length ? valMediana(el.map(a => a.pc)) : 0;
   const buoni = el.filter(a => a.pc >= med * 0.5 && a.pc <= med * 1.6);
@@ -1371,8 +1428,12 @@ function valuta(auto, annunci, cfg, ripristino) {
   const cento = x => Math.round(x / 100) * 100, cinquanta = x => Math.floor(x / 50) * 50;
   const mercato = cento(valMedianaPesata(buoni.map(a => ({ p: a.pc, w: a.peso }))));
   const conc = buoni.filter(a => a.venditore === 'concessionario');
-  const rivenditaStimata = conc.length < 3;
-  const rivendita = rivenditaStimata ? cento(mercato * 1.08) : cento(valMedianaPesata(conc.map(a => ({ p: a.pc, w: a.peso }))));
+  // rivendita: dalle nostre vendite simili se sono almeno 3 (prezzo vero alla prenotazione), altrimenti dagli annunci dei
+  // concessionari, e se anche quelli sono pochi dal mercato +8%
+  const nostre = nostreVendite(auto, extra.vendite, extra.oggi);
+  const daNostre = nostre.n >= 3;
+  const rivenditaStimata = !daNostre && conc.length < 3;
+  const rivendita = daNostre ? cento(nostre.prezzo) : rivenditaStimata ? cento(mercato * 1.08) : cento(valMedianaPesata(conc.map(a => ({ p: a.pc, w: a.peso }))));
   const rip = ripristino == null || ripristino === '' || isNaN(ripristino) ? cfg.ripristino : Number(ripristino);
   const mN = margine(rivendita, cfg.nostro), mC = margine(mercato, cfg.commerciante);
   const teniamo = { offerta: cinquanta(rivendita - rip - cfg.passaggio - mN), margine: mN };
@@ -1388,9 +1449,11 @@ function valuta(auto, annunci, cfg, ripristino) {
     scarto ? (conviene === 'teniamo' ? `Conviene tenerla: puoi offrire ${valEuro(scarto)} in più al cliente.` : `Conviene darla al commerciante: puoi offrire ${valEuro(scarto)} in più al cliente.`) : 'Le due strade si equivalgono.'
   ];
   if (rivenditaStimata) note.splice(2, 0, 'Pochi annunci di concessionari: rivendita stimata dal mercato +8%.');
+  if (daNostre) note.splice(2, 0, `Rivendita dalle nostre ${nostre.n} vendite simili degli ultimi 2 anni: prezzo alla prenotazione, adeguato ad anno e km.${nostre.giorni != null ? ` Prenotate in media ${nostre.giorni} giorni dopo il primo prezzo.` : ''}`);
+  else if (nostre.n) note.splice(2, 0, `Solo ${nostre.n === 1 ? '1 vendita simile' : nostre.n + ' vendite simili'} da noi negli ultimi 2 anni: troppo poche per la rivendita, uso gli annunci.`);
   if (!auto.km) note.splice(1, 0, 'Mancano i km: il valore non tiene conto dei chilometri, è meno preciso. Aggiungili in "Ho capito così".');
   if (!valAlim(auto.alimentazione)) note.splice(1, 0, 'Manca il carburante: sto mescolando benzina, diesel, GPL e gli altri. Aggiungilo in "Ho capito così".');
-  return { ok: true, n, qualita, perPortale, simili: buoni, mercato, rivendita, rivenditaStimata, ripristino: rip, teniamo, commerciante, conviene, scarto, note };
+  return { ok: true, n, qualita, perPortale, simili: buoni, mercato, rivendita, rivenditaStimata, daNostre, nostre, ripristino: rip, teniamo, commerciante, conviene, scarto, note };
 }
 
 /* ---------- valutatore permute: la schermata (scheda auto, scheda Permute, pagina a se') ---------- */
@@ -1403,9 +1466,31 @@ const valKm = n => valEuro(n).replace(' €', ' km');
 // gli annunci salvati arrivano dal servizio, che chiunque abbia il link puo' riempire: link solo verso i tre portali
 const valLink = u => /^https:\/\/(www\.)?(autoscout24\.it|subito\.it|automobile\.it)\//.test(String(u || '')) ? u : '';
 const valNum = n => Number(n) || 0;
+const valGiorno = iso => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '';
+
+// dati che l'agente del PC pubblica accanto all'app: le nostre vendite (compresse e cifrate con la chiave dei nomi clienti,
+// agente/valutatore-dati.js) e il mercato letto ogni giorno (agente/valutatore-mercato.js). Se mancano si va avanti senza.
+let VAL_DATI = null;
+async function valVendite() {
+  let k = null;
+  try { k = localStorage.getItem('su.chiaveClienti'); } catch (e) {}
+  if (!k || !window.crypto || !crypto.subtle || typeof DecompressionStream === 'undefined') return null;
+  const r = await fetch('data/valutatore-vendite.json?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) return null;
+  const j = await r.json(), b = s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0));
+  const key = await crypto.subtle.importKey('raw', b(k), 'AES-GCM', false, ['decrypt']), x = b(j.x);
+  const testo = new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: x.slice(0, 12) }, key, x.slice(12)));
+  return JSON.parse(await new Response(new Blob([b(testo)]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+}
+async function valMercato() {
+  const r = await fetch('data/valutatore-mercato.json?t=' + Date.now(), { cache: 'no-store' });
+  return r.ok ? r.json() : null;
+}
+const valDati = () => VAL_DATI || (VAL_DATI = Promise.all([valVendite().catch(() => null), valMercato().catch(() => null)]).then(([vendite, mercato]) => ({ vendite, mercato })));
 
 function montaValutatore(el, opz) {
-  const st = { frase: '', auto: null, mancano: [], annunci: [], venduti: [], portali: {}, cfg: null, rip: null, et: { giallo: '', blu: '' }, targa: '', id: null, r: null, lista: false };
+  const st = { frase: '', auto: null, mancano: [], annunci: [], venduti: [], portali: {}, cfg: null, rip: null, et: { giallo: '', blu: '' }, targa: '', id: null, r: null, lista: false, vendite: null, mercato: null, notte: null, nostre: null };
+  valDati().then(d => { st.vendite = d.vendite; st.mercato = d.mercato; });
   el.innerHTML = `<div class="val">
     <form class="val-in"><input type="text" placeholder="Es. Clio GPL Energy 120000 km del 2013" enterkeyhint="search" autocomplete="off" aria-label="Auto da valutare"><button class="btn btn-primary">Valuta</button></form>
     <div class="val-out" aria-live="polite"></div>
@@ -1426,13 +1511,20 @@ function montaValutatore(el, opz) {
   async function valutaOra(auto) {
     attesa('Leggo AutoScout, Subito e Automobile.it…');
     try {
-      const j = await chiama('valuta', auto ? { auto, frase: st.frase } : { frase: st.frase });
-      Object.assign(st, { auto: j.auto, mancano: j.mancano || [], annunci: j.annunci || [], venduti: j.venduti || [], portali: j.portali || {}, cfg: j.cfg, id: null, lista: false });
+      const [j, d] = await Promise.all([chiama('valuta', auto ? { auto, frase: st.frase } : { frase: st.frase }), valDati()]);
+      Object.assign(st, { auto: j.auto, mancano: j.mancano || [], annunci: j.annunci || [], venduti: j.venduti || [], portali: j.portali || {}, cfg: j.cfg, id: null, lista: false, vendite: d.vendite, mercato: d.mercato });
+      // Subito blocca il servizio Google: se non ha risposto uso gli annunci letti dal PC per lo stesso modello e anni vicini
+      st.notte = mercatoNotte(st.auto, st.mercato);
+      if (st.notte && st.notte.annunci.length && !(st.portali.subito > 0)) { st.annunci = st.annunci.concat(st.notte.annunci); st.portali = Object.assign({}, st.portali, { subito: 'pc' }); }
       if (!st.cfg) return errore('Margini non ancora impostati: aprili da "Margini" con la chiave di Giuseppe.');
       calcola(); disegna();
     } catch (e) { errore(e.message || 'Il servizio non risponde, riprova.'); }
   }
-  const calcola = () => { st.r = valuta(st.auto, st.annunci, st.cfg, st.rip); };
+  const calcola = () => {
+    const extra = { vendite: st.vendite && st.vendite.vendite, oggi: new Date().toISOString() };
+    st.nostre = nostreVendite(st.auto, extra.vendite, extra.oggi);
+    st.r = valuta(st.auto, st.annunci, st.cfg, st.rip, extra);
+  };
 
   function chips() {
     const a = st.auto, voci = [['marca', a.marca], ['modello', a.serie && valNorm(a.serie).includes(valNorm(a.modello)) ? a.serie : [a.modello, a.serie].filter(Boolean).join(' ')], ['versione', a.versione], ['alimentazione', a.alimentazione], ['anno', a.anno || ''], ['km', a.km ? valKm(a.km) : '']];
@@ -1442,7 +1534,7 @@ function montaValutatore(el, opz) {
 
   function fonti() {
     const r = st.r, ps = Object.keys(VAL_PORTALI);
-    const conti = ps.filter(p => r.perPortale && r.perPortale[p]).map(p => `${VAL_PORTALI[p]} ${r.perPortale[p]}`).join(' · ');
+    const conti = ps.filter(p => r.perPortale && r.perPortale[p]).map(p => `${VAL_PORTALI[p]} ${r.perPortale[p]}${p === 'subito' && st.portali.subito === 'pc' && st.notte ? ` (letti il ${valGiorno(st.notte.giorno)})` : ''}`).join(' · ');
     const giu = ps.filter(p => st.portali[p] === 'errore').map(p => VAL_PORTALI[p]);
     return `da ${r.n} auto simili in vendita${r.qualita ? ` · confronto ${r.qualita}` : ''}${conti ? ' · ' + conti : ''}${giu.length ? ` · <span class="val-warn">${giu.join(' e ')} non ${giu.length > 1 ? 'hanno' : 'ha'} risposto</span>` : ''}`;
   }
@@ -1469,26 +1561,39 @@ function montaValutatore(el, opz) {
       <button type="button" class="btn btn-ghost btn-sm" data-v="eurotax">Apri Eurotax</button></div>`;
   }
 
+  // le nostre vendite simili e il mercato degli ultimi giorni (dati dell'agente del PC)
+  function dati() {
+    const n = st.nostre, m = st.notte, righe = [];
+    if (n && n.n) righe.push(`<p><b>${n.n === 1 ? '1 vendita simile' : n.n + ' vendite simili'} da noi</b> negli ultimi 2 anni · ${valEuro(Math.round(n.prezzo / 50) * 50)} riportato a quest'auto${n.giorni != null ? ` · prenotate in media ${n.giorni} giorni dopo il primo prezzo` : ''}<br><span>Prezzo veicolo alla prenotazione, adeguato ad anno e km${n.n < 3 ? ': sotto le 3 vendite non lo uso per la rivendita' : ''}.</span></p>`);
+    else if (st.vendite) righe.push('<p>Nessuna vendita simile da noi negli ultimi 2 anni.</p>');
+    if (m && m.totAS) righe.push(`<p><b>${m.totAS} in vendita su AutoScout</b> per l'anno ${st.auto.anno} e quelli vicini<span> · contate il ${valGiorno(m.giorno)}</span></p>`);
+    if (m && m.andamento != null) righe.push(`<p><b>${Math.abs(m.andamento) < 0.02 ? 'Prezzi stabili' : m.andamento > 0 ? 'Prezzi in salita' : 'Prezzi in calo'}</b> nell'ultimo mese${Math.abs(m.andamento) < 0.02 ? '' : ` (${m.andamento > 0 ? '+' : '−'}${Math.round(Math.abs(m.andamento) * 100)}%)`}<span> · prezzo mediano degli annunci di AutoScout e Subito</span></p>`);
+    return righe.length ? `<div class="val-dati"><div class="val-lab">Da noi e sul mercato</div>${righe.join('')}</div>` : '';
+  }
+
   function grafico() {
     const pts = (st.r.simili || st.annunci).filter(a => a.km && a.prezzo);
     const vend = simili(st.auto, st.venduti).filter(a => a.km && a.prezzo);
-    const tutti = pts.concat(vend);
+    // delle nostre vendite solo le 25 piu' vicine per eta' e km, se no coprono gli annunci
+    const nos = ((st.nostre && st.nostre.simili) || []).filter(a => a.km && a.prezzo).sort((a, b) => b.peso - a.peso).slice(0, 25);
+    const tutti = pts.concat(vend, nos);
     if (tutti.length < 2) return '';
     const W = 340, H = 170, L = 38, B = 22, T = 8, R = 8;
     const kms = tutti.map(a => a.km).concat(st.auto.km ? [st.auto.km] : []), ps = tutti.map(a => a.prezzo);
     const dk = (Math.max(...kms) - Math.min(...kms)) * 0.04 || 1000, dp = (Math.max(...ps) - Math.min(...ps)) * 0.08 || 200;
-    const k0 = Math.min(...kms) - dk, k1 = Math.max(...kms) + dk, p0 = Math.min(...ps) - dp, p1 = Math.max(...ps) + dp;
+    const k0 = Math.max(0, Math.min(...kms) - dk), k1 = Math.max(...kms) + dk, p0 = Math.min(...ps) - dp, p1 = Math.max(...ps) + dp;
     const x = k => L + (k1 > k0 ? (k - k0) / (k1 - k0) : 0.5) * (W - L - R), y = p => T + (p1 > p0 ? 1 - (p - p0) / (p1 - p0) : 0.5) * (H - T - B);
     const tua = st.auto.km ? `<rect x="${x(st.auto.km * 0.9)}" y="${T}" width="${Math.max(2, x(st.auto.km * 1.1) - x(st.auto.km * 0.9))}" height="${H - T - B}" class="val-fascia"/><line x1="${x(st.auto.km)}" x2="${x(st.auto.km)}" y1="${T}" y2="${H - B}" class="val-tua"/>` : '';
+    const quadro = a => `<rect x="${(x(a.km) - 4).toFixed(1)}" y="${(y(a.prezzo) - 4).toFixed(1)}" width="8" height="8" rx="1.5" class="val-nos"><title>Venduta da noi · ${valEuro(a.prezzo)} · ${valKm(a.km)} · ${a.anno} · prenotata ${valEsc(String(a.pren).slice(5, 7) + '/' + String(a.pren).slice(0, 4))}</title></rect>`;
     const punto = (a, v) => `<circle cx="${x(a.km).toFixed(1)}" cy="${y(a.prezzo).toFixed(1)}" r="${v ? 5.5 : 3.6}" ${v ? `fill="none" stroke="${VAL_COLORI[a.portale]}" stroke-width="2"` : `fill="${VAL_COLORI[a.portale]}"`}><title>${valEsc(a.titolo)} · ${valEuro(a.prezzo)} · ${valKm(a.km)}${v ? ' · annuncio non più presente' : ''}</title></circle>`;
     return `<div class="val-graf"><div class="val-lab">Le auto simili, per km e prezzo</div>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafico km e prezzo delle auto simili">
         <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" class="val-asse"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" class="val-asse"/>
         <text x="${L}" y="${H - 6}" class="val-t">${valKm(k0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end" class="val-t">${valKm(k1)}</text>
         <text x="${L - 4}" y="${T + 8}" text-anchor="end" class="val-t">${Math.round(p1 / 1000)}k</text><text x="${L - 4}" y="${H - B}" text-anchor="end" class="val-t">${Math.round(p0 / 1000)}k</text>
-        ${tua}${pts.map(a => punto(a, false)).join('')}${vend.map(a => punto(a, true)).join('')}
+        ${tua}${pts.map(a => punto(a, false)).join('')}${vend.map(a => punto(a, true)).join('')}${nos.map(quadro).join('')}
       </svg>
-      <div class="val-leg">${Object.keys(VAL_PORTALI).map(p => `<span><i style="background:${VAL_COLORI[p]}"></i>${VAL_PORTALI[p]}</span>`).join('')}<span><i class="anello"></i>${vend.length ? 'annunci non più presenti (di solito vendute)' : 'annunci non più presenti: compaiono rifacendo la stessa ricerca nei prossimi giorni'}</span></div></div>`;
+      <div class="val-leg">${Object.keys(VAL_PORTALI).map(p => `<span><i style="background:${VAL_COLORI[p]}"></i>${VAL_PORTALI[p]}</span>`).join('')}${nos.length ? `<span><i class="quadro"></i>vendute da noi${st.nostre.n > nos.length ? ` (le ${nos.length} più vicine)` : ''}</span>` : ''}<span><i class="anello"></i>${vend.length ? 'annunci non più presenti (di solito vendute)' : 'annunci non più presenti: compaiono rifacendo la stessa ricerca nei prossimi giorni'}</span></div></div>`;
   }
 
   function elenco() {
@@ -1504,7 +1609,7 @@ function montaValutatore(el, opz) {
       ${r.ok ? `<div class="val-big"><div class="val-lab">Valore di mercato</div><div class="val-valore">${valEuro(r.mercato)}</div><div class="val-fonti">${fonti()}</div></div>` : `<div class="val-big"><div class="val-fonti">${fonti()}</div></div>`}
       <div class="val-note"><div class="val-lab">Note</div><div class="val-note-testo">${note()}</div>
         <label class="val-riga">Ripristino <input type="number" inputmode="numeric" class="val-rip" value="${st.rip == null ? '' : valEsc(st.rip)}" placeholder="${st.cfg.ripristino} (standard)"> €</label></div>
-      ${eurotax()}${grafico()}<div class="val-el">${elenco()}</div>
+      ${dati()}${eurotax()}${grafico()}<div class="val-el">${elenco()}</div>
       <div class="val-salva"><input type="text" class="val-targa" maxlength="10" placeholder="Targa (facoltativa)" value="${valEsc(st.targa)}"><button type="button" class="btn btn-ghost btn-sm" data-v="salva">${st.id ? 'Aggiorna' : 'Salva'}</button></div>`;
   }
 
@@ -1564,9 +1669,10 @@ function montaValutatore(el, opz) {
   async function apri(id) {
     attesa('Apro la valutazione…'); extra.innerHTML = '';
     try {
-      const j = await chiama('apri', { id });
+      const [j, d] = await Promise.all([chiama('apri', { id }), valDati()]);
       if (!st.cfg) st.cfg = (await chiama('margini', {})).cfg;
-      Object.assign(st, { id: j.id, frase: j.frase, targa: j.targa || '', auto: j.auto, annunci: j.annunci || [], venduti: j.venduti || [], portali: {}, et: j.eurotax || { giallo: '', blu: '' }, rip: j.ripristino == null ? null : j.ripristino, lista: false });
+      Object.assign(st, { id: j.id, frase: j.frase, targa: j.targa || '', auto: j.auto, annunci: j.annunci || [], venduti: j.venduti || [], portali: {}, et: j.eurotax || { giallo: '', blu: '' }, rip: j.ripristino == null ? null : j.ripristino, lista: false, vendite: d.vendite, mercato: d.mercato });
+      st.notte = mercatoNotte(st.auto, st.mercato);
       q('.val-in input').value = j.frase;
       calcola(); disegna();
     } catch (e) { errore(e.message); }

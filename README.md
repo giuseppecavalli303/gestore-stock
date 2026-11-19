@@ -17,7 +17,9 @@ Chi lavora al progetto con un assistente (Claude, ChatGPT o altri) legga prima [
 - Km 0, prezzo speciale (campo "prezzo speciale" della stampa), cartello salone in PDF al clic
 - vista **Statistiche** e scheda **Storico** con grafici dal 2022 (solo numeri aggregati)
 - modalità cliente (`cliente.html`): preventivo senza dati interni; simulazioni di finanziamento sempre con TAN, TAEG e "simulazione indicativa, non vincolante"
-- simulatore finanziamenti (`simulatore.html`, tassi allineati al simulatore della casa: PVV G56, Multimake 11,49% MMPCP28) e valutatore permute (`valutatore.html`, servizio Google in `assistente/`; margini solo nella proprietà VAL_CONFIG, mai nel repo)
+- simulatore finanziamenti (`simulatore.html`, tassi allineati al simulatore della casa: PVV G56, Multimake 11,49% MMPCP28) e valutatore permute (`valutatore.html`, servizio Google in `assistente/`; margini solo nella proprietà VAL_CONFIG, mai nel repo). Oltre agli annunci letti al momento, il valutatore usa:
+  - le **nostre vendite** degli ultimi 2 anni (`data/valutatore-vendite.json`, compresse e cifrate con la chiave dei nomi clienti, quindi solo sui telefoni che hanno aperto il link con la chiave): con almeno 3 vendite simili la rivendita "se la teniamo" viene dal nostro prezzo alla prenotazione, adeguato ad anno e km (5% all'anno, 3% ogni 10.000 km);
+  - il **mercato letto dal PC** ogni giorno (`data/valutatore-mercato.json`): annunci di Subito (che dal servizio Google non si leggono), auto in vendita su AutoScout e andamento del prezzo nell'ultimo mese, per i modelli che entrano di più
 - link diretti: `…/#TARGA` apre un'auto, `…/?q=golf diesel` apre una ricerca, `…/#statistiche` le statistiche
 - Excel della lista filtrata
 
@@ -26,9 +28,10 @@ Chi lavora al progetto con un assistente (Claude, ChatGPT o altri) legga prima [
 Un'operazione pianificata di Windows lancia `agente\avvia-nascosto.vbs` ogni 10 minuti dalle 8 alle 20. Lo script `agente\aggiorna-stock.ps1`:
 
 1. legge in Outlook le richieste di avviso dei colleghi (oggetto `AVVISO STOCK: la ricerca`, per fermarle `STOP AVVISO`)
-2. quando arriva la stampa da Muschitiello o Quartieri: copia il PDF nell'archivio su Drive, scarica gli annunci del sito, converte il PDF (solo se i conteggi tornano con il report; i nomi dei clienti viaggiano cifrati), conferma telecamera/tetto dalle foto, legge i codici modello e il cambio dai listini VW, aggiorna lo storico e lo storico lungo, calcola i prezzi barrati delle promo, pubblica
+2. quando arriva la stampa da Muschitiello o Quartieri: copia il PDF nell'archivio su Drive, scarica gli annunci del sito, converte il PDF (solo se i conteggi tornano con il report; i nomi dei clienti viaggiano cifrati), conferma telecamera/tetto dalle foto, legge i codici modello e il cambio dai listini VW, aggiorna lo storico e lo storico lungo, prepara le nostre vendite cifrate per il valutatore (`agente/valutatore-dati.js`), calcola i prezzi barrati delle promo, pubblica
 3. con la stampa pubblicata manda le mail della giornata (una volta sola per tipo, stato in `agente/stato.json`): riepilogo e avvisi ai colleghi, mail promo senza sconto, **controllo prezzi** a Giuseppe (solo se ci sono totali che non tornano, prezzi diversi dal sito o libere senza prezzo), presentazione giornaliera per Giuseppe (il lunedì anche la settimanale), rapporto mensile sui venditori solo a Giuseppe
 4. ogni 6 ore riallinea foto e annunci dal sito e il giudizio di AutoScout
+4b. una volta al giorno dalle 14 legge AutoScout e Subito per i 25 modelli che entrano di più, anno per anno (`agente/valutatore-mercato.js`, circa 8 minuti, una pagina alla volta) e pubblica il mercato per il valutatore
 5. dalle 13, se la stampa del giorno non è arrivata, avvisa una volta
 6. a ogni giro aggiorna la **copia di sicurezza su Google Drive** (`agente\backup-drive.ps1`, cartella `Il mio Drive\lavoro\Gestore stock - copia di sicurezza`): tutti i file, anche quelli riservati che non vanno nel repo, la storia git in un unico file `repo-git.bundle` e le note dell'assistente. Copia solo quello che cambia e non cancella mai niente. Restano fuori `node_modules` e `video\out`, che si possono rigenerare.
 
@@ -75,6 +78,7 @@ Elenchi, controlli e rapporti si consegnano sempre in **PDF** (`agente/stampa-pd
 - `agente/`: agente, conversione, annunci, abbinamento, storico, posta, rapporti, prove automatiche (`test.js`, `prova-*.js`)
 - `data/`: stock pubblicato, giorno precedente, storico, storico lungo (aggregati), annunci del sito, promo
 - `assistente/`: servizio Google Apps Script del valutatore permute
+- `data/valutatore-vendite.json` (cifrato) e `data/valutatore-mercato.json`: dati del valutatore preparati dall'agente
 - `cartelli/`: moduli vuoti dei cartelli salone
 
 ## Attenzione

@@ -60,6 +60,10 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
 ## Diario delle novità
 
 - **19/11/2026:**
+  - valutatore permute più vicino ad Autorola, senza toccare il servizio Google:
+    - le nostre vendite degli ultimi 2 anni entrano nel valutatore (`agente/valutatore-dati.js` → `data/valutatore-vendite.json`). Sono compresse e cifrate con la chiave dei nomi clienti; niente targhe, venditori o costi; da CROSS solo il rapporto medio di incasso. Con almeno 3 vendite simili (stessa marca, modello e carburante, età alla vendita entro 1 anno e mezzo) la rivendita "se la teniamo" viene dal nostro prezzo veicolo alla prenotazione, adeguato ad anno e km. I giorni di vendita si contano dal primo prezzo, non dall'ingresso;
+    - il mercato letto dal PC una volta al giorno dalle 14 (`agente/valutatore-mercato.js` → `data/valutatore-mercato.json`): 25 modelli più entrati, fino a 5 anni ciascuno, AutoScout e Subito. Il valutatore aggiunge gli annunci di Subito quando il servizio Google non li legge e mostra le auto in vendita e il prezzo dell'ultimo mese (serve almeno un mese di dati);
+    - Automobile.it risponde 404 per i modelli con il trattino (T-Roc, T-Cross): va sistemato l'indirizzo nel servizio Google (`urlPortali` in `assistente/Valutatore.gs`).
   - prezzi consigliati: prima pagina con il grafico delle auto da prezzare per prime. Sono "pronte" quelle con fattura di carrozzeria in CROSS o con prezzo speciale; oltre i 45 giorni in casa (campo `giorni` della stampa) l'auto comincia a essere un problema. La tabella è divisa in tre gruppi, ognuno dalla più vecchia.
   - cartelli da cambiare solo per Prenestina e Tuscolana: lì il cartello va anche sulle auto fuori dal salone (piazzale esterno a Prenestina, secondo piano a Tuscolana). A Tiburtina c'è solo sulle poche auto del salone e lo curano i venditori, quindi la sede non è più nell'elenco (nemmeno i depositi Tiburtina 2 e 1128).
 - **18/11/2026:**
