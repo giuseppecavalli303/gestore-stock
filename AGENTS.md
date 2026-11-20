@@ -49,7 +49,7 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
   - nell'accordo di ritiro non premere "Eseguire", perché accanto c'è l'azione "Cancella".
 - Nell'elenco pratiche le colonne dei prezzi di acquisto escono "*" per l'utenza di Giuseppe: i dati si leggono pratica per pratica.
 - **Riportare in primo piano CROSS:** non usare l'avvio dell'app (nge/xstart), perché apre una seconda istanza che dà "C2 Client Initialization Error": portare in primo piano la finestra del processo `nge` già aperto. Se il server CROSS è stato aggiornato, al primo comando chiede di chiudere e rientrare: il login lo fa Giuseppe. Il PC si blocca quando Giuseppe chiude TeamViewer: va sbloccato e lasciato collegato durante il lavoro.
-- **Vendite di un venditore con i dati dei clienti:** F8, scheda "Prop.d'acq.": "Prop.d'acq. esistente" = Sì, stato firmato e concluso, data prop. d'acq. "da", venditore dal tasto "…". Le colonne del cliente sono "CL della prop.d'acq. - …" (Intest.riga1, Contatto 1 e 2 = telefono ed email). La colonna "Acquirente" è chi ha comprato l'auto per lo stock, non il venditore. Le vendite dei primi mesi (2022) sono spesso registrate con un altro venditore: si ritrovano per targa dalle stampe (campo `vend`). Lo script che fa l'elenco resta locale.
+- **Vendite di un venditore con i dati dei clienti:** F8, scheda "Prop.d'acq.": "Prop.d'acq. esistente" = Sì, stato firmato e concluso, data prop. d'acq. "da", venditore dal tasto "…". Le colonne del cliente sono "CL della prop.d'acq. - …" (Intest.riga1, Contatto 1 e 2 = telefono ed email). La colonna "Acquirente" è chi ha comprato l'auto per lo stock, non il venditore: il venditore è la colonna "Venditore da prop.d'acq.". Un venditore può avere più codici (i vecchi sono "-- CANCELLATO --"), quindi si raggruppa per nome. Le poche vendite registrate con un altro venditore si ritrovano per targa dalle stampe (campo `vend`). Lo script che fa l'elenco resta locale.
 - **Prezzi di vendita veri:** il "PV-lordo" invece si vede. F8, nei criteri lasciare solo lo stato "Concluso" e una data di consegna "da"; OK, "Leggere tutto"; da "Configuraz." aggiungere Targa e Data consegna e premere "Applicare" (non "Salvare la selezione"); "Esport.". Il file va copiato in `agente/cross-vendute.txt` (escluso dal repo) e lo usa `prezzi-consigliati.js`. Il PV-lordo è il prezzo veicolo senza passaggio; valori fuori dal 70-110% del prezzo esposto sono errori di registrazione.
 
 ## Come si lavora
@@ -61,7 +61,7 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
 
 ## Diario delle novità
 
-- **20/11/2026:** elenco dei clienti di Giuseppe dal 2022 (PDF ed Excel, raggruppato per cliente) da CROSS e dalle stampe; resta sul PC e nella sua cartella privata di Drive, mai nel repo.
+- **20/11/2026:** elenchi dei clienti di Giuseppe e di ogni venditore dal 2022 (PDF ed Excel, raggruppati per cliente) da CROSS e dalle stampe; restano sul PC e nella cartella privata di Drive di Giuseppe, mai nel repo né mandati ad altri.
 
 - **19/11/2026:**
   - valutatore permute più vicino ad Autorola, senza toccare il servizio Google:
