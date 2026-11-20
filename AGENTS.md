@@ -61,7 +61,7 @@ Giuseppe Cavalli, venditore dell'usato da Valentino Automobili (Roma). Scrive in
 
 ## Diario delle novità
 
-- **20/11/2026:** elenchi dei clienti di Giuseppe e di ogni venditore dal 2022 (PDF ed Excel, raggruppati per cliente) da CROSS e dalle stampe; restano sul PC e nella cartella privata di Drive di Giuseppe, mai nel repo né mandati ad altri.
+- **20/11/2026:** elenchi dei clienti di Giuseppe e dei colleghi di Tiburtina dal 2022 (`agente/clienti-venduti.js`, PDF ed Excel, raggruppati per cliente). I colleghi sono i destinatari della mail del riepilogo (Sfregola e Valentino esclusi); `--tutti` li fa per ogni venditore. Dati da CROSS (export in `agente/cross-clienti-tutte.txt`) e dalle stampe. Gli elenchi restano sul PC e nel Drive privato di Giuseppe, mai nel repo né mandati ad altri. Giuseppe vuole poi una lista broadcast WhatsApp con i suoi clienti, dopo aver tolto quelli con cui non è andata bene: le liste si creano solo dal telefono (massimo 256 contatti), si può preparare un file contatti da importare in rubrica.
 
 - **19/11/2026:**
   - valutatore permute più vicino ad Autorola, senza toccare il servizio Google:
