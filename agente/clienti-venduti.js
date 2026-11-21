@@ -52,7 +52,10 @@ function leggi() {
 }
 
 function nomeCliente(v) {
-  const n = v.intest.replace(/^(Sig\.ra|Sig\.|Sigg\.|Ditta|Spett\.le|Dott\.ssa|Dott\.|Avv\.|Ing\.)\s+/i, '').trim();
+  // solo nome e cognome: via i titoli davanti (Signor, Signora, Sig.ra, Ditta, Dott., Frau, Herr...), anche piu' di uno
+  const TITOLO = /^(Signora|Signorina|Signori|Signor|Sig\.ra|Sig\.na|Sigg\.|Sig\.?|Sgr\.|Ditta|Spett\.le|Spett\.|Dott\.ssa|Dott\.|Dr\.|Avv\.|Ing\.|Prof\.ssa|Prof\.|Frau|Herr|Firma|Mr\.?|Mrs\.?)\s+/i;
+  let n = v.intest.trim();
+  while (TITOLO.test(n)) n = n.replace(TITOLO, '').trim();
   return (n + (v.agg && !n.includes(v.agg) ? ' ' + v.agg : '')).replace(/\s+/g, ' ');
 }
 
