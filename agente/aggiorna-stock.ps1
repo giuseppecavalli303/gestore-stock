@@ -262,6 +262,15 @@ try {
         if ($mv.Codice -eq 0) { Pubblica 'Mercato per il valutatore permute aggiornato' | Out-Null }
     }
 
+    # 3c. ogni sera la lista clienti di Giuseppe: prenotazioni nuove dalla stampa, telefoni dall'ultima esportazione
+    # CROSS (presa da sola se in c:\cross2\temp\export.txt ce n'e' una nuova con le colonne giuste). Resta sul PC e
+    # nel suo Drive privato, non si pubblica e non si manda a nessuno.
+    if ($ora -ge 19 -and -not (GiaFatto 'clientiMiei')) {
+        SegnaStato 'clientiMiei' $oggi
+        $cm = Esegui 'node agente\clienti-venduti.js --mio --drive "G:\Il mio Drive\lavoro\Clienti venduti"'
+        Scrivi $cm.Testo
+    }
+
     # 4. stampa di oggi non ancora arrivata (domenica esclusa)
     if ($ora -ge $OraAllarme -and (Get-Date).DayOfWeek -ne 'Sunday' -and -not (GiaFatto 'allarme')) {
         $giorno = if (Test-Path (Join-Path $repo 'data\stock.json')) { (Get-Content (Join-Path $repo 'data\stock.json') -Raw -Encoding UTF8 | ConvertFrom-Json).meta.day } else { '' }
