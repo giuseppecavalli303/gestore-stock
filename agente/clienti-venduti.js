@@ -44,7 +44,16 @@ function leggi() {
     targa: col('Targa'), vend: col("Venditore da prop.d'acq."),
   };
   if (Object.values(c).some(i => i < 0)) throw new Error('cross-clienti-tutte.txt: mancano colonne, rifare l\'esportazione da CROSS');
+  // facoltative (servono al file contatti): cognome e nome separati, indirizzo
+  const o = {
+    cog: col("CL della prop.d'acq. - Cognome"), nom: col("CL della prop.d'acq. - Nome"), via: col("CL della prop.d'acq. - Strada"),
+    civ: col("CL della prop.d'acq. - Strada numero"), cap: col("CL della prop.d'acq. - C.A.P."),
+    loc: col("CL della prop.d'acq. - Località"), prov: col("CL della prop.d'acq. - Provincia"),
+  };
+  const f = (r, i) => (i >= 0 ? (r[i] || '').trim() : '');
   return L.slice(1).map(l => l.split(';')).map(r => ({
+    cognome: f(r, o.cog), nomeP: f(r, o.nom),
+    indirizzo: { via: [f(r, o.via), f(r, o.civ)].filter(Boolean).join(' '), cap: f(r, o.cap), loc: f(r, o.loc), prov: f(r, o.prov) },
     modello: r[c.mod].replace(/\s+/g, ' ').trim(), intest: r[c.int].trim(), agg: (r[c.agg] || '').trim(),
     contatti: [r[c.c1], r[c.c2]].map(s => (s || '').trim()).filter(Boolean),
     data: iso(r[c.data]), consegna: iso(r[c.cons]), targa: r[c.targa].trim(), vend: chiaveNome(r[c.vend]), vendNome: pulisci(r[c.vend]),
@@ -129,6 +138,9 @@ function prepara(righe, cache, chiave, stampe) {
     const n = nomeCliente(v);
     const k = n.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const c = clienti.get(k) || { nome: n, tel: new Set(), mail: new Set(), auto: [] };
+    if (!c.cognome && v.cognome) { c.cognome = v.cognome; c.nomeP = v.nomeP; }
+    const ind = v.indirizzo;
+    if (ind && (ind.via || ind.loc) && (!c.indData || v.data > c.indData)) { c.indirizzo = ind; c.indData = v.data; }
     const { tel, mail } = contatti(v, cognome);
     tel.forEach(x => c.tel.add(x)); mail.forEach(x => c.mail.add(x));
     c.auto.push(v);
@@ -180,6 +192,27 @@ function excelHtml(d) {
   <tr style="font-weight:700;background:#dde6f3"><td>Cliente</td><td>Telefono</td><td>Email</td><td>Auto comprate</td><td>Data acquisto</td><td>Data consegna</td><td>Modello</td><td>Targa</td><td>Nota</td></tr>${r}</table></body></html>`;
 }
 
+// File contatti per l'iPhone (vCard 3.0, UTF-8): nome e cognome, telefoni, email, indirizzo (quando l'esportazione
+// CROSS ha le colonne dell'indirizzo) e nelle note le auto comprate.
+function vcard(d) {
+  const e = x => String(x || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
+  const t = x => titolo(String(x || ''));
+  return d.clienti.map(c => {
+    const azienda = !c.nomeP && c.auto.some(a => /^(Ditta|Firma)\b/i.test(a.intest || ''));
+    const r = ['BEGIN:VCARD', 'VERSION:3.0'];
+    if (azienda) r.push('N:' + e(t(c.nome)) + ';;;;', 'FN:' + e(t(c.nome)), 'ORG:' + e(t(c.nome)));
+    else if (c.cognome) r.push(`N:${e(t(c.cognome))};${e(t(c.nomeP))};;;`, 'FN:' + e(t([c.nomeP, c.cognome].filter(Boolean).join(' '))));
+    else r.push('N:' + e(t(c.nome)) + ';;;;', 'FN:' + e(t(c.nome)));
+    c.tel.forEach(x => r.push('TEL;TYPE=CELL:' + x.replace(/[^\d+]/g, '')));
+    c.mail.forEach(x => r.push('EMAIL;TYPE=INTERNET:' + e(x)));
+    const a = c.indirizzo;
+    if (a && (a.via || a.loc)) r.push(`ADR;TYPE=HOME:;;${e(t(a.via))};${e(t(a.loc))};${e(a.prov.toUpperCase())};${e(a.cap)};Italia`);
+    r.push('NOTE:' + e('Cliente Valentino Automobili: ' + c.auto.map(x => `${x.modello} (${it(x.data)}${x.targa ? ', ' + x.targa : ''})`).join(' · ')));
+    r.push('CATEGORIES:Clienti Valentino', 'END:VCARD');
+    return r.join('\r\n');
+  }).join('\r\n') + '\r\n';
+}
+
 function salvaXlsx(coppie) {
   const lista = coppie.map(([h, x]) => `$l+=,@('${h.replace(/'/g, "''")}','${x.replace(/'/g, "''")}')`).join(';');
   const ps = `$l=@();${lista};$e=New-Object -ComObject Excel.Application;$e.DisplayAlerts=$false;$e.Visible=$false;try{foreach($c in $l){$w=$e.Workbooks.Open($c[0]);$s=$w.Worksheets.Item(1);$s.Name='Clienti';$s.UsedRange.Columns.AutoFit()|Out-Null;$s.Columns.Item(7).ColumnWidth=45;$s.UsedRange.AutoFilter()|Out-Null;$w.SaveAs($c[1],51);$w.Close($false)}}finally{$e.Quit();[void][Runtime.InteropServices.Marshal]::ReleaseComObject($e)}`;
@@ -227,6 +260,7 @@ async function main() {
       fs.unlinkSync(base + '.html');
       fs.writeFileSync(base + '-excel.html', excelHtml(d));
       excel.push([base + '-excel.html', base + '.xlsx']);
+      if (mio) fs.writeFileSync(base + '.vcf', vcard(d));
       const nAuto = d.clienti.reduce((s, c) => s + c.auto.length, 0);
       fatti.push(`${d.venditore}: ${d.clienti.length} clienti, ${nAuto} auto (${d.altre} con altro venditore in CROSS, ${d.nuove} nuove dalla stampa), ${d.senza.length} senza dati`);
     }
