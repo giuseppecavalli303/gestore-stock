@@ -78,8 +78,10 @@
   function setData(data, prev) {
     S.cars = data.cars; S.meta = data.meta; S.prev = prev || null;
     S.cars.forEach(c => { c.trazione = trazioneDi(c); });
-    S.cars.forEach(c => { c._h = deacc([c.targa, c.brand, c.family, c.modello, c.colore, c.ubic, c.vend, c.acq, c.note, c.section, c.stato, c.antic, c.web && c.web.carrozzeria].join(' ').toLowerCase()); });
+    S.cars.forEach(c => { c._h = deacc([c.targa, c.brand, c.family, c.modello, c.colore, c.ubic, c.vend, c.acq, c.note, c.section, c.stato, c.antic, c.web && c.web.carrozzeria, c.web && c.web.vin].join(' ').toLowerCase()); });
     S.vocab = buildVocab(S.cars);
+    // ultime 6 cifre del telaio (targa delle auto non targate, o telaio dall'annuncio): scritte da sole cercano l'auto
+    S.vocab.telai = new Set(S.cars.flatMap(c => [c.targa, c.web && c.web.vin].map(x => (/(\d{6})$/.exec(x || '') || [])[1]).filter(Boolean)));
     S.prevMap = null; S.gone = []; S.delta = null;
     if (prev && prev.cars && prev.meta.day !== data.meta.day) {
       const pm = new Map(prev.cars.map(c => [c.targa, c])), cur = new Set(S.cars.map(c => c.targa));

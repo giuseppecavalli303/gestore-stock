@@ -1106,6 +1106,8 @@ function parseQuery(raw, vocab) {
   const take = (re, fn) => { t = t.replace(re, (...a) => (fn(...a) === false ? a[0] : ' ')); };
   const put = (k, lo, hi) => { if (k === 'kw') { k = 'cv'; if (lo != null) lo = Math.round(lo * 1.36); if (hi != null) hi = Math.round(hi * 1.36); } setR(k, lo, hi); };
   const ctx = t;
+  // telaio intero: le auto non targate (estere, km0) in stampa hanno come targa le ultime 8 cifre del telaio
+  t = t.replace(/\b([a-hj-npr-z0-9]{17})\b/g, (m, v) => (/\d/.test(v) && /[a-z]/.test(v) ? ' ' + v.slice(-8) + ' ' : m));
   take(/\bkm ?0\b|\bkm ?zero\b|\bchilometri zero\b|\b0 ?km\b/g, () => { Q.km0 = true; });   // prima dei numeri: "km 0" non e' un limite di km
   take(new RegExp(`\\b(?:tra|fra)\\s+(?:i|gli|le)?\\s*(\\d+)\\s*${U}\\s*(?:e|ed)\\s+(?:i|gli|le)?\\s*(\\d+)\\s*${U}`, 'g'), (m, a, u1, b, u2) => { const k = unitKey(u2 || u1, +b, ctx); if (!k) return false; put(k, Math.min(+a, +b), Math.max(+a, +b)); });
   take(new RegExp(`(?:\\b(?:sotto|meno di|max|massimo|fino a|fino al|entro|non oltre|al massimo|prima del)|<=?)\\s*(?:i|gli|le|il|a)?\\s*(\\d+)\\s*${U}`, 'g'), (m, n, u) => { const k = unitKey(u, +n, ctx); if (!k) return false; put(k, null, /prima del/.test(m) ? +n - 1 : +n); });
@@ -1116,7 +1118,8 @@ function parseQuery(raw, vocab) {
   take(/\b(\d+)\s*(euro|eur)\b/g, (m, n) => { put('prezzo', null, +n); });
   take(/\b(19\d\d|20[0-3]\d)\b/g, (m, n) => { put('anno', +n, +n); });
   // una cifra da sola tra 3.000 e 300.000 e' un budget: "cliente con 18 mila"
-  take(/\b(\d{4,6})\b/g, (m, n) => { n = +n; if (n < 3000 || n > 300000) return false; put('prezzo', null, n); });
+  // ...ma se sono le ultime cifre di un telaio in stock si cerca l'auto
+  take(/\b(\d{4,6})\b/g, (m, n) => { if (n.length === 6 && vocab && vocab.telai && vocab.telai.has(n)) return false; n = +n; if (n < 3000 || n > 300000) return false; put('prezzo', null, n); });
 
   const kw = (re, fn) => { if (re.test(t)) { t = t.replace(re, ' '); fn(); } };
   kw(/\bnon (?:e |sono )?su autoscout|\bsenza autoscout|\bno autoscout|\bnon pubblicat\w*/g, () => { Q.as = false; });
@@ -1958,8 +1961,10 @@ function montaStoricoLungo(el, D) {
   function setData(data, prev) {
     S.cars = data.cars; S.meta = data.meta; S.prev = prev || null;
     S.cars.forEach(c => { c.trazione = trazioneDi(c); });
-    S.cars.forEach(c => { c._h = deacc([c.targa, c.brand, c.family, c.modello, c.colore, c.ubic, c.vend, c.acq, c.note, c.section, c.stato, c.antic, c.web && c.web.carrozzeria].join(' ').toLowerCase()); });
+    S.cars.forEach(c => { c._h = deacc([c.targa, c.brand, c.family, c.modello, c.colore, c.ubic, c.vend, c.acq, c.note, c.section, c.stato, c.antic, c.web && c.web.carrozzeria, c.web && c.web.vin].join(' ').toLowerCase()); });
     S.vocab = buildVocab(S.cars);
+    // ultime 6 cifre del telaio (targa delle auto non targate, o telaio dall'annuncio): scritte da sole cercano l'auto
+    S.vocab.telai = new Set(S.cars.flatMap(c => [c.targa, c.web && c.web.vin].map(x => (/(\d{6})$/.exec(x || '') || [])[1]).filter(Boolean)));
     S.prevMap = null; S.gone = []; S.delta = null;
     if (prev && prev.cars && prev.meta.day !== data.meta.day) {
       const pm = new Map(prev.cars.map(c => [c.targa, c])), cur = new Set(S.cars.map(c => c.targa));

@@ -8,7 +8,7 @@ Chi lavora al progetto con un assistente (Claude, ChatGPT o altri) legga prima [
 
 ## Cosa fa l'app
 
-- ricerca scritta a parole ("golf diesel automatica sotto 25000 libera a Tiburtina") e filtri completi
+- ricerca scritta a parole ("golf diesel automatica sotto 25000 libera a Tiburtina") e filtri completi; si cerca anche per telaio, intero o con le ultime cifre (le auto non targate, es. estere, in stampa hanno come targa le ultime 8 cifre del telaio; per le altre il telaio viene dall'annuncio del sito)
 - foto, link all'annuncio, giro a 360° e dati in più presi da valentinoautomobili.it (cambio, dotazioni, telecamera e tetto confermati dalle foto)
 - giorni in stock e giorni di pubblicazione su AutoScout, giudizio di AutoScout sul prezzo
 - scheda veicolo con la storia nelle stampe (cambi di prezzo e di stato) e testo pronto da mandare al cliente
