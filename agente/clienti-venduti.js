@@ -61,8 +61,8 @@ function leggi() {
 }
 
 function nomeCliente(v) {
-  // solo nome e cognome: via i titoli davanti (Signor, Signora, Sig.ra, Ditta, Dott., Frau, Herr...), anche piu' di uno
-  const TITOLO = /^(Signora|Signorina|Signori|Signor|Sig\.ra|Sig\.na|Sigg\.|Sig\.?|Sgr\.|Ditta|Spett\.le|Spett\.|Dott\.ssa|Dott\.|Dr\.|Avv\.|Ing\.|Prof\.ssa|Prof\.|Frau|Herr|Firma|Mr\.?|Mrs\.?)\s+/i;
+  // solo nome e cognome: via i titoli davanti (Signor, Sig.ra, Ditta, Dottore, Ing., Avvocato, Geometra, Frau, Herr...), anche piu' di uno
+  const TITOLO = /^(Signora|Signorina|Signori|Signor|Sig\.ra|Sig\.na|Sigg\.|Sig\.?|Sgr\.|Ditta|Spett\.le|Spett\.|Gentile|Gent\.(?:mo|ma|mi)?|Egregio|Egr\.|Dottoressa|Dottore|Dottor|Dott\.ssa|Dott\.?|Dr\.|Ingegnere|Ing\.?|Avvocato|Avv\.?|Architetto|Arch\.|Geometra|Geom\.?|Ragioniere|Rag\.|Professoressa|Professore|Prof\.ssa|Prof\.?|Cav\.|Comm\.|On\.|Frau|Herr|Firma|Mr\.?|Mrs\.?)\s+/i;
   let n = v.intest.trim();
   while (TITOLO.test(n)) n = n.replace(TITOLO, '').trim();
   return (n + (v.agg && !n.includes(v.agg) ? ' ' + v.agg : '')).replace(/\s+/g, ' ');
