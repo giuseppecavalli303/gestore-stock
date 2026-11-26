@@ -156,7 +156,7 @@ function html(d, oggi) {
   const nAuto = d.clienti.reduce((s, c) => s + c.auto.length, 0);
   const piu = d.clienti.filter(c => c.auto.length > 1).length;
   const righe = d.clienti.map(c => c.auto.map((a, i) => `<tr class="${i ? 'seg' : 'cli'}">
-    ${i ? '<td></td><td></td>' : `<td class="nome">${esc(c.nome)}${c.auto.length > 1 ? ` <span class="n">${c.auto.length} auto</span>` : ''}</td><td>${c.tel.map(esc).join('<br>') || '<span class="manca">manca</span>'}${c.mail.length ? `<div class="mail">${c.mail.map(esc).join('<br>')}</div>` : ''}</td>`}
+    ${i ? '<td></td><td></td>' : `<td class="nome">${esc(c.nome)}${c.auto.length > 1 ? ` <span class="n">${c.auto.length} auto</span>` : ''}${indirizzoTesto(c.indirizzo) ? `<div class="ind">${esc(indirizzoTesto(c.indirizzo))}</div>` : ''}</td><td>${c.tel.map(esc).join('<br>') || '<span class="manca">manca</span>'}${c.mail.length ? `<div class="mail">${c.mail.map(esc).join('<br>')}</div>` : ''}</td>`}
     <td class="data">${it(a.data)}</td><td>${esc(a.modello)}${a.altro ? ' <span class="alt">*</span>' : ''}${a.nuova ? ' <span class="nuo">nuova</span>' : ''}</td><td class="targa">${esc(a.targa)}</td></tr>`).join('')).join('');
   const senza = d.senza.length ? `<h2>Vendite nelle stampe senza dati cliente in CROSS (${d.senza.length})</h2>
     <p class="nota">La stampa dello stock le segna a questo venditore, ma in CROSS non c'è una proposta d'acquisto con questa targa vicino a quella data: per le auto con il telaio al posto della targa (estero, km 0) in CROSS c'è la targa italiana, che la stampa non conosce. Le più recenti potrebbero non avere ancora la proposta.</p>
@@ -171,7 +171,7 @@ function html(d, oggi) {
   table { width: 100%; border-collapse: collapse; } th { text-align: left; font-size: 8.5pt; color: #555; border-bottom: 1.5px solid #333; padding: 4px; }
   td { padding: 3px 4px; vertical-align: top; } tr.cli td { border-top: 1px solid #ccc; } tr { page-break-inside: avoid; }
   .nome { font-weight: 600; width: 30%; } .n { font-weight: 400; font-size: 8pt; background: #eef3fb; color: #24548f; border-radius: 3px; padding: 0 4px; white-space: nowrap; }
-  .mail { color: #666; font-size: 8pt; word-break: break-all; } .data { white-space: nowrap; width: 62px; } .targa { white-space: nowrap; font-family: Consolas, monospace; font-size: 8.5pt; }
+  .ind { font-weight: 400; color: #666; font-size: 8pt; } .mail { color: #666; font-size: 8pt; word-break: break-all; } .data { white-space: nowrap; width: 62px; } .targa { white-space: nowrap; font-family: Consolas, monospace; font-size: 8.5pt; }
   .manca { color: #a33; font-style: italic; } .nuo { font-size: 7.5pt; background: #e8f5e9; color: #2e7d32; border-radius: 3px; padding: 0 4px; } .alt { color: #a35a00; font-weight: 700; } .nota { color: #555; font-size: 8.5pt; }
   </style></head><body>
   <h1>Clienti di ${esc(d.venditore)}</h1>
@@ -183,13 +183,16 @@ function html(d, oggi) {
   </body></html>`;
 }
 
+// indirizzo su una riga: "Via Roma 1, 00100 Roma (RM)"
+const indirizzoTesto = a => (a && (a.via || a.loc) ? [titolo(a.via), [a.cap, titolo(a.loc)].filter(Boolean).join(' ') + (a.prov ? ` (${a.prov.toUpperCase()})` : '')].filter(x => x.trim()).join(', ') : '');
+
 // Excel: tabella HTML aperta da Excel e salvata come .xlsx. Il nome del cliente sta sulla prima riga del gruppo.
 function excelHtml(d) {
   const r = d.clienti.map(c => c.auto.map((a, i) => `<tr>
-    <td style="font-weight:${i ? 400 : 700}">${i ? '' : esc(c.nome)}</td><td style="mso-number-format:'\\@'">${i ? '' : esc(c.tel.join(' / '))}</td><td>${i ? '' : esc(c.mail.join(' / '))}</td>
+    <td style="font-weight:${i ? 400 : 700}">${i ? '' : esc(c.nome)}</td><td style="mso-number-format:'\\@'">${i ? '' : esc(c.tel.join(' / '))}</td><td>${i ? '' : esc(c.mail.join(' / '))}</td><td>${i ? '' : esc(indirizzoTesto(c.indirizzo))}</td>
     <td>${i ? '' : c.auto.length}</td><td style="mso-number-format:'dd\\/mm\\/yyyy'">${it(a.data)}</td><td style="mso-number-format:'dd\\/mm\\/yyyy'">${it(a.consegna)}</td><td>${esc(a.modello)}</td><td>${esc(a.targa)}</td><td>${a.altro ? 'altro venditore in CROSS' : a.nuova ? 'nuova: dalla stampa, telefono da CROSS' : ''}</td></tr>`).join('')).join('');
   return `<html><head><meta charset="utf-8"></head><body><table>
-  <tr style="font-weight:700;background:#dde6f3"><td>Cliente</td><td>Telefono</td><td>Email</td><td>Auto comprate</td><td>Data acquisto</td><td>Data consegna</td><td>Modello</td><td>Targa</td><td>Nota</td></tr>${r}</table></body></html>`;
+  <tr style="font-weight:700;background:#dde6f3"><td>Cliente</td><td>Telefono</td><td>Email</td><td>Indirizzo</td><td>Auto comprate</td><td>Data acquisto</td><td>Data consegna</td><td>Modello</td><td>Targa</td><td>Nota</td></tr>${r}</table></body></html>`;
 }
 
 // File contatti per l'iPhone (vCard 3.0, UTF-8): nome e cognome, telefoni, email, indirizzo (quando l'esportazione
