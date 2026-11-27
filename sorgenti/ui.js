@@ -637,7 +637,7 @@
     if (confronta != null) S.confronta = confronta;
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <header><h2>Lista per il cliente</h2><p style="color:var(--ink2)">${l.length ? `${l.length} ${l.length === 1 ? 'auto' : 'auto'} · confrontale e mandale con un solo messaggio` : 'Tocca la stella su un\'auto per aggiungerla.'}</p>
-      <div class="r3">${l.length ? `<button class="btn btn-primary btn-sm" id="lInvia">Invia al cliente</button><button class="btn btn-ghost btn-sm" id="lConf" aria-pressed="${!!S.confronta}">${S.confronta ? 'Vedi elenco' : 'Confronta'}</button><button class="btn btn-ghost btn-sm" id="lVuota">Svuota</button>` : ''}</div></header>
+      <div class="r3">${l.length ? `<button class="btn btn-primary btn-sm" id="lInvia">Invia al cliente</button><button class="btn btn-ghost btn-sm" id="lConf" aria-pressed="${!!S.confronta}">${S.confronta ? 'Vedi elenco' : 'Confronta'}</button><button class="btn btn-ghost btn-sm" id="lMultipla">Contratto vendita multipla</button><button class="btn btn-ghost btn-sm" id="lVuota">Svuota</button>` : ''}</div></header>
       <div class="scroll">${S.confronta ? htmlConfronto(l) : `<ul class="lista">${l.map(c => `<li><button class="la" data-open="${c.targa}">${foto(c, 400) ? `<img src="${foto(c, 400)}" alt="">` : '<i></i>'}<span><b>${esc(c.brand)} ${esc(c.family)}</b><small>${esc(c.modello)}</small><small>${immIt(c)} · ${N(c.km)} km · ${esc(c.fuel)}${c.free ? '' : ' · ' + esc(stLabel(c))}</small></span><b class="p">${c.prezzo ? eur(c.prezzo) : 'n.d.'}</b></button><button class="chip" data-stella="${c.targa}" aria-pressed="true" aria-label="Togli dalla lista">Togli</button></li>`).join('')}</ul>`}</div>`;
     $('drawer').hidden = false;
     requestAnimationFrame(() => { $('drawer').classList.add('on'); $('scrim').classList.add('on'); document.documentElement.classList.add('locked'); });
@@ -645,6 +645,7 @@
     $('dClose').onclick = closeAll;
     if ($('lInvia')) $('lInvia').onclick = () => condividiLink(`${baseSito()}cliente.html#l=${l.map(c => c.targa).join(',')}`, `Le auto che abbiamo scelto per lei da Valentino Automobili (${l.length})`);
     if ($('lConf')) $('lConf').onclick = () => apriLista(!S.confronta);
+    if ($('lMultipla')) $('lMultipla').onclick = () => window.open('contratto-multiplo.html#l=' + l.map(c => encodeURIComponent(c.targa)).join(','), '_blank');
     if ($('lVuota')) $('lVuota').onclick = () => { LISTA.t = []; store.set('su.lista', []); document.querySelectorAll('[data-stella]').forEach(b => b.setAttribute('aria-pressed', 'false')); renderListaBar(); closeAll(); };
   }
   function condividiLink(url, testo) {

@@ -1,6 +1,6 @@
 // PDF da compilare della lettera proposta d'acquisto con la grafica Valentino (contratto.html).
 // Stampa il modulo vuoto con Chrome, poi mette un campo del PDF sopra ogni riga e casella, nella stessa posizione.
-// Uso: node agente/contratto-compilabile.js [file.pdf]   (di base in Desktop/documenti utili, "Contratto nuovo.pdf")
+// Uso: node agente/contratto-compilabile.js [--multipla] [file.pdf]   (di base in Desktop/documenti utili, "Contratto nuovo.pdf" o "Contratto vendita multipla.pdf")
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -9,13 +9,13 @@ const { PDFDocument, StandardFonts, TextAlignment, rgb, drawCheckMark } = requir
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const NERO = rgb(0, 0, 0);   // testo compilato nero
 
-async function main(out) {
+async function main(out, multipla) {
   const b = await puppeteer.launch({ executablePath: CHROME, headless: true });
   let campi, iniziali, pdf;
   try {
     const p = await b.newPage();
     await p.setViewport({ width: 794, height: 1123 });   // A4 a 96 dpi, come in stampa
-    await p.goto(pathToFileURL(path.join(__dirname, '..', 'contratto.html')).href + '?vuoto', { waitUntil: 'networkidle0' });
+    await p.goto(pathToFileURL(path.join(__dirname, '..', multipla ? 'contratto-multiplo.html' : 'contratto.html')).href + '?vuoto', { waitUntil: 'networkidle0' });
     await p.emulateMediaType('print');
     ({ campi, iniziali } = await p.evaluate(() => ({
       iniziali: window.INIZIALI,
@@ -56,7 +56,8 @@ async function main(out) {
 }
 
 if (require.main === module) {
-  const out = process.argv[2] || path.join(process.env.USERPROFILE || '', 'Desktop', 'documenti utili', 'Contratto nuovo.pdf');
-  main(out).then(n => console.log(`${n} campi · ${out}`)).catch(e => { console.error(e.message); process.exit(1); });
+  const multipla = process.argv.includes('--multipla'), arg = process.argv.slice(2).find(a => !a.startsWith('--'));
+  const out = arg || path.join(process.env.USERPROFILE || '', 'Desktop', 'documenti utili', multipla ? 'Contratto vendita multipla.pdf' : 'Contratto nuovo.pdf');
+  main(out, multipla).then(n => console.log(`${n} campi · ${out}`)).catch(e => { console.error(e.message); process.exit(1); });
 }
 module.exports = { main };

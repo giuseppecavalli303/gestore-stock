@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0a2a5c">
+<title>Proposta d'acquisto - vendita multipla</title>
+<link rel="icon" type="image/png" href="icone/icona-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Lettera proposta d'acquisto per la vendita di piu' auto in blocco (commercianti), con la grafica del contratto nuovo.
+   Le auto si aggiungono scrivendo o incollando le targhe, oppure arrivano dalla Lista dell'app (#l=TARGA,TARGA).
+   I prezzi si scrivono a mano: per i commercianti non valgono quelli esposti. I dati dell'acquirente non si salvano.
+   ?vuoto da' il modulo vuoto con 15 righe (lo usa agente/contratto-compilabile.js --multipla). */
+:root{--navy:#0a2a5c;--ink:#14181f;--ink2:#4a5566;--line:#c9d1de;--bg:#e9edf3;--txt:#000}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%}
+.barra{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.barra b{font-weight:600;font-size:15px;margin-right:6px}
+.barra input{height:36px;border-radius:6px;border:0;padding:0 10px;font:600 15px Inter,sans-serif;width:230px;text-transform:uppercase}
+.barra button{height:36px;border-radius:6px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font:500 14px Inter,sans-serif;padding:0 14px;cursor:pointer}
+.barra button.pri{background:#fff;color:var(--navy);border-color:#fff}
+.barra .msg{font-size:13px;color:#c9d6ee;flex:1 1 260px}
+.barra .msg.att{color:#ffd166}
+.fuori{padding:18px 0 40px;overflow-x:auto}
+.foglio{width:210mm;min-height:296mm;margin:0 auto;background:#fff;padding:6mm 10mm 5mm;box-shadow:0 6px 30px -10px rgba(10,30,60,.35);font-size:7.9pt;line-height:1.3}
+@media (max-width:820px){.foglio{zoom:calc(100vw / 220mm)}}
+.testa{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;border-bottom:2.5pt solid var(--navy);padding-bottom:6px}
+.marca{color:var(--navy)}
+.marca .nome{font-weight:700;font-size:15pt;letter-spacing:.01em;line-height:1.05}
+.marca .sotto{font-weight:600;font-size:9pt;margin-top:1px}
+.marca .ind{font-size:7.4pt;color:var(--ink2);margin-top:3px;line-height:1.35}
+.titolo{text-align:right}
+.titolo h1{margin:0;font-size:14pt;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.titolo .tipo{font-size:9pt;font-weight:600;color:var(--navy);margin-top:1px}
+.titolo .num{display:grid;grid-template-columns:auto 34mm;gap:3px 6px;align-items:end;margin-top:4px;font-size:8pt;color:var(--ink2)}
+.premessa{margin:6px 0 2px;font-size:7.8pt;color:var(--ink2)}
+.sez{margin-top:6px;border:0.8pt solid var(--line);border-radius:4px;padding:3px 7px 4px;position:relative;break-inside:avoid}
+.sez>.et{position:absolute;top:-6px;left:7px;background:#fff;padding:0 4px;font-weight:700;font-size:7.2pt;letter-spacing:.06em;text-transform:uppercase;color:var(--navy)}
+.sez.ruolo>.et{right:7px;left:auto}
+.sez.auto{break-inside:auto}
+.r{display:flex;align-items:flex-end;gap:5px;margin-top:2px;white-space:nowrap}
+.r>label,.r>span{color:var(--ink2)}
+.r>.f{flex:1 1 0;min-width:0;width:0}
+.fisso{font-weight:600;color:var(--ink)}
+.f{display:inline-block;border:0;border-bottom:0.7pt dotted #6b778a;background:transparent;font:500 8.6pt Inter,"Segoe UI",Arial,sans-serif;color:var(--txt);padding:0 2px;height:10.6pt;line-height:10.6pt;border-radius:0;outline:none}
+.f:focus{background:#fff8d6}
+.f.e{text-align:right}
+.w14{width:14mm!important;flex:none!important}.w18{width:18mm!important;flex:none!important}.w26{width:26mm!important;flex:none!important}.w30{width:30mm!important;flex:none!important}.w36{width:36mm!important;flex:none!important}.w44{width:44mm!important;flex:none!important}.w54{width:54mm!important;flex:none!important}
+.pt{flex:none;position:relative;display:inline-flex;height:17px}
+.pt>i{flex:none;width:16px;height:17px;border:0.75pt solid #6b778a;margin-left:-0.75pt;background:#fff}
+.pt>i:first-child{margin-left:0}
+.pettine{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;font:500 9.5pt "Consolas","Courier New",monospace;color:var(--txt);padding:0;text-transform:uppercase;outline:none}
+.pettine:focus{background:rgba(255,236,150,.45)}
+.cb{width:8.5pt;height:8.5pt;margin:0 3px 0 0;vertical-align:-1pt;accent-color:#000}
+/* tabella delle auto */
+table.auto{width:100%;border-collapse:collapse;margin-top:3px;table-layout:fixed}
+table.auto th{font-weight:600;font-size:7pt;color:var(--ink2);text-align:left;padding:2px 3px;border-bottom:0.8pt solid var(--navy)}
+table.auto td{padding:0 3px;border-bottom:0.5pt solid #e2e7ef;height:15px}
+table.auto td .f{width:100%;border-bottom:0;height:13px;line-height:13px;font-size:7.6pt;padding:0 1px}
+table.auto tr[data-ps="1"] td:nth-child(2){white-space:nowrap}
+table.auto tr[data-ps="1"] td:nth-child(2) .f{width:calc(100% - 17px)}
+table.auto td.n{color:var(--ink2);font-size:7pt;text-align:center}
+table.auto .e{text-align:right}
+table.auto thead{display:table-header-group}
+table.auto tr{break-inside:avoid}
+table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:14px;padding:0;line-height:1}
+.ps{font-size:6.5pt;font-weight:700;color:var(--txt);border:0.6pt solid var(--txt);border-radius:2px;padding:0 2px;margin-left:2px}
+.f::placeholder{color:#9aa5b5}
+.prezzi{display:grid;grid-template-columns:5mm 1fr 34mm;column-gap:4px;row-gap:0;align-items:end;margin-top:2px}
+.prezzi .op{color:var(--ink2);text-align:center;font-weight:600}
+.prezzi .vo{display:flex;align-items:flex-end;gap:5px;min-width:0;white-space:nowrap;color:var(--ink2)}
+.prezzi .vo .f{flex:1 1 0;min-width:0;width:0}
+.prezzi .eu{display:flex;align-items:flex-end;gap:4px;color:var(--ink2)}
+.prezzi .eu .f{flex:1 1 0;min-width:0;width:0;text-align:right}
+.prezzi .tot{font-weight:700;color:var(--ink)}
+.prezzi .tot+.eu .f{font-weight:700;border-bottom-style:solid}
+.prezzi .fin{font-weight:700;color:var(--navy);font-size:9.2pt}
+.prezzi .fin+.eu .f{font-weight:700;border-bottom:1.2pt solid var(--navy)}
+.prezzi .sc{font-weight:600;color:var(--ink)}
+.testo{font-size:7.2pt;color:var(--ink2);line-height:1.38;margin-top:4px;white-space:normal}
+.nps{color:var(--txt);font-weight:600;font-size:7.6pt;margin:3px 0 1px}
+.nps[hidden]{display:none}
+.firme{display:grid;grid-template-columns:1fr 1fr;gap:16mm;align-items:end;margin-top:6px;break-inside:avoid}
+.firma{border-top:0.8pt solid var(--ink);text-align:center;font-size:7.4pt;color:var(--ink2);padding-top:2px;margin-top:8mm}
+.piede{display:flex;justify-content:space-between;margin-top:5px;font-size:7pt;color:var(--ink2);border-top:0.6pt solid var(--line);padding-top:3px}
+.nascosto{display:none}
+@page{size:A4;margin:0}
+@media print{
+  html,body{background:#fff}
+  .barra,.solo-schermo{display:none!important}
+  .fuori{padding:0;overflow:visible}
+  .foglio{box-shadow:none;margin:0;zoom:1}
+  .f:focus,.pettine:focus{background:transparent}
+  .f::placeholder{color:transparent}
+}
+</style>
+</head>
+<body>
+<div class="barra" id="barra">
+  <b>Vendita multipla</b>
+  <input id="targa" list="targhe" placeholder="Targhe da aggiungere" autocomplete="off" spellcheck="false" aria-label="Targhe da aggiungere">
+  <datalist id="targhe"></datalist>
+  <button id="aggiungi">Aggiungi</button>
+  <button class="pri" id="stampa">Stampa / PDF</button>
+  <button id="svuota">Svuota</button>
+  <span class="msg" id="msg">Scrivi o incolla una o più targhe (anche separate da spazi o virgole) e premi Aggiungi.</span>
+</div>
+<div class="fuori"><div class="foglio" id="foglio">
+  <div class="testa">
+    <div class="marca">
+      <div class="nome">VALENTINO AUTOMOBILI ROMA SRL</div>
+      <div class="sotto">Concessionaria Volkswagen</div>
+      <div class="ind">Sede Legale: Via Giovanni Paisiello, 34 - 00198 Roma · C.F. e P.I. 12163031003<br>Sede Amministrativa: Via Tiburtina, 1097 - 00156 Roma</div>
+    </div>
+    <div class="titolo">
+      <h1>Lettera proposta d'acquisto</h1>
+      <div class="tipo">Vendita multipla di autovetture</div>
+      <div class="num"><span>Lettera di proposta n°</span><input class="f" data-k="proposta"><span>Pratica interna n°</span><input class="f" data-k="pratica"></div>
+    </div>
+  </div>
+  <p class="premessa">Alle condizioni di vendita e fornitura di autovetture nuove di fabbrica per utilizzatori finali della Organizzazione Volkswagen, a lato riportate e d'uso, e presa visione delle stesse,</p>
+
+  <div class="sez ruolo"><span class="et">Acquirente</span>
+    <div class="r"><label>la Ditta / Società</label><input class="f" data-k="ditta"><label>Partita I.V.A.</label><input class="pettine" data-k="piva" data-n="11"></div>
+    <div class="r"><label>con sede in</label><input class="f" data-k="comune"><label>C.A.P.</label><input class="pettine" data-k="cap" data-n="5"><label>Prov.</label><input class="pettine" data-k="prov" data-n="2"></div>
+    <div class="r"><label>via</label><input class="f" data-k="via"><label>n°</label><input class="f w18" data-k="civico"><label>Codice Fiscale</label><input class="pettine" data-k="cf" data-n="16"></div>
+    <div class="r"><label>in persona di</label><input class="f" data-k="legale"><label>in qualità di</label><input class="f w36" data-k="qualita"><label>tel.</label><input class="f w30" data-k="tel"></div>
+    <div class="r"><label>e-mail / PEC</label><input class="f" data-k="email"><label>Codice destinatario (SDI)</label><input class="pettine" data-k="sdi" data-n="7"></div>
+  </div>
+
+  <div class="sez ruolo"><span class="et">Venditrice</span>
+    <div class="r"><label>propone alla</label><span class="fisso">VALENTINO AUTOMOBILI ROMA SRL</span><span>, Concessionaria Volkswagen</span></div>
+    <div class="r"><label>con sede in</label><input class="f" data-k="sedeVend" data-vend><label>tel.</label><input class="f w30" data-k="telVend" data-vend></div>
+    <div class="r"><label>Partita I.V.A.</label><span class="fisso">12163031003</span><span style="flex:1"></span><label>Codice VGI</label><input class="pettine" data-k="vgi" data-n="5" data-vend><label>Codice Vend.</label><input class="pettine" data-k="codVend" data-n="5" data-vend></div>
+  </div>
+
+  <div class="sez auto"><span class="et">Autovetture</span>
+    <div class="testo" style="margin-top:2px">l'acquisto in blocco delle seguenti autovetture usate (che la Venditrice si riserva di accettare con dichiarazione scritta e/o con la fornitura):</div>
+    <table class="auto"><colgroup><col style="width:5mm"><col style="width:22mm"><col><col style="width:35mm"><col style="width:13mm"><col style="width:14mm"><col style="width:26mm"><col style="width:23mm"><col class="solo-schermo" style="width:5mm"></colgroup>
+      <thead><tr><th>n°</th><th>Targa</th><th>Marca e modello</th><th>Telaio</th><th>Imm.</th><th class="e">Km</th><th>Colore</th><th class="e">Prezzo Euro</th><th class="solo-schermo"></th></tr></thead>
+      <tbody id="righe"></tbody>
+    </table>
+  </div>
+
+  <div class="sez"><span class="et">Condizioni economiche</span>
+    <div class="r"><label>alle seguenti condizioni: (Prezzi esposti</label><label><input type="checkbox" class="cb" data-k="ivaComp">I.V.A. compresa</label><input class="f w14 e" data-k="ivaPerc"><label>%</label><label><input type="checkbox" class="cb" data-k="ivaEscl">I.V.A. esclusa</label><label><input type="checkbox" class="cb" data-k="margine">regime del margine)</label></div>
+    <div class="prezzi" id="prezzi"></div>
+  </div>
+
+  <div class="sez"><span class="et">Consegna e pagamento</span>
+    <div class="r"><label>con data prevista di consegna</label><input class="pettine" data-k="consegna" data-n="8"><label>luogo di ritiro</label><input class="f" data-k="ritiro"></div>
+    <div class="r"><label>condizioni di pagamento:</label><input class="f" data-k="pagamento1"></div>
+    <div class="r"><input class="f" data-k="pagamento2"></div>
+    <div class="r"><label>L'Acquirente versa a titolo di deposito cauzionale (Art. 1), l'importo di Euro</label><input class="f e" data-k="deposito"></div>
+    <div class="nps" id="notaSpec" hidden>Auto indicate con PS: prezzo speciale in quanto auto in ottime condizioni, ma non ricondizionata nella carrozzeria. Prezzo speciale non cumulabile con le altre promozioni in corso.</div>
+    <div class="r"><label>Note:</label><input class="f" data-k="note1"></div>
+    <div class="r"><input class="f" data-k="note2"></div>
+  </div>
+
+  <div class="firme">
+    <div class="r" style="margin:0"><input class="f w54" data-k="luogo" value="Roma"><span>, lì</span><input class="pettine" data-k="data" data-n="8"></div>
+    <div class="firma">Timbro e Firma dell'Acquirente</div>
+  </div>
+  <div class="piede"><span>a - (copia x venditrice)</span><span>Valentino Automobili Roma Srl · Concessionaria Volkswagen</span></div>
+</div></div>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const VUOTO = /[?&]vuoto\b/.test(location.search);
+  const VEND = 'su.contratto.venditrice';           // gli stessi dati del venditore del contratto nuovo
+  const righePrezzi = [
+    ['', 'Totale autovetture', 'totAuto', '', 'tot'],
+    ['+', 'spese (passaggi di proprietà, trasporto, ecc.)', 'spese1', 'spese1d'],
+    ['+', '', 'spese2', 'spese2d'],
+    ['−', 'Sconto', 'sconto', 'scontoDesc', 'sc'],
+    ['=', 'Totale', 'totale', '', 'tot'],
+    ['', 'se prezzi I.V.A. esclusa &nbsp; = Imponibile', 'imponibile', ''],
+    ['', 'se prezzi I.V.A. esclusa &nbsp; + I.V.A.', 'iva', ''],
+    ['=', 'Totale da pagare', 'pagare', '', 'fin'],
+  ];
+  $('prezzi').innerHTML = righePrezzi.map(([op, voce, ke, kd, cl]) =>
+    `<span class="op">${op}</span><span class="vo${cl ? ' ' + cl : ''}">${voce ? `<span>${voce}</span>` : ''}${kd ? `<input class="f" data-k="${kd}">` : ''}</span><span class="eu">Euro <input class="f e" data-k="${ke}" inputmode="decimal"></span>`).join('');
+
+  const tbody = $('righe');
+  let nRighe = 0;
+  const riga = c => {
+    const i = ++nRighe, tr = document.createElement('tr');
+    tr.innerHTML = `<td class="n">${i}</td><td><input class="f" data-k="a${i}targa"></td><td><input class="f" data-k="a${i}modello"></td><td><input class="f" data-k="a${i}telaio"></td><td><input class="f" data-k="a${i}imm"></td><td><input class="f e" data-k="a${i}km"></td><td><input class="f" data-k="a${i}colore"></td><td><input class="f e prezzo" data-k="a${i}prezzo" inputmode="decimal"></td><td class="solo-schermo"><button class="via" title="Togli questa auto" aria-label="Togli">×</button></td>`;
+    tbody.appendChild(tr);
+    if (c) {
+      const set = (k, v) => { tr.querySelector(`[data-k="a${i}${k}"]`).value = v || ''; };
+      const imm = /^(\d{4})-(\d{2})/.exec(c.imm || '');
+      set('targa', c.targa); set('modello', [c.brand, c.modello].filter(Boolean).join(' '));
+      set('telaio', c.web && c.web.vin); set('imm', imm && imm[1] !== '0000' ? imm[2] + '/' + imm[1] : '');
+      set('km', c.km ? c.km.toLocaleString('it-IT') : ''); set('colore', (c.web && c.web.colore) || c.colore);
+      if (c.spec) tr.querySelector('td:nth-child(2)').insertAdjacentHTML('beforeend', '<span class="ps">PS</span>');
+      tr.dataset.ps = c.spec ? '1' : '';
+      // prezzo per il commerciante: si scrive a mano; a schermo il prezzo veicolo esposto come riferimento
+      if (c.prezzoV) tr.querySelector('.prezzo').placeholder = 'esposto ' + c.prezzoV.toLocaleString('it-IT');
+    }
+    return tr;
+  };
+  if (VUOTO) {   // modulo vuoto per il PDF da compilare: 15 righe
+    for (let k = 0; k < 15; k++) riga();
+    document.querySelectorAll('.solo-schermo').forEach(e => e.remove());
+  }
+  // caselle a pettine, come nel contratto nuovo
+  const pettini = root => { for (const e of root.querySelectorAll('input.pettine')) {
+    if (e.parentElement.classList.contains('pt')) continue;
+    const n = +e.dataset.n; e.maxLength = n;
+    const box = document.createElement('span'); box.className = 'pt'; box.innerHTML = '<i></i>'.repeat(n);
+    e.replaceWith(box); box.appendChild(e);
+    const passo = box.firstChild.getBoundingClientRect().width - 1;
+    e.style.letterSpacing = 'calc(' + passo + 'px - 1ch)'; e.style.paddingLeft = 'calc((' + (passo + 1) + 'px - 1ch) / 2)';
+  } };
+  pettini(document);
+  const campi = () => [...document.querySelectorAll('[data-k]')];
+  const C = k => document.querySelector(`[data-k="${k}"]`);
+  if (VUOTO) { window.INIZIALI = { luogo: 'Roma', sedeVend: 'Via Tiburtina, 1097 - 00156 Roma' }; C('luogo').value = ''; $('barra').classList.add('nascosto'); return; }
+
+  const num = s => { s = String(s || '').replace(/[^\d,.-]/g, ''); if (!s) return null; s = s.replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); const n = parseFloat(s); return isFinite(n) ? n : null; };
+  const eur = n => n == null ? '' : n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const manuale = new Set();
+  const somma = vals => vals.some(x => x != null) ? vals.reduce((s, x) => s + (x || 0), 0) : null;
+  function totali() {
+    if (!manuale.has('totAuto')) C('totAuto').value = eur(somma([...tbody.querySelectorAll('.prezzo')].map(e => num(e.value))));
+    if (!manuale.has('totale')) { const t = somma([num(C('totAuto').value), num(C('spese1').value), num(C('spese2').value)]); C('totale').value = eur(t == null ? null : t - Math.abs(num(C('sconto').value) || 0)); }
+    if (!manuale.has('pagare')) C('pagare').value = eur(somma([num(C('totale').value), num(C('iva').value)]));
+    $('notaSpec').hidden = !tbody.querySelector('tr[data-ps="1"]');
+  }
+  document.addEventListener('input', e => { const t = e.target; if (!t.classList || !t.classList.contains('e')) return; if (['totAuto', 'totale', 'pagare'].includes(t.dataset.k)) manuale[t.value ? 'add' : 'delete'](t.dataset.k); totali(); });
+  document.addEventListener('focusout', e => { const t = e.target; if (!t.classList || !t.classList.contains('e') || /km$/.test(t.dataset.k || '')) return; const n = num(t.value); if (n != null) t.value = eur(n); totali(); });
+  tbody.addEventListener('click', e => {
+    if (!e.target.classList.contains('via')) return;
+    e.target.closest('tr').remove();
+    [...tbody.rows].forEach((tr, i) => { tr.cells[0].textContent = i + 1; });   // numeri in ordine (i nomi dei campi restano)
+    totali(); msg(`${tbody.rows.length} auto nel contratto.`);
+  });
+  try { const v = JSON.parse(localStorage.getItem(VEND) || '{}'); for (const k in v) if (C(k)) C(k).value = v[k]; } catch (e) {}
+  if (!C('sedeVend').value) C('sedeVend').value = 'Via Tiburtina, 1097 - 00156 Roma';
+  document.querySelectorAll('[data-vend]').forEach(e => e.addEventListener('change', () => {
+    try { const v = {}; document.querySelectorAll('[data-vend]').forEach(x => { v[x.dataset.k] = x.value; }); localStorage.setItem(VEND, JSON.stringify(v)); } catch (er) {}
+  }));
+  const oggi = new Date(), dataOggi = () => String(oggi.getDate()).padStart(2, '0') + String(oggi.getMonth() + 1).padStart(2, '0') + oggi.getFullYear();
+  C('data').value = dataOggi();
+
+  let AUTO = {};
+  const msg = (t, att) => { $('msg').textContent = t; $('msg').classList.toggle('att', !!att); };
+  const norm = t => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const trova = t => { t = norm(t); if (!t) return null; if (AUTO[t]) return AUTO[t]; const tel = Object.values(AUTO).filter(c => c.web && c.web.vin && t.length >= 6 && norm(c.web.vin).endsWith(t)); return tel.length === 1 ? tel[0] : null; };
+  const presenti = () => new Set([...tbody.querySelectorAll('[data-k$="targa"]')].map(e => norm(e.value)));
+  function aggiungi(testo) {
+    const pezzi = String(testo || '').split(/[\s,;]+/).filter(Boolean), ci = presenti(), no = [], gia = [];
+    let n = 0;
+    for (const p of pezzi) { const c = trova(p); if (!c) { no.push(p.toUpperCase()); continue; } if (ci.has(c.targa)) { gia.push(c.targa); continue; } ci.add(c.targa); pettini(riga(c)); n++; }
+    totali();
+    const parti = [n ? `${n} auto aggiunte (${tbody.rows.length} nel contratto)` : '', gia.length ? 'già presenti: ' + gia.join(', ') : '', no.length ? 'non trovate nello stock: ' + no.join(', ') : ''].filter(Boolean);
+    msg((parti.join(' · ') || 'Nessuna targa da aggiungere') + (n ? '. I prezzi per il commerciante si scrivono a mano.' : ''), no.length > 0);
+  }
+  $('aggiungi').onclick = () => { aggiungi($('targa').value); $('targa').value = ''; $('targa').focus(); };
+  $('targa').addEventListener('keydown', e => { if (e.key === 'Enter') $('aggiungi').onclick(); });
+  $('stampa').onclick = () => { document.title = 'Proposta vendita multipla' + (C('ditta').value ? ' - ' + C('ditta').value : '') + ' (' + tbody.rows.length + ' auto)'; window.print(); };
+  $('svuota').onclick = () => {
+    if (!confirm('Svuotare il modulo? I dati scritti si perdono.')) return;
+    tbody.innerHTML = ''; nRighe = 0; manuale.clear();
+    for (const e of campi()) { if (e.dataset.vend !== undefined) continue; if (e.type === 'checkbox') e.checked = false; else e.value = ''; }
+    C('luogo').value = 'Roma'; C('data').value = dataOggi(); totali(); history.replaceState(null, '', location.pathname); msg('Modulo svuotato.');
+  };
+  window.addEventListener('beforeunload', e => { if (C('ditta').value || tbody.rows.length) { e.preventDefault(); e.returnValue = ''; } });
+  (async () => {
+    try {
+      const r = await fetch('data/stock.json?t=' + Date.now(), { cache: 'no-store' });
+      const j = await r.json();
+      for (const c of j.cars || []) AUTO[norm(c.targa)] = c;
+      $('targhe').innerHTML = (j.cars || []).map(c => `<option value="${c.targa}">${(c.brand || '') + ' ' + (c.modello || '')} · ${c.stato || ''}</option>`).join('');
+      const l = /(?:^|&)l=([^&]+)/.exec(location.hash.slice(1));
+      if (l) aggiungi(decodeURIComponent(l[1]));
+    } catch (e) { msg('Stock non raggiungibile: le righe si possono compilare a mano.', true); for (let k = 0; k < 5; k++) riga(); pettini(document); }
+  })();
+})();
+</script>
+</body>
+</html>
