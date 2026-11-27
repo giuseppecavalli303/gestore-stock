@@ -7,7 +7,7 @@ const { pathToFileURL } = require('url');
 const puppeteer = require('puppeteer-core');
 const { PDFDocument, StandardFonts, TextAlignment, rgb, drawCheckMark } = require('pdf-lib');
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const BLU = rgb(0.04, 0.18, 0.54);
+const NERO = rgb(0, 0, 0);   // testo compilato nero
 
 async function main(out) {
   const b = await puppeteer.launch({ executablePath: CHROME, headless: true });
@@ -32,9 +32,9 @@ async function main(out) {
   const page = doc.getPage(0), H = page.getHeight(), PT = 0.75;   // 1 px CSS = 0,75 punti
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const form = doc.getForm();
-  const spunta = (cb, w) => { const { width, height } = w.getRectangle(); return { normal: { on: drawCheckMark({ x: width / 2, y: height / 2, size: Math.min(width, height) * 0.85, thickness: 1.3, color: BLU }), off: [] } }; };
+  const spunta = (cb, w) => { const { width, height } = w.getRectangle(); return { normal: { on: drawCheckMark({ x: width / 2, y: height / 2, size: Math.min(width, height) * 0.85, thickness: 1.3, color: NERO }), off: [] } }; };
   for (const c of campi) {
-    const box = { x: c.x * PT, y: H - (c.y + c.h) * PT, width: c.w * PT, height: c.h * PT, backgroundColor: undefined, borderColor: undefined, borderWidth: 0, textColor: BLU };
+    const box = { x: c.x * PT, y: H - (c.y + c.h) * PT, width: c.w * PT, height: c.h * PT, backgroundColor: undefined, borderColor: undefined, borderWidth: 0, textColor: NERO };
     if (c.tipo === 'c') {
       const cb = form.createCheckBox(c.k);
       cb.addToPage(page, box);

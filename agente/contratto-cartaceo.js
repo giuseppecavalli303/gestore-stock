@@ -95,8 +95,8 @@ const CAMPI = [
   { t: 't', nome: 'Note', r: [92, 1565, 1135, 1590], multi: true },
 ];
 
-const BLU = rgb(0, 0, 0.55);
-const spunta = (cb, w) => { const { width, height } = w.getRectangle(); return { normal: { on: drawCheckMark({ x: width / 2, y: height / 2, size: Math.min(width, height) * 0.8, thickness: 1.4, color: BLU }), off: [] } }; };
+const NERO = rgb(0, 0, 0);   // testo compilato nero
+const spunta = (cb, w) => { const { width, height } = w.getRectangle(); return { normal: { on: drawCheckMark({ x: width / 2, y: height / 2, size: Math.min(width, height) * 0.8, thickness: 1.4, color: NERO }), off: [] } }; };
 const nome = c => c.nome.split('.').join('');   // i punti nei nomi dei campi non sono ammessi
 
 async function crea(scansione) {
@@ -106,7 +106,7 @@ async function crea(scansione) {
   const form = doc.getForm();
   for (const c of CAMPI) {
     const [x1, y1, x2, y2] = c.r;
-    const box = { x: x1 / 2, y: H - y2 / 2, width: (x2 - x1) / 2, height: (y2 - y1) / 2, backgroundColor: undefined, borderColor: undefined, borderWidth: 0, textColor: BLU };
+    const box = { x: x1 / 2, y: H - y2 / 2, width: (x2 - x1) / 2, height: (y2 - y1) / 2, backgroundColor: undefined, borderColor: undefined, borderWidth: 0, textColor: NERO };
     if (c.t === 'c') { const cb = form.createCheckBox(nome(c)); cb.addToPage(page, box); cb.updateAppearances(spunta); continue; }
     const f = form.createTextField(nome(c));
     if (c.t === 'n') { f.setMaxLength(c.n); f.enableCombing(); }
