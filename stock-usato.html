@@ -1026,7 +1026,7 @@ function normalize(ext) {
       note, iva: /IVA ESP/.test(note), prezzoV: money(g('prezzoVeicolo')), pp: money(g('pp')), prezzo: money(g('prezzoTot')),
       ingresso: titleCase(g('ingresso')), ubic: titleCase(g('ubicazione')), antic: g('anticipata'),
       mini: /^SI/.test(g('miniPP')), acq: titleCase(acq), dataPren: isoDate(g('dataPren')), caparra: money(g('caparra')), modVen: g('modVen'),
-      fv: /^SI/.test(g('fv')), vend: titleCase(g('venditore')), section: r.section.replace(/^\d{2}( [A-Z])? - /, ''),
+      fv: /^SI/.test(g('fv')), vend: titleCase(g('venditore')), section: r.section.replace(/^\d{2}( [A-Z])? - /, ''), classe: (/^(\d{2}(?: [A-Z])?) - /.exec(r.section) || [])[1] || '',   // numero della classe veicolo della stampa (es. 03)
       cv: d.cv, kw: d.kw, fuel: d.fuel, cambio: d.cambio
     };
     c.free = st === 0 && !c.acq;

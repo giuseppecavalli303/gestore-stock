@@ -36,7 +36,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
 .marca .ind{font-size:7.4pt;color:var(--ink2);margin-top:3px;line-height:1.35}
 .titolo{text-align:right}
 .titolo h1{margin:0;font-size:14pt;font-weight:700;color:var(--navy);letter-spacing:-.01em}
-.titolo .num{display:grid;grid-template-columns:auto 56mm;gap:3px 6px;align-items:end;margin-top:4px;font-size:8pt;color:var(--ink2)}
+.titolo .num{display:grid;grid-template-columns:auto 68mm;gap:3px 6px;align-items:end;margin-top:4px;font-size:8pt;color:var(--ink2)}
 .premessa{margin:6px 0 2px;font-size:7.8pt;color:var(--ink2)}
 /* sezioni */
 .sez{margin-top:5px;border:0.8pt solid #c9d1de;border-radius:4px;padding:3px 7px 4px;position:relative}
@@ -240,11 +240,21 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
     const tel = Object.values(AUTO).filter(c => c.web && c.web.vin && t.length >= 6 && norm(c.web.vin).endsWith(t));   // anche con le ultime cifre del telaio
     return tel.length === 1 ? tel[0] : null;
   }
+  // testo lungo (la classe): carattere piu' piccolo finche' ci sta, misurato sul testo vero
+  const misura = document.createElement('canvas').getContext('2d');
+  function adatta(e) {
+    e.style.fontSize = '';
+    const st = getComputedStyle(e), spazio = e.getBoundingClientRect().width / (parseFloat(st.zoom) || 1) - 6;
+    for (let pt = 8.6; pt >= 5; pt -= 0.2) { misura.font = st.fontWeight + ' ' + pt + 'pt ' + st.fontFamily; if (misura.measureText(e.value).width <= spazio) { e.style.fontSize = pt + 'pt'; return; } }
+    e.style.fontSize = '5pt';
+  }
   function compila(c) {
     const set = (k, v) => { if (C[k]) C[k].value = v == null ? '' : v; };
     set('marca', c.brand || ''); set('modello', [c.family && !String(c.modello || '').toUpperCase().includes(String(c.family).toUpperCase()) ? c.family : '', c.modello].filter(Boolean).join(' '));
     const vin = (c.web && c.web.vin) || '', targata = /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(c.targa);   // le auto non targate hanno in stampa le ultime cifre del telaio
-    set('classe', c.section || ''); set('targaTelaio', targata ? c.targa : (vin || c.targa)); set('telaio', vin);
+    set('classe', [c.classe, c.section].filter(Boolean).join(' - '));   // numero e nome della classe come nella stampa
+    adatta(C.classe);
+    set('targaTelaio', targata ? c.targa : (vin || c.targa)); set('telaio', vin);
     set('colore', (c.web && c.web.colore) || c.colore || '');
     const imm = /^(\d{4})-(\d{2})/.exec(c.imm || '');
     set('imm', imm && imm[1] !== '0000' ? imm[2] + '/' + imm[1] : '');
