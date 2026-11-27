@@ -27,6 +27,9 @@ async function main(out, multipla) {
     pdf = await p.pdf({ preferCSSPageSize: true, printBackground: true });
   } finally { await b.close(); }
 
+  // vendita multipla: l'acquirente abituale gia' scritto nei campi (agente/contratto-acquirente.json, solo sul PC)
+  const abituale = path.join(__dirname, 'contratto-acquirente.json');
+  if (multipla && fs.existsSync(abituale)) { const { nota, ...dati } = JSON.parse(fs.readFileSync(abituale, 'utf8')); iniziali = Object.assign({}, iniziali, dati); }
   const doc = await PDFDocument.load(pdf);
   if (doc.getPageCount() !== 1) throw new Error('Il modulo esce su ' + doc.getPageCount() + ' pagine: deve stare in una');
   const page = doc.getPage(0), H = page.getHeight(), PT = 0.75;   // 1 px CSS = 0,75 punti

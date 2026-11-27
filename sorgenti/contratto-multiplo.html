@@ -104,6 +104,7 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
   <input id="targa" list="targhe" placeholder="Targhe da aggiungere" autocomplete="off" spellcheck="false" aria-label="Targhe da aggiungere">
   <datalist id="targhe"></datalist>
   <button id="aggiungi">Aggiungi</button>
+  <button id="ricorda" title="Tiene i dati dell'acquirente su questo dispositivo: il contratto parte gia' compilato">Ricorda acquirente</button>
   <button class="pri" id="stampa">Stampa / PDF</button>
   <button id="svuota">Svuota</button>
   <span class="msg" id="msg">Scrivi o incolla una o più targhe (anche separate da spazi o virgole) e premi Aggiungi.</span>
@@ -249,6 +250,15 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
   });
   try { const v = JSON.parse(localStorage.getItem(VEND) || '{}'); for (const k in v) if (C(k)) C(k).value = v[k]; } catch (e) {}
   if (!C('sedeVend').value) C('sedeVend').value = 'Via Tiburtina, 1097 - 00156 Roma';
+  // acquirente abituale (es. il commerciante a cui si vende sempre): ricordato solo su questo dispositivo, mai pubblicato
+  const ACQ = 'su.contratto.acquirente', CAMPI_ACQ = ['proposta', 'ditta', 'piva', 'comune', 'cap', 'prov', 'via', 'civico', 'cf', 'legale', 'qualita', 'tel', 'email', 'sdi'];
+  const applicaAcq = () => { try { const v = JSON.parse(localStorage.getItem(ACQ) || '{}'); for (const k of CAMPI_ACQ) if (v[k] != null && C(k)) C(k).value = v[k]; return Object.keys(v).length > 0; } catch (e) { return false; } };
+  applicaAcq();
+  $('ricorda').onclick = () => {
+    const v = {}; for (const k of CAMPI_ACQ) if (C(k).value.trim()) v[k] = C(k).value.trim();
+    try { if (Object.keys(v).length) localStorage.setItem(ACQ, JSON.stringify(v)); else localStorage.removeItem(ACQ); } catch (e) { msg('Questo browser non permette di ricordare i dati.', true); return; }
+    msg(Object.keys(v).length ? 'Acquirente ricordato su questo dispositivo: il contratto partirà già compilato. Per cambiarlo, correggi i dati e premi di nuovo.' : 'Acquirente dimenticato.');
+  };
   document.querySelectorAll('[data-vend]').forEach(e => e.addEventListener('change', () => {
     try { const v = {}; document.querySelectorAll('[data-vend]').forEach(x => { v[x.dataset.k] = x.value; }); localStorage.setItem(VEND, JSON.stringify(v)); } catch (er) {}
   }));
@@ -275,9 +285,9 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
     if (!confirm('Svuotare il modulo? I dati scritti si perdono.')) return;
     tbody.innerHTML = ''; nRighe = 0; manuale.clear();
     for (const e of campi()) { if (e.dataset.vend !== undefined) continue; if (e.type === 'checkbox') e.checked = false; else e.value = ''; }
-    C('luogo').value = 'Roma'; C('depAuto').value = '5.000,00'; C('depModo').value = 'bonifico'; C('data').value = dataOggi(); totali(); history.replaceState(null, '', location.pathname); msg('Modulo svuotato.');
+    applicaAcq(); C('luogo').value = 'Roma'; C('depAuto').value = '5.000,00'; C('depModo').value = 'bonifico'; C('data').value = dataOggi(); totali(); history.replaceState(null, '', location.pathname); msg('Modulo svuotato.');
   };
-  window.addEventListener('beforeunload', e => { if (C('ditta').value || tbody.rows.length) { e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', e => { if (tbody.rows.length) { e.preventDefault(); e.returnValue = ''; } });
   (async () => {
     try {
       const r = await fetch('data/stock.json?t=' + Date.now(), { cache: 'no-store' });

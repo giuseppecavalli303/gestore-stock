@@ -51,3 +51,6 @@ agente/analisi-stock.js
 
 # dotazioni dei cartelli scelte dal servizio Google (cache locale)
 agente/cartelli-dotazioni.json
+
+# acquirente abituale della vendita multipla (dati di un cliente)
+agente/contratto-acquirente.json
