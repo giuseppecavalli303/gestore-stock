@@ -64,6 +64,7 @@ function datiContratto(c, oggi) {
   const d = oggi || new Date();
   const campi = {
     Modello: [c.brand && c.brand !== 'Volkswagen' ? c.brand : '', c.modello, '- targa ' + c.targa].filter(Boolean).join(' '),
+    'Pratica interna n': /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(c.targa) ? c.targa : '',   // la targa nelle caselle della pratica interna, come la scrive Sfregola
     Colore: (c.web && c.web.colore) || c.colore || '',
     'Supplemento colore - Immatricolazione': imm && imm[1] !== '0000' ? imm[2] + '/' + imm[1] : '',
     'M3 KM': c.km ? c.km.toLocaleString('it-IT') : '',
@@ -82,7 +83,7 @@ async function compilaContratto(PDFLib, modello, dati) {
     f.setText(testo);
     if (f.isMultiline()) continue;
     const spazio = f.acroField.getWidgets()[0].getRectangle().width - 4;   // testo lungo (es. il modello): carattere piu' piccolo, fino a 6
-    let dim = 9; while (dim > 6 && font.widthOfTextAtSize(testo, dim) > spazio) dim -= 0.5;
+    let dim = 11; while (dim > 7 && font.widthOfTextAtSize(testo, dim) > spazio) dim -= 0.5;
     f.setFontSize(dim);
   }
   form.updateFieldAppearances(font);

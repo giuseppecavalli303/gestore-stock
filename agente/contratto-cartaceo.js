@@ -8,15 +8,15 @@ const { PDFDocument, StandardFonts, TextAlignment, rgb, drawCheckMark } = requir
 
 // Posizioni in pixel della scansione resa a scala 2 (x1, y1 alto, x2, y2 basso); t testo, c casella, n caselle a pettine.
 const E = [805, 1135]; // colonna Euro
-const euro = (nome, base) => ({ t: 't', nome, r: [E[0], base - 21, E[1], base], al: 2 });
-const riga = (nome, x1, x2, base) => ({ t: 't', nome, r: [x1, base - 21, x2, base] });
+const euro = (nome, base) => ({ t: 't', nome, r: [E[0], base - 23, E[1], base + 1], al: 2 });
+const riga = (nome, x1, x2, base) => ({ t: 't', nome, r: [x1, base - 23, x2, base + 1] });
 const pettine = (nome, x1, y1, x2, y2, n) => ({ t: 'n', nome, r: [x1, y1, x2, y2], n });
 const casella = (nome, x, y) => ({ t: 'c', nome, r: [x, y, x + 15, y + 15] });
 
 const CAMPI = [
   // intestazione
-  { t: 't', nome: 'Lettera di proposta n.', r: [802, 62, 1038, 98], fs: 11 },
-  { t: 't', nome: 'Pratica interna n.', r: [802, 104, 1038, 140], fs: 11 },
+  pettine('Lettera di proposta n.', 798, 58, 1040, 100, 7),
+  pettine('Pratica interna n.', 798, 101, 1040, 143, 7),   // una lettera per casella: qui va la targa
   // acquirente
   riga('Sottoscritto', 330, 1135, 226),
   riga('Nato a', 165, 805, 271),
@@ -114,7 +114,7 @@ async function crea(scansione) {
     f.disableSpellChecking();
     f.addToPage(page, { ...box, font });
     if (c.al === 2) f.setAlignment(TextAlignment.Right);
-    if (c.multi) f.setFontSize(6.4); else f.setFontSize(c.fs || (c.t === 'n' ? 11 : 9));
+    if (c.multi) f.setFontSize(6.4); else f.setFontSize(c.fs || (c.t === 'n' ? 13 : 11));   // caratteri grandi come il testo stampato del modulo
   }
   form.updateFieldAppearances(font);
   doc.setTitle("Lettera proposta d'acquisto - compilabile");
