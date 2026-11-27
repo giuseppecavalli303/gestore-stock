@@ -40,7 +40,6 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
 .premessa{margin:6px 0 2px;font-size:7.8pt;color:var(--ink2)}
 .sez{margin-top:6px;border:0.8pt solid var(--line);border-radius:4px;padding:3px 7px 4px;position:relative;break-inside:avoid}
 .sez>.et{position:absolute;top:-6px;left:7px;background:#fff;padding:0 4px;font-weight:700;font-size:7.2pt;letter-spacing:.06em;text-transform:uppercase;color:var(--navy)}
-.sez.ruolo>.et{right:7px;left:auto}
 .sez.auto{break-inside:auto}
 .r{display:flex;align-items:flex-end;gap:5px;margin-top:2px;white-space:nowrap}
 .r>label,.r>span{color:var(--ink2)}
@@ -58,7 +57,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
 .cb{width:8.5pt;height:8.5pt;margin:0 3px 0 0;vertical-align:-1pt;accent-color:#000}
 /* tabella delle auto */
 table.auto{width:100%;border-collapse:collapse;margin-top:3px;table-layout:fixed}
-table.auto th{font-weight:600;font-size:7pt;color:var(--ink2);text-align:left;padding:2px 3px;border-bottom:0.8pt solid var(--navy)}
+table.auto th{font-weight:600;font-size:6.8pt;line-height:1.1;color:var(--ink2);text-align:left;padding:2px 3px;border-bottom:0.8pt solid var(--navy)}
 table.auto td{padding:0 3px;border-bottom:0.5pt solid #e2e7ef;height:15px}
 table.auto td .f{width:100%;border-bottom:0;height:13px;line-height:13px;font-size:7.6pt;padding:0 1px}
 table.auto tr[data-ps="1"] td:nth-child(2){white-space:nowrap}
@@ -124,7 +123,7 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
   </div>
   <p class="premessa">Alle condizioni di vendita e fornitura di autovetture nuove di fabbrica per utilizzatori finali della Organizzazione Volkswagen, a lato riportate e d'uso, e presa visione delle stesse,</p>
 
-  <div class="sez ruolo"><span class="et">Acquirente</span>
+  <div class="sez"><span class="et">Acquirente</span>
     <div class="r"><label>la Ditta / Società</label><input class="f" data-k="ditta"><label>Partita I.V.A.</label><input class="pettine" data-k="piva" data-n="11"></div>
     <div class="r"><label>con sede in</label><input class="f" data-k="comune"><label>C.A.P.</label><input class="pettine" data-k="cap" data-n="5"><label>Prov.</label><input class="pettine" data-k="prov" data-n="2"></div>
     <div class="r"><label>via</label><input class="f" data-k="via"><label>n°</label><input class="f w18" data-k="civico"><label>Codice Fiscale</label><input class="pettine" data-k="cf" data-n="16"></div>
@@ -132,16 +131,16 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
     <div class="r"><label>e-mail / PEC</label><input class="f" data-k="email"><label>Codice destinatario (SDI)</label><input class="pettine" data-k="sdi" data-n="7"></div>
   </div>
 
-  <div class="sez ruolo"><span class="et">Venditrice</span>
-    <div class="r"><label>propone alla</label><span class="fisso">VALENTINO AUTOMOBILI ROMA SRL</span><span>, Concessionaria Volkswagen</span></div>
+  <div class="sez"><span class="et">Venditrice</span>
+    <div class="r"><label>propone alla</label><span class="fisso">VALENTINO AUTOMOBILI ROMA SRL</span><span>, Concessionaria Volkswagen</span><label style="margin-left:8px">venditore</label><input class="f" data-k="venditore" data-vend></div>
     <div class="r"><label>con sede in</label><input class="f" data-k="sedeVend" data-vend><label>tel.</label><input class="f w30" data-k="telVend" data-vend></div>
     <div class="r"><label>Partita I.V.A.</label><span class="fisso">12163031003</span><span style="flex:1"></span><label>Codice VGI</label><input class="pettine" data-k="vgi" data-n="5" data-vend><label>Codice Vend.</label><input class="pettine" data-k="codVend" data-n="5" data-vend></div>
   </div>
 
   <div class="sez auto"><span class="et">Autovetture</span>
     <div class="testo" style="margin-top:2px">l'acquisto in blocco delle seguenti autovetture usate (che la Venditrice si riserva di accettare con dichiarazione scritta e/o con la fornitura):</div>
-    <table class="auto"><colgroup><col style="width:5mm"><col style="width:22mm"><col><col style="width:35mm"><col style="width:13mm"><col style="width:14mm"><col style="width:26mm"><col style="width:23mm"><col class="solo-schermo" style="width:5mm"></colgroup>
-      <thead><tr><th>n°</th><th>Targa</th><th>Marca e modello</th><th>Telaio</th><th>Imm.</th><th class="e">Km</th><th>Colore</th><th class="e">Prezzo Euro</th><th class="solo-schermo"></th></tr></thead>
+    <table class="auto"><colgroup><col style="width:5mm"><col style="width:21mm"><col><col style="width:34mm"><col style="width:13mm"><col style="width:13mm"><col style="width:20mm"><col style="width:22mm"><col style="width:16mm"><col class="solo-schermo" style="width:5mm"></colgroup>
+      <thead><tr><th>n°</th><th>Targa</th><th>Marca e modello</th><th>Telaio</th><th>Imm.</th><th class="e">Km</th><th>Colore</th><th class="e">Prezzo chiavi in mano</th><th class="e">Radiazione</th><th class="solo-schermo"></th></tr></thead>
       <tbody id="righe"></tbody>
     </table>
   </div>
@@ -155,7 +154,8 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
     <div class="r"><label>con data prevista di consegna</label><input class="pettine" data-k="consegna" data-n="8"><label>luogo di ritiro</label><input class="f" data-k="ritiro"></div>
     <div class="r"><label>condizioni di pagamento:</label><input class="f" data-k="pagamento1"></div>
     <div class="r"><input class="f" data-k="pagamento2"></div>
-    <div class="r"><label>L'Acquirente versa a titolo di deposito cauzionale (Art. 1), l'importo di Euro</label><input class="f e" data-k="deposito"></div>
+    <div class="r"><label>L'Acquirente versa a titolo di deposito cauzionale (Art. 1) Euro</label><input class="f nm w26" data-k="depAuto" value="5.000,00"><span>per ciascuna delle</span><input class="f w14" data-k="depN"><span>autovetture,</span></div>
+    <div class="r"><span>per un totale di Euro</span><input class="f nm w30" data-k="deposito"><span>con</span><input class="f" data-k="depModo" value="bonifico"></div>
     <div class="nps" id="notaSpec" hidden>Auto indicate con PS: prezzo speciale in quanto auto in ottime condizioni, ma non ricondizionata nella carrozzeria. Prezzo speciale non cumulabile con le altre promozioni in corso.</div>
     <div class="r"><label>Note:</label><input class="f" data-k="note1"></div>
     <div class="r"><input class="f" data-k="note2"></div>
@@ -173,8 +173,9 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
   const VUOTO = /[?&]vuoto\b/.test(location.search);
   const VEND = 'su.contratto.venditrice';           // gli stessi dati del venditore del contratto nuovo
   const righePrezzi = [
-    ['', 'Totale autovetture', 'totAuto', '', 'tot'],
-    ['+', 'spese (passaggi di proprietà, trasporto, ecc.)', 'spese1', 'spese1d'],
+    ['', 'Totale autovetture (prezzi chiavi in mano)', 'totAuto', '', 'tot'],
+    ['+', 'Radiazione', 'totRad', 'radDesc'],
+    ['+', 'altre spese', 'spese1', 'spese1d'],
     ['+', '', 'spese2', 'spese2d'],
     ['−', 'Sconto', 'sconto', 'scontoDesc', 'sc'],
     ['=', 'Totale', 'totale', '', 'tot'],
@@ -189,7 +190,7 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
   let nRighe = 0;
   const riga = c => {
     const i = ++nRighe, tr = document.createElement('tr');
-    tr.innerHTML = `<td class="n">${i}</td><td><input class="f" data-k="a${i}targa"></td><td><input class="f" data-k="a${i}modello"></td><td><input class="f" data-k="a${i}telaio"></td><td><input class="f" data-k="a${i}imm"></td><td><input class="f e" data-k="a${i}km"></td><td><input class="f" data-k="a${i}colore"></td><td><input class="f e prezzo" data-k="a${i}prezzo" inputmode="decimal"></td><td class="solo-schermo"><button class="via" title="Togli questa auto" aria-label="Togli">×</button></td>`;
+    tr.innerHTML = `<td class="n">${i}</td><td><input class="f" data-k="a${i}targa"></td><td><input class="f" data-k="a${i}modello"></td><td><input class="f" data-k="a${i}telaio"></td><td><input class="f" data-k="a${i}imm"></td><td><input class="f e" data-k="a${i}km"></td><td><input class="f" data-k="a${i}colore"></td><td><input class="f e prezzo" data-k="a${i}prezzo" inputmode="decimal"></td><td><input class="f e rad" data-k="a${i}rad" inputmode="decimal"${VUOTO ? '' : ' value="100,00"'}></td><td class="solo-schermo"><button class="via" title="Togli questa auto" aria-label="Togli">×</button></td>`;
     tbody.appendChild(tr);
     if (c) {
       const set = (k, v) => { tr.querySelector(`[data-k="a${i}${k}"]`).value = v || ''; };
@@ -220,7 +221,9 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
   pettini(document);
   const campi = () => [...document.querySelectorAll('[data-k]')];
   const C = k => document.querySelector(`[data-k="${k}"]`);
-  if (VUOTO) { window.INIZIALI = { luogo: 'Roma', sedeVend: 'Via Tiburtina, 1097 - 00156 Roma' }; C('luogo').value = ''; $('barra').classList.add('nascosto'); return; }
+  if (VUOTO) { window.INIZIALI = { luogo: 'Roma', sedeVend: 'Via Tiburtina, 1097 - 00156 Roma', depAuto: '5.000,00', depModo: 'bonifico' };
+    for (let k = 1; k <= 15; k++) window.INIZIALI['a' + k + 'rad'] = '100,00';
+    for (const k of ['luogo', 'depAuto', 'depModo']) C(k).value = ''; $('barra').classList.add('nascosto'); return; }
 
   const num = s => { s = String(s || '').replace(/[^\d,.-]/g, ''); if (!s) return null; s = s.replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); const n = parseFloat(s); return isFinite(n) ? n : null; };
   const eur = n => n == null ? '' : n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -228,12 +231,16 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
   const somma = vals => vals.some(x => x != null) ? vals.reduce((s, x) => s + (x || 0), 0) : null;
   function totali() {
     if (!manuale.has('totAuto')) C('totAuto').value = eur(somma([...tbody.querySelectorAll('.prezzo')].map(e => num(e.value))));
-    if (!manuale.has('totale')) { const t = somma([num(C('totAuto').value), num(C('spese1').value), num(C('spese2').value)]); C('totale').value = eur(t == null ? null : t - Math.abs(num(C('sconto').value) || 0)); }
+    const rad = somma([...tbody.querySelectorAll('.rad')].map(e => num(e.value))), nRad = [...tbody.querySelectorAll('.rad')].filter(e => num(e.value)).length;
+    if (!manuale.has('totRad')) { C('totRad').value = eur(rad); C('radDesc').value = nRad ? nRad + (nRad === 1 ? ' auto' : ' auto') + ' (Euro ' + eur(rad / nRad) + ' ciascuna)' : ''; }
+    const n = tbody.rows.length; C('depN').value = n || '';
+    if (!manuale.has('deposito')) { const d = num(C('depAuto').value); C('deposito').value = d != null && n ? eur(d * n) : ''; }
+    if (!manuale.has('totale')) { const t = somma([num(C('totAuto').value), num(C('totRad').value), num(C('spese1').value), num(C('spese2').value)]); C('totale').value = eur(t == null ? null : t - Math.abs(num(C('sconto').value) || 0)); }
     if (!manuale.has('pagare')) C('pagare').value = eur(somma([num(C('totale').value), num(C('iva').value)]));
     $('notaSpec').hidden = !tbody.querySelector('tr[data-ps="1"]');
   }
-  document.addEventListener('input', e => { const t = e.target; if (!t.classList || !t.classList.contains('e')) return; if (['totAuto', 'totale', 'pagare'].includes(t.dataset.k)) manuale[t.value ? 'add' : 'delete'](t.dataset.k); totali(); });
-  document.addEventListener('focusout', e => { const t = e.target; if (!t.classList || !t.classList.contains('e') || /km$/.test(t.dataset.k || '')) return; const n = num(t.value); if (n != null) t.value = eur(n); totali(); });
+  document.addEventListener('input', e => { const t = e.target; if (!t.classList || !(t.classList.contains('e') || t.classList.contains('nm'))) return; if (['totAuto', 'totRad', 'totale', 'pagare', 'deposito'].includes(t.dataset.k)) manuale[t.value ? 'add' : 'delete'](t.dataset.k); totali(); });
+  document.addEventListener('focusout', e => { const t = e.target; if (!t.classList || !(t.classList.contains('e') || t.classList.contains('nm')) || /km$|depN$/.test(t.dataset.k || '')) return; const n = num(t.value); if (n != null) t.value = eur(n); totali(); });
   tbody.addEventListener('click', e => {
     if (!e.target.classList.contains('via')) return;
     e.target.closest('tr').remove();
@@ -268,7 +275,7 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
     if (!confirm('Svuotare il modulo? I dati scritti si perdono.')) return;
     tbody.innerHTML = ''; nRighe = 0; manuale.clear();
     for (const e of campi()) { if (e.dataset.vend !== undefined) continue; if (e.type === 'checkbox') e.checked = false; else e.value = ''; }
-    C('luogo').value = 'Roma'; C('data').value = dataOggi(); totali(); history.replaceState(null, '', location.pathname); msg('Modulo svuotato.');
+    C('luogo').value = 'Roma'; C('depAuto').value = '5.000,00'; C('depModo').value = 'bonifico'; C('data').value = dataOggi(); totali(); history.replaceState(null, '', location.pathname); msg('Modulo svuotato.');
   };
   window.addEventListener('beforeunload', e => { if (C('ditta').value || tbody.rows.length) { e.preventDefault(); e.returnValue = ''; } });
   (async () => {

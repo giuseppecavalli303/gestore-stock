@@ -36,12 +36,11 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
 .marca .ind{font-size:7.4pt;color:var(--ink2);margin-top:3px;line-height:1.35}
 .titolo{text-align:right}
 .titolo h1{margin:0;font-size:14pt;font-weight:700;color:var(--navy);letter-spacing:-.01em}
-.titolo .num{display:grid;grid-template-columns:auto 34mm;gap:3px 6px;align-items:end;margin-top:4px;font-size:8pt;color:var(--ink2)}
+.titolo .num{display:grid;grid-template-columns:auto 56mm;gap:3px 6px;align-items:end;margin-top:4px;font-size:8pt;color:var(--ink2)}
 .premessa{margin:6px 0 2px;font-size:7.8pt;color:var(--ink2)}
 /* sezioni */
 .sez{margin-top:5px;border:0.8pt solid #c9d1de;border-radius:4px;padding:3px 7px 4px;position:relative}
 .sez>.et{position:absolute;top:-6px;left:7px;background:#fff;padding:0 4px;font-weight:700;font-size:7.2pt;letter-spacing:.06em;text-transform:uppercase;color:var(--navy)}
-.sez.ruolo>.et{right:7px;left:auto}
 .r{display:flex;align-items:flex-end;gap:5px;margin-top:2px;white-space:nowrap}
 .r>label,.r>span{color:var(--ink2)}
 .r>.f{flex:1 1 0;min-width:0;width:0}
@@ -107,12 +106,12 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
     </div>
     <div class="titolo">
       <h1>Lettera proposta d'acquisto</h1>
-      <div class="num"><span>Lettera di proposta n°</span><input class="f" data-k="proposta"><span>Pratica interna n°</span><input class="f" data-k="pratica"></div>
+      <div class="num"><span>Classe veicolo</span><input class="f" data-k="classe"><span>Targa / Telaio</span><input class="f" data-k="targaTelaio"></div>
     </div>
   </div>
   <p class="premessa">Alle condizioni di vendita e fornitura di autovetture nuove di fabbrica per utilizzatori finali della Organizzazione Volkswagen, a lato riportate e d'uso, e presa visione delle stesse,</p>
 
-  <div class="sez ruolo"><span class="et">Acquirente</span>
+  <div class="sez"><span class="et">Acquirente</span>
     <div class="r"><label>il sottoscritto/la sottoscritta</label><input class="f" data-k="nome"></div>
     <div class="r"><label>nato/a a</label><input class="f" data-k="natoA"><span>(</span><input class="f w14" data-k="natoProv" maxlength="2"><span>) il</span><input class="pettine" data-k="natoIl" data-n="8" placeholder=""></div>
     <div class="r"><label>residente in</label><input class="f" data-k="comune"><label>C.A.P.</label><input class="pettine" data-k="cap" data-n="5"><label>Prov.</label><input class="pettine" data-k="prov" data-n="2"></div>
@@ -120,16 +119,16 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
     <div class="r"><label>Codice Fiscale o Partita I.V.A.</label><input class="pettine" data-k="cf" data-n="16"><label>e-mail</label><input class="f" data-k="email"></div>
   </div>
 
-  <div class="sez ruolo"><span class="et">Venditrice</span>
-    <div class="r"><label>propone alla</label><span class="fisso">VALENTINO AUTOMOBILI ROMA SRL</span><span>, Concessionaria Volkswagen</span></div>
+  <div class="sez"><span class="et">Venditrice</span>
+    <div class="r"><label>propone alla</label><span class="fisso">VALENTINO AUTOMOBILI ROMA SRL</span><span>, Concessionaria Volkswagen</span><label style="margin-left:8px">venditore</label><input class="f" data-k="venditore" data-vend></div>
     <div class="r"><label>con sede in</label><input class="f" data-k="sedeVend" data-vend><label>tel.</label><input class="f w30" data-k="telVend" data-vend></div>
     <div class="r"><label>Partita I.V.A.</label><span class="fisso">12163031003</span><span style="flex:1"></span><label>Codice VGI</label><input class="pettine" data-k="vgi" data-n="5" data-vend><label>Codice Vend.</label><input class="pettine" data-k="codVend" data-n="5" data-vend></div>
   </div>
 
   <div class="sez"><span class="et">Autovettura</span>
     <div class="testo" style="margin-top:2px">l'acquisto di una autovettura (che la Venditrice si riserva di accettare con dichiarazione scritta e/o con la fornitura):</div>
-    <div class="r"><label>Marca</label><input class="f w30" data-k="marca" value="Volkswagen"><label>modello</label><input class="f" data-k="modello"><label>targa</label><input class="f w26" data-k="targaAuto"><label>colore</label><input class="f w44" data-k="colore"></div>
-    <div class="r"><label>sigla modello</label><input class="pettine" data-k="sigla1" data-n="7"><input class="pettine" data-k="sigla2" data-n="7"><span style="flex:1"></span><label>sigla colore</label><input class="pettine" data-k="siglaCol" data-n="6"></div>
+    <div class="r"><label>Marca</label><input class="f w30" data-k="marca" value="Volkswagen"><label>modello</label><input class="f" data-k="modello"><label>colore</label><input class="f w44" data-k="colore"></div>
+    <div class="r"><label>immatricolazione</label><input class="f w22" data-k="imm"><label>km</label><input class="f w26" data-k="km"><label>telaio</label><input class="f" data-k="telaio"></div>
   </div>
 
   <div class="sez"><span class="et">Condizioni economiche</span>
@@ -153,7 +152,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
     <div class="r"><label>Omaggi (art. 3 Condizioni generali):</label><input class="f" data-k="omaggi1" value="Condizioni valide con finanziamento Volkswagen Bank e servizi inclusi"></div>
     <div class="r"><input class="f" data-k="omaggi2"></div>
     <div class="testo ps" id="notaSpec" hidden>Prezzo speciale in quanto auto in ottime condizioni, ma non ricondizionata nella carrozzeria. Prezzo speciale non cumulabile con le altre promozioni in corso.</div>
-    <div class="r"><label>L'Acquirente versa a titolo di deposito cauzionale (Art. 1), l'importo di Euro</label><input class="f e" data-k="deposito"></div>
+    <div class="r"><label>L'Acquirente versa a titolo di deposito cauzionale (Art. 1), l'importo di Euro</label><input class="f" data-k="deposito"></div>
   </div>
 
   <div class="firme">
@@ -169,11 +168,10 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
   const VEND = 'su.contratto.venditrice';           // solo i dati del venditore restano su questo dispositivo
   // righe dei prezzi: [operatore, voce, chiave euro, chiave descrizione, codice M, segnaposto descrizione]
   const righe = [
-    ['', 'Prezzo di listino cliente di', 'listino', 'listinoDesc'],
-    ['+', 'supplemento colore speciale e/o metallizzato', 'suppl', 'supplDesc', '', 'Immatricolazione'],
-    ...[1, 2, 3, 4, 5, 6, 7].map(i => ['+', `${i}) M`, `m${i}`, `m${i}d`, `m${i}c`]),
-    ['+', 'Accessori extra:', '', 'accDesc'],
-    ['', '1)', 'acc1', 'acc1d'], ['', '2)', 'acc2', 'acc2d'],
+    ['', 'Prezzo veicolo', 'listino', 'listinoDesc'],
+    ['+', 'Passaggio di proprietà', 'pp', 'ppDesc'],
+    ['+', 'Garanzia', 'gar', 'garDesc'],
+    ['+', 'Altre voci: 1)', 'v1', 'v1d'], ['', '2)', 'v2', 'v2d'], ['', '3)', 'v3', 'v3d'],
     ['−', 'Sconto', 'sconto', 'scontoDesc', '', '', 'sc'],
     ['=', "Prezzo dell'autovettura", 'prezzoAuto', '', '', '', 'tot'],
     ['+', 'spese di messa su strada <span class="pic">(soggette ad I.V.A.: spese di trasporto, deceratura, preconsegna, ecc.)</span>', 'speseIva', ''],
@@ -189,7 +187,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
     `<span class="op">${op}</span><span class="vo${cl ? ' ' + cl : ''}">${voce ? `<span${kc ? ' class="lm"' : ''}>${voce}</span>` : ''}${kc ? `<input class="pettine" data-k="${kc}" data-n="3">` : ''}${kd ? `<input class="f" data-k="${kd}"${ph ? ` value="${ph}"` : ''}>` : ''}</span>` +
     `<span class="eu">${ke ? `Euro <input class="f e" data-k="${ke}" inputmode="decimal">` : ''}</span>`).join('');
   // valori di partenza del modulo cartaceo (scritti a mano sulla copia in uso)
-  const iniz = { m3d: 'KM', m6d: "Passaggio di proprietà", accDesc: 'Garanzia' };
+  const iniz = {};
   const campi = [...document.querySelectorAll('[data-k]')];
   const C = Object.fromEntries(campi.map(e => [e.dataset.k, e]));
   for (const [k, v] of Object.entries(iniz)) C[k].value = v;
@@ -217,7 +215,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
   const manuale = new Set();
   const somma = ks => { const v = ks.map(k => num(C[k].value)); return v.some(x => x != null) ? v.reduce((s, x) => s + (x || 0), 0) : null; };
   function totali() {
-    if (!manuale.has('prezzoAuto')) { const p = somma(['listino', 'suppl', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'acc1', 'acc2']), sc = Math.abs(num(C.sconto.value) || 0); C.prezzoAuto.value = eur(p == null ? null : p - sc); }   // lo sconto si sottrae, anche se scritto senza il meno
+    if (!manuale.has('prezzoAuto')) { const p = somma(['listino', 'pp', 'gar', 'v1', 'v2', 'v3']), sc = Math.abs(num(C.sconto.value) || 0); C.prezzoAuto.value = eur(p == null ? null : p - sc); }   // lo sconto si sottrae, anche se scritto senza il meno
     if (!manuale.has('chiavi')) C.chiavi.value = eur(somma(['prezzoAuto', 'speseIva', 'speseIva2', 'iva', 'speseNo', 'speseNo2']));
   }
   for (const e of document.querySelectorAll('.f.e')) {
@@ -245,15 +243,17 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
   function compila(c) {
     const set = (k, v) => { if (C[k]) C[k].value = v == null ? '' : v; };
     set('marca', c.brand || ''); set('modello', [c.family && !String(c.modello || '').toUpperCase().includes(String(c.family).toUpperCase()) ? c.family : '', c.modello].filter(Boolean).join(' '));
-    set('targaAuto', c.targa); set('colore', (c.web && c.web.colore) || c.colore || '');
+    const vin = (c.web && c.web.vin) || '', targata = /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(c.targa);   // le auto non targate hanno in stampa le ultime cifre del telaio
+    set('classe', c.section || ''); set('targaTelaio', targata ? c.targa : (vin || c.targa)); set('telaio', vin);
+    set('colore', (c.web && c.web.colore) || c.colore || '');
     const imm = /^(\d{4})-(\d{2})/.exec(c.imm || '');
-    set('supplDesc', 'Immatricolazione' + (imm && imm[1] !== '0000' ? ' ' + imm[2] + '/' + imm[1] : ''));
-    set('m3d', 'KM' + (c.km ? ' ' + c.km.toLocaleString('it-IT') : ''));
-    set('accDesc', 'Garanzia' + (c.web && c.web.garanzia ? ' ' + c.web.garanzia + ' mesi' : ''));
+    set('imm', imm && imm[1] !== '0000' ? imm[2] + '/' + imm[1] : '');
+    set('km', c.km ? c.km.toLocaleString('it-IT') : '');
+    set('garDesc', c.web && c.web.garanzia ? c.web.garanzia + ' mesi' : '');
     $('notaSpec').hidden = !c.spec;   // prezzo speciale: la dicitura va nel contratto
     manuale.clear();
     const ok = c.prezzo > 0 && c.prezzoV > 0 && c.prezzoV + (c.pp || 0) === c.prezzo;
-    set('listino', ok ? eur(c.prezzoV) : ''); set('m6', ok && c.pp ? eur(c.pp) : '');
+    set('listino', ok ? eur(c.prezzoV) : ''); set('pp', ok && c.pp ? eur(c.pp) : '');
     totali();
     const stato = c.stato && c.stato !== 'In vendita' ? ` · stato: ${c.stato}` : '';
     if (!c.prezzo) msg(`${c.targa}: auto senza prezzo, gli importi vanno scritti a mano${stato}.`, true);
@@ -268,7 +268,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
   }
   $('targa').addEventListener('change', scegli);
   $('targa').addEventListener('input', () => { if (AUTO[norm($('targa').value)]) scegli(); });
-  $('stampa').onclick = () => { document.title = 'Proposta d\'acquisto ' + (C.targaAuto.value || '') + (C.nome.value ? ' - ' + C.nome.value : ''); window.print(); };
+  $('stampa').onclick = () => { document.title = 'Proposta d\'acquisto ' + (C.targaTelaio.value || '') + (C.nome.value ? ' - ' + C.nome.value : ''); window.print(); };
   $('svuota').onclick = () => {
     if (!confirm('Svuotare il modulo? I dati scritti si perdono.')) return;
     for (const e of campi) { if (e.dataset.vend !== undefined) continue; if (e.type === 'checkbox') e.checked = iniziali[e.dataset.k]; else e.value = iniziali[e.dataset.k]; }
