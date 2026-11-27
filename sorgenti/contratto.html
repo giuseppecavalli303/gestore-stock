@@ -48,7 +48,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
 .r>.f[class*=" w"]{flex:0 0 auto}
 .fisso{font-weight:600;color:var(--ink)}
 /* campi */
-.f{display:inline-block;border:0;border-bottom:0.7pt dotted #6b778a;background:transparent;font:500 8.6pt Inter,"Segoe UI",Arial,sans-serif;color:var(--blu);padding:0 2px;height:11pt;line-height:11pt;border-radius:0;outline:none}
+.f{display:inline-block;border:0;border-bottom:0.7pt dotted #6b778a;background:transparent;font:500 8.6pt Inter,"Segoe UI",Arial,sans-serif;color:var(--blu);padding:0 2px;height:10.6pt;line-height:10.6pt;border-radius:0;outline:none}
 .f:focus{background:#fff8d6}
 .f.e{text-align:right}
 .w10{width:10mm!important}.w14{width:14mm!important}.w18{width:18mm!important}.w22{width:22mm!important}.w26{width:26mm!important}.w30{width:30mm!important}.w36{width:36mm!important}.w44{width:44mm!important}.w54{width:54mm!important}
@@ -69,6 +69,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
 .prezzi .tot+.eu .f{font-weight:700;border-bottom-style:solid}
 .prezzi .chiavi{font-weight:700;color:var(--navy);font-size:9.2pt}
 .prezzi .chiavi+.eu .f{font-weight:700;border-bottom:1.2pt solid var(--navy)}
+.prezzi .sc{font-weight:600;color:var(--ink)}
 .prezzi .pic{font-size:6.8pt;color:var(--ink2)}
 .lm{flex:none;width:7mm}
 .testo{font-size:7.2pt;color:var(--ink2);line-height:1.38;margin-top:4px;white-space:normal}
@@ -173,6 +174,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
     ...[1, 2, 3, 4, 5, 6, 7].map(i => ['+', `${i}) M`, `m${i}`, `m${i}d`, `m${i}c`]),
     ['+', 'Accessori extra:', '', 'accDesc'],
     ['', '1)', 'acc1', 'acc1d'], ['', '2)', 'acc2', 'acc2d'],
+    ['−', 'Sconto', 'sconto', 'scontoDesc', '', '', 'sc'],
     ['=', "Prezzo dell'autovettura", 'prezzoAuto', '', '', '', 'tot'],
     ['+', 'spese di messa su strada <span class="pic">(soggette ad I.V.A.: spese di trasporto, deceratura, preconsegna, ecc.)</span>', 'speseIva', ''],
     ['', '', 'speseIva2', 'speseIva2d'],
@@ -215,7 +217,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Se
   const manuale = new Set();
   const somma = ks => { const v = ks.map(k => num(C[k].value)); return v.some(x => x != null) ? v.reduce((s, x) => s + (x || 0), 0) : null; };
   function totali() {
-    if (!manuale.has('prezzoAuto')) C.prezzoAuto.value = eur(somma(['listino', 'suppl', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'acc1', 'acc2']));
+    if (!manuale.has('prezzoAuto')) { const p = somma(['listino', 'suppl', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'acc1', 'acc2']), sc = Math.abs(num(C.sconto.value) || 0); C.prezzoAuto.value = eur(p == null ? null : p - sc); }   // lo sconto si sottrae, anche se scritto senza il meno
     if (!manuale.has('chiavi')) C.chiavi.value = eur(somma(['prezzoAuto', 'speseIva', 'speseIva2', 'iva', 'speseNo', 'speseNo2']));
   }
   for (const e of document.querySelectorAll('.f.e')) {
