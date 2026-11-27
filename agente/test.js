@@ -343,6 +343,14 @@ async function leggi(file) {
     const letto = (await PDFLib.PDFDocument.load(pdf)).getForm();
     ok(Object.entries(g.campi).every(([k, v]) => (letto.getTextField(k).getText() || '') === v), 'cartello: PDF compilato, ogni campo contiene il suo valore');
     ok(pdf.misure.every(m => m.larghezza <= m.spazio + 0.5), `cartello: ogni testo entra nel suo spazio (${pdf.misure.filter(m => m.ridotto).map(m => m.campo + ' ' + m.dimensione + 'pt').join(', ') || 'nessuno ridotto'})`);
+    // contratto cartaceo: dati dell'auto nei campi sopra la scansione, dicitura del prezzo speciale
+    const { datiContratto, compilaContratto } = new Function(src('cartello.js') + '\nreturn { datiContratto, compilaContratto };')();
+    const cf = datiContratto(fiat, new Date(2026, 10, 27)), cg = datiContratto(golf);
+    ok(cf.campi.Modello === 'Fiat 500 1.0 HYBRID SPORT - targa GH268NJ' && cf.campi['Supplemento colore - Immatricolazione'] === '01/2021' && cf.campi['M3 KM'] === '30.274' && cf.campi.Data === '27112026', `contratto: modello con la targa, immatricolazione, km, data (${cf.campi.Modello})`);
+    ok(cf.campi['Prezzo di listino'] === '13.950,00' && cf.campi['M6 euro'] === '500,00' && cf.campi['Prezzo chiavi in mano'] === '14.450,00' && /non ricondizionata nella carrozzeria/.test(cf.campi.Note) && cg.campi.Note === '' && cg.campi.Modello.startsWith('GOLF'), 'contratto: prezzi, dicitura solo per il prezzo speciale, "Volkswagen" non ripetuto');
+    ok(!datiContratto(Object.assign({}, golf, { prezzo: 33950 })).prezzi && !datiContratto(Object.assign({}, golf, { prezzo: 33950 })).campi['Prezzo chiavi in mano'], 'contratto: se veicolo + passaggio non fa il totale gli importi restano da scrivere');
+    const letto2 = (await PDFLib.PDFDocument.load(await compilaContratto(PDFLib, fs.readFileSync(path.join(root, 'cartelli', 'contratto-cartaceo.pdf')), cf))).getForm();
+    ok(Object.entries(cf.campi).every(([k, v]) => (letto2.getTextField(k).getText() || '') === v), 'contratto: PDF compilato, ogni campo contiene il suo valore');
   }
   // nomi dei clienti: cifrati nello stock pubblico, leggibili solo con la chiave del link
   {

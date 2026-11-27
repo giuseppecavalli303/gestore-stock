@@ -327,7 +327,7 @@
     $('drawer').innerHTML = `<button class="close" id="dClose" aria-label="Chiudi scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <header>${daAI && S.aiUltimo ? '<button class="linkbtn" id="dBack">← Torna ai consigli</button>' : daLista ? '<button class="linkbtn" id="dBackL">← Torna alla lista</button>' : ''}<div class="r3">${stPill(c)}${km0(c) ? '<span class="pill km0">Km 0</span>' : ''}${PROMO.has(c.targa) ? '<span class="pill bf">Black Friday</span>' : ''}${c._ds ? `<span class="tag">prima: ${esc(c._ds)}</span>` : ''}${ggVisibili() ? `<span class="age ${ageCls(c.giorni)}">${c.giorni == null ? '' : c.giorni + ' giorni in stock'}</span>` : ''}</div>
       <h2>${esc(c.brand)} ${esc(c.family)}</h2><p style="color:var(--ink2)">${esc(c.modello)}</p>
-      <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button>${S.cliente ? '' : '<button class="btn btn-ghost btn-sm" id="dCartello">Cartello salone</button><button class="btn btn-ghost btn-sm" id="dContratto">Contratto</button>'}<button class="btn btn-ghost btn-sm stella-btn" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}">${STELLA}<span>Lista</span></button></div></header>
+      <div class="r3">${plate(c.targa)}<button class="btn btn-ghost btn-sm" id="dCopy">Copia targa</button><button class="btn btn-primary btn-sm" id="dShare">Invia al cliente</button>${S.cliente ? '' : '<button class="btn btn-ghost btn-sm" id="dCartello">Cartello salone</button><button class="btn btn-ghost btn-sm" id="dContratto">Contratto nuovo</button><button class="btn btn-ghost btn-sm" id="dCartaceo">Contratto cartaceo</button>'}<button class="btn btn-ghost btn-sm stella-btn" data-stella="${c.targa}" aria-pressed="${inLista(c.targa)}">${STELLA}<span>Lista</span></button></div></header>
       <div class="scroll">
         ${c.web && c.web.foto.length ? `<div class="galwrap"><button class="gfr sx" aria-label="Foto precedente"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="gfr dx" aria-label="Foto successiva"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button><span class="gnum"></span><div class="gal">${c.web.foto.map((x, k) => `<a href="${foto(c, 800, k)}" target="_blank" rel="noopener"><img src="${foto(c, 800, k)}" alt="Foto ${k + 1}" loading="lazy"></a>`).join('')}</div></div>` : ''}
         ${c.web ? `<div class="links"><a class="btn btn-ghost btn-sm" href="${esc(c.web.url)}" target="_blank" rel="noopener">Annuncio sul sito</a>${c.web.giro360 ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.giro360)}" target="_blank" rel="noopener">Giro a 360°</a>` : ''}${c.web.video ? `<a class="btn btn-ghost btn-sm" href="${esc(c.web.video)}" target="_blank" rel="noopener">Video</a>` : ''}</div>` : `<p class="hint">Quest'auto non ha un annuncio su valentinoautomobili.it.</p>`}
@@ -353,6 +353,7 @@
     $('dShare').onclick = () => condividi(c);
     if ($('dCartello')) $('dCartello').onclick = () => stampaCartello(c);
     if ($('dContratto')) $('dContratto').onclick = () => window.open('contratto.html#' + encodeURIComponent(c.targa), '_blank');
+    if ($('dCartaceo')) $('dCartaceo').onclick = () => contrattoCartaceo(c);
     if ($('dBack')) $('dBack').onclick = () => mostraAI(S.aiUltimo);
     if ($('dBackL')) $('dBackL').onclick = () => apriLista();
     S.aperta = c.targa; S.vistaLista = false;
@@ -957,6 +958,21 @@
       toast(`Cartello ${dati.vw ? 'Usato Certificato' : 'Usato Selezionato'}${dati.ps ? ' prezzo speciale' : ''} pronto${manca}`);
     } catch (e) { if (finestra) finestra.close(); toast('Cartello non creato: controlla la connessione e riprova', true); }
     if (b) { b.disabled = false; b.textContent = 'Cartello salone'; }
+  }
+  // contratto cartaceo con i dati dell'auto: si apre il PDF, i dati del cliente si scrivono nei campi
+  async function contrattoCartaceo(c) {
+    const b = $('dCartaceo'), finestra = window.open('', '_blank');
+    if (b) { b.disabled = true; b.textContent = 'Preparo il contratto…'; }
+    try {
+      if (!window.PDFLib) await loadScript(PDFLIBJS);
+      const dati = datiContratto(c);
+      const modello = await (await fetch('cartelli/contratto-cartaceo.pdf')).arrayBuffer();
+      const url = URL.createObjectURL(new Blob([await compilaContratto(window.PDFLib, modello, dati)], { type: 'application/pdf' }));
+      if (finestra) finestra.location.href = url;
+      const a = document.createElement('a'); a.href = url; a.download = dati.nomeFile; if (!finestra) a.click();
+      toast(dati.prezzi ? 'Contratto pronto con i dati dell’auto' + (c.spec ? ' e la dicitura del prezzo speciale' : '') : 'Contratto pronto: prezzo da verificare, gli importi vanno scritti a mano', !dati.prezzi);
+    } catch (e) { if (finestra) finestra.close(); toast('Contratto non creato: controlla la connessione e riprova', true); }
+    if (b) { b.disabled = false; b.textContent = 'Contratto cartaceo'; }
   }
   const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('script')); document.head.appendChild(s); });
   async function loadBuffer(buf) {

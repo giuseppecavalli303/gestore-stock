@@ -53,3 +53,38 @@ async function compilaCartello(PDFLib, modello, dati) {
   out.misure = misure;
   return out;
 }
+
+// Contratto cartaceo (cartelli/contratto-cartaceo.pdf, fatto da agente/contratto-cartaceo.js): i dati dell'auto nei campi
+// sopra la scansione. Importi solo se veicolo + passaggio fa il totale; per il prezzo speciale la dicitura sopra "Roma".
+const DICITURA_PS = 'Prezzo speciale in quanto auto in ottime condizioni, ma non ricondizionata nella carrozzeria. Prezzo speciale non cumulabile con le altre promozioni in corso.';
+function datiContratto(c, oggi) {
+  const eu = n => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const imm = /^(\d{4})-(\d{2})/.exec(c.imm || '');
+  const ok = c.prezzo > 0 && c.prezzoV > 0 && c.prezzoV + (c.pp || 0) === c.prezzo;
+  const d = oggi || new Date();
+  const campi = {
+    Modello: [c.brand && c.brand !== 'Volkswagen' ? c.brand : '', c.modello, '- targa ' + c.targa].filter(Boolean).join(' '),
+    Colore: (c.web && c.web.colore) || c.colore || '',
+    'Supplemento colore - Immatricolazione': imm && imm[1] !== '0000' ? imm[2] + '/' + imm[1] : '',
+    'M3 KM': c.km ? c.km.toLocaleString('it-IT') : '',
+    Data: String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0') + d.getFullYear(),
+    Note: c.spec ? DICITURA_PS : '',
+  };
+  if (ok) Object.assign(campi, { 'Prezzo di listino': eu(c.prezzoV), "Prezzo dell'autovettura": eu(c.prezzo), 'Prezzo chiavi in mano': eu(c.prezzo) }, c.pp ? { 'M6 euro': eu(c.pp) } : {});
+  return { campi, prezzi: ok, nomeFile: `Contratto ${c.targa}.pdf` };
+}
+async function compilaContratto(PDFLib, modello, dati) {
+  const pdf = await PDFLib.PDFDocument.load(modello), form = pdf.getForm();
+  const font = await pdf.embedFont(PDFLib.StandardFonts.Helvetica);
+  for (const [campo, testo] of Object.entries(dati.campi)) {
+    if (!testo) continue;
+    let f; try { f = form.getTextField(campo); } catch (e) { continue; }   // campo assente
+    f.setText(testo);
+    if (f.isMultiline()) continue;
+    const spazio = f.acroField.getWidgets()[0].getRectangle().width - 4;   // testo lungo (es. il modello): carattere piu' piccolo, fino a 6
+    let dim = 9; while (dim > 6 && font.widthOfTextAtSize(testo, dim) > spazio) dim -= 0.5;
+    f.setFontSize(dim);
+  }
+  form.updateFieldAppearances(font);
+  return pdf.save();
+}

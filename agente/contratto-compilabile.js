@@ -1,6 +1,6 @@
 // PDF da compilare della lettera proposta d'acquisto con la grafica Valentino (contratto.html).
 // Stampa il modulo vuoto con Chrome, poi mette un campo del PDF sopra ogni riga e casella, nella stessa posizione.
-// Uso: node agente/contratto-compilabile.js [file.pdf]   (di base in Desktop/documenti utili, "Contratto Valentino - compilabile.pdf")
+// Uso: node agente/contratto-compilabile.js [file.pdf]   (di base in Desktop/documenti utili, "Contratto nuovo.pdf")
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -56,7 +56,7 @@ async function main(out) {
 }
 
 if (require.main === module) {
-  const out = process.argv[2] || path.join(process.env.USERPROFILE || '', 'Desktop', 'documenti utili', 'Contratto Valentino - compilabile.pdf');
+  const out = process.argv[2] || path.join(process.env.USERPROFILE || '', 'Desktop', 'documenti utili', 'Contratto nuovo.pdf');
   main(out).then(n => console.log(`${n} campi · ${out}`)).catch(e => { console.error(e.message); process.exit(1); });
 }
 module.exports = { main };
