@@ -27,6 +27,8 @@ fs.writeFileSync(path.join(root, 'index.html'), '<!doctype html><html lang="it">
 console.log(require('./simulatore.js').prepara(path.join(root, 'simulatore.html')));
 // pagina per il cliente (preventivo e lista di auto): statica, la copio accanto all'app
 fs.copyFileSync(path.join(__dirname, 'cliente.html'), path.join(root, 'cliente.html'));
+// lettera proposta d'acquisto con la grafica Valentino: si compila dalla targa (tasto Contratto della scheda)
+fs.copyFileSync(path.join(__dirname, 'contratto.html'), path.join(root, 'contratto.html'));
 // valutatore permute anche come pagina a se' (da aggiungere alla schermata Home): stessi stili e stesso codice dell'app
 const ui = src('ui.js'), stile = src('page.html').match(/<style>[\s\S]*?<\/style>/)[0];
 const servizio = k => (ui.match(new RegExp('const ' + k + " = '([^']+)'")) || [])[1];
