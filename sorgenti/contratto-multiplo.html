@@ -14,7 +14,8 @@
 /* Lettera proposta d'acquisto per la vendita di piu' auto in blocco (commercianti), con la grafica del contratto nuovo.
    Le auto si aggiungono scrivendo o incollando le targhe, oppure arrivano dalla Lista dell'app (#l=TARGA,TARGA).
    I prezzi si scrivono a mano: per i commercianti non valgono quelli esposti. I dati dell'acquirente non si salvano.
-   ?vuoto da' il modulo vuoto con 15 righe (lo usa agente/contratto-compilabile.js --multipla). */
+   ?vuoto da' il modulo vuoto con 15 righe, ?vuoto=10 con 10 righe piu' alte per scrivere a mano
+   (lo usa agente/contratto-compilabile.js --multipla [--righe=10]). */
 :root{--navy:#0a2a5c;--ink:#14181f;--ink2:#4a5566;--line:#c9d1de;--bg:#e9edf3;--txt:#000}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 Inter,"Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%}
@@ -63,6 +64,8 @@ table.auto td .f{width:100%;border-bottom:0;height:13px;line-height:13px;font-si
 table.auto tr[data-ps="1"] td:nth-child(2){white-space:nowrap}
 table.auto tr[data-ps="1"] td:nth-child(2) .f{width:calc(100% - 17px)}
 table.auto td.n{color:var(--ink2);font-size:7pt;text-align:center}
+table.auto tbody.alte td{height:21px}
+table.auto tbody.alte td .f{height:19px;line-height:19px}
 table.auto .e{text-align:right}
 table.auto thead{display:table-header-group}
 table.auto tr{break-inside:avoid}
@@ -206,8 +209,10 @@ table.auto .via{border:0;background:none;color:#b42318;cursor:pointer;font-size:
     }
     return tr;
   };
-  if (VUOTO) {   // modulo vuoto per il PDF da compilare: 15 righe
-    for (let k = 0; k < 15; k++) riga();
+  if (VUOTO) {   // modulo vuoto per il PDF da compilare: 15 righe, o quante ne dice ?vuoto=N (fino a 10 piu' alte)
+    const n = Math.min(15, +(/[?&]vuoto=(\d+)/.exec(location.search) || [])[1] || 15);
+    for (let k = 0; k < n; k++) riga();
+    if (n <= 10) tbody.classList.add('alte');
     document.querySelectorAll('.solo-schermo').forEach(e => e.remove());
   }
   // caselle a pettine, come nel contratto nuovo
