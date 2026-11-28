@@ -365,6 +365,15 @@ async function leggi(file) {
     const senza = dati(); await decifraClienti(senza, null, require('crypto').webcrypto.subtle);
     ok(sbagliata.cars[0].acq === '' && senza.cars[0].acq === '', 'clienti: senza chiave o con una chiave sbagliata niente nome');
   }
+  {
+    const { zonaDi, ORDINE, ZONE_ROMA } = require('./zone-roma.js');
+    const z = (cap, loc, prov) => zonaDi({ cap, loc, prov }).zona;
+    ok(z('00156', 'ROMA', 'RM').includes('Tiburtina') && z('00122', 'Roma', 'RM').includes('Litorale') && z('00197', 'ROMA', 'RM').includes('Nord'), 'zone: Roma divisa per C.A.P.');
+    ok(z('00012', 'GUIDONIA MONTECELIO', 'RM').startsWith('Provincia · Tiburtina') && z('00010', 'SANT ANGELO ROMANO', 'RM') === z('00010', "Sant'Angelo Romano", 'RM') && z('00047', 'MARINO', 'RM').includes('Castelli'), 'zone: provincia per comune, con o senza apostrofo');
+    ok(z('04100', 'LATINA', 'LT') === 'Lazio fuori provincia' && z('40138', 'BOLOGNA', 'BO') === 'Altre regioni' && z('00199', 'ROMA', 'RM') !== z('00100', 'ROMA', 'RM') && zonaDi(undefined).zona === 'Senza indirizzo', 'zone: fuori provincia, C.A.P. sconosciuto e senza indirizzo');
+    const caps = ZONE_ROMA.flatMap(([, c]) => Object.keys(c));
+    ok(new Set(caps).size === caps.length && ORDINE.length === new Set(ORDINE).size, 'zone: ogni C.A.P. di Roma in una sola zona');
+  }
   //__VALUTATORE__
   console.log(errori ? `\n${errori} controlli falliti` : '\nTutto in ordine');
   process.exit(errori ? 1 : 0);

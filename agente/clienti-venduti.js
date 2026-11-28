@@ -17,6 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const puppeteer = require('puppeteer-core');
+const { zonaDi, ORDINE } = require('./zone-roma');
 
 const DIR = __dirname;
 const DAL = '2022-05-05';
@@ -34,7 +35,11 @@ const titolo = s => s.toLowerCase().replace(/(^|[\s'])\S/g, m => m.toUpperCase()
 
 function leggi() {
   const p = path.join(DIR, 'cross-clienti-tutte.txt');
-  const L = fs.readFileSync(p, 'latin1').split(/\r?\n/).filter(Boolean);
+  // le esportazioni recenti di CROSS sono in UTF-8 (con "Località"), le vecchie in latin1
+  const buf = fs.readFileSync(p);
+  let testo = buf.toString('utf8');
+  if (testo.includes('�')) testo = buf.toString('latin1');
+  const L = testo.replace(/^﻿/, '').split(/\r?\n/).filter(Boolean);
   const h = L[0].split(';');
   const col = n => h.indexOf(n);
   const c = {
@@ -183,6 +188,53 @@ function html(d, oggi) {
   </body></html>`;
 }
 
+// --mio: gli stessi clienti divisi per zona (agente/zone-roma.js), per organizzare le visite. Dentro ogni zona per
+// quartiere (C.A.P.) o comune e poi per via; una colonna vuota per gli appunti quando si stampa.
+function htmlZone(d, oggi) {
+  const perZona = new Map();
+  for (const c of d.clienti) {
+    const z = zonaDi(c.indirizzo);
+    const zona = perZona.get(z.zona) || new Map();
+    (zona.get(z.gruppo) || zona.set(z.gruppo, []).get(z.gruppo)).push(c);
+    perZona.set(z.zona, zona);
+  }
+  const zone = ORDINE.filter(z => perZona.has(z)).map(z => {
+    const gruppi = [...perZona.get(z).entries()].map(([g, cl]) => [g, cl.sort((a, b) => ((a.indirizzo || {}).via || '').localeCompare((b.indirizzo || {}).via || '', 'it'))]);
+    // Roma per C.A.P.; provincia e fuori: prima i comuni con piu' clienti
+    gruppi.sort(z.startsWith('Roma') ? (a, b) => a[0].localeCompare(b[0]) : (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'it'));
+    return { z, gruppi, n: gruppi.reduce((s, g) => s + g[1].length, 0) };
+  });
+  const ultima = c => c.auto[c.auto.length - 1];
+  const riga = c => { const a = c.indirizzo || {}; return `<tr><td class="nome">${esc(c.nome)}${c.auto.length > 1 ? ` <span class="n">${c.auto.length} auto</span>` : ''}</td>
+    <td>${esc(titolo(a.via || ''))}${a.cap ? `<div class="cap">${esc(a.cap)} ${esc(titolo(a.loc || ''))}</div>` : ''}</td>
+    <td class="tel">${c.tel.map(esc).join('<br>') || '<span class="manca">manca</span>'}</td>
+    <td>${esc(ultima(c).modello)}<div class="cap">${it(ultima(c).data)}</div></td><td class="app"></td></tr>`; };
+  const sommario = zone.map(x => `<tr><td>${esc(x.z)}</td><td class="num">${x.n}</td><td class="pic">${x.gruppi.slice(0, 6).map(([g, cl]) => `${esc(g.replace(/^\d{5} · /, ''))} ${cl.length}`).join(' · ')}${x.gruppi.length > 6 ? ' …' : ''}</td></tr>`).join('');
+  const sezioni = zone.map(x => `<h2>${esc(x.z)} <span>${x.n} clienti</span></h2>${x.gruppi.map(([g, cl]) => `<table><thead><tr><th colspan="5" class="gr">${esc(g)} <span>(${cl.length})</span></th></tr></thead><tbody>${cl.map(riga).join('')}</tbody></table>`).join('')}`).join('');
+  return `<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Clienti per zona</title><style>
+  @page { size: A4; }
+  body { font: 9pt/1.35 'Segoe UI', Arial, sans-serif; color: #1a1a1a; margin: 0; }
+  h1 { font-size: 17pt; margin: 0 0 2px; } .sotto, .nota { color: #555; } .nota { font-size: 8.5pt; }
+  h2 { font-size: 13pt; margin: 0 0 6px; padding-bottom: 3px; border-bottom: 2px solid #0a2a5c; color: #0a2a5c; page-break-before: always; }
+  h2 span, th.gr span { font-weight: 400; color: #555; font-size: 9pt; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; page-break-inside: auto; } tr { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  th { text-align: left; font-size: 8.5pt; color: #555; border-bottom: 1.5px solid #333; padding: 4px; }
+  th.gr { font-size: 10pt; color: #1a1a1a; background: #eef3fb; border-bottom: 1px solid #b9c8e0; }
+  td { padding: 3px 4px; vertical-align: top; border-bottom: 1px solid #e3e3e3; }
+  .nome { font-weight: 600; width: 27%; } .cap { color: #666; font-size: 8pt; } .app { width: 18%; border-bottom: 1px solid #bbb; }
+  .n { font-weight: 400; font-size: 7.5pt; background: #eef3fb; color: #24548f; border-radius: 3px; padding: 0 4px; white-space: nowrap; }
+  .tel { white-space: nowrap; width: 15%; }
+  .manca { color: #a33; font-style: italic; } .num { text-align: right; font-weight: 600; width: 50px; } .pic { color: #555; font-size: 8pt; }
+  </style></head><body>
+  <h1>I miei clienti per zona</h1>
+  <div class="sotto">${d.clienti.length} clienti · aggiornato al ${it(oggi)} · da CROSS Sales e dalle stampe · uso interno, dati riservati</div>
+  <p class="nota">Roma è divisa per C.A.P. lungo le consolari, partendo dalla Tiburtina e girando in senso orario; la provincia per comune. I quartieri accanto ai C.A.P. sono indicativi. In ogni gruppo i clienti sono in ordine di via, con l'ultima auto comprata e una colonna vuota per gli appunti.</p>
+  <table><thead><tr><th>Zona</th><th class="num">Clienti</th><th>Quartieri e comuni con più clienti</th></tr></thead><tbody>${sommario}</tbody></table>
+  ${sezioni}
+  </body></html>`;
+}
+
 // indirizzo su una riga: "Via Roma 1, 00100 Roma (RM)"
 const indirizzoTesto = a => (a && (a.via || a.loc) ? [titolo(a.via), [a.cap, titolo(a.loc)].filter(Boolean).join(' ') + (a.prov ? ` (${a.prov.toUpperCase()})` : '')].filter(x => x.trim()).join(', ') : '');
 
@@ -190,9 +242,9 @@ const indirizzoTesto = a => (a && (a.via || a.loc) ? [titolo(a.via), [a.cap, tit
 function excelHtml(d) {
   const r = d.clienti.map(c => c.auto.map((a, i) => `<tr>
     <td style="font-weight:${i ? 400 : 700}">${i ? '' : esc(c.nome)}</td><td style="mso-number-format:'\\@'">${i ? '' : esc(c.tel.join(' / '))}</td><td>${i ? '' : esc(c.mail.join(' / '))}</td><td>${i ? '' : esc(indirizzoTesto(c.indirizzo))}</td>
-    <td>${i ? '' : c.auto.length}</td><td style="mso-number-format:'dd\\/mm\\/yyyy'">${it(a.data)}</td><td style="mso-number-format:'dd\\/mm\\/yyyy'">${it(a.consegna)}</td><td>${esc(a.modello)}</td><td>${esc(a.targa)}</td><td>${a.altro ? 'altro venditore in CROSS' : a.nuova ? 'nuova: dalla stampa, telefono da CROSS' : ''}</td></tr>`).join('')).join('');
+    <td>${i ? '' : c.auto.length}</td><td style="mso-number-format:'dd\\/mm\\/yyyy'">${it(a.data)}</td><td style="mso-number-format:'dd\\/mm\\/yyyy'">${it(a.consegna)}</td><td>${esc(a.modello)}</td><td>${esc(a.targa)}</td><td>${a.altro ? 'altro venditore in CROSS' : a.nuova ? 'nuova: dalla stampa, telefono da CROSS' : ''}</td><td>${esc(zonaDi(c.indirizzo).zona)}</td><td>${esc(zonaDi(c.indirizzo).gruppo)}</td></tr>`).join('')).join('');
   return `<html><head><meta charset="utf-8"></head><body><table>
-  <tr style="font-weight:700;background:#dde6f3"><td>Cliente</td><td>Telefono</td><td>Email</td><td>Indirizzo</td><td>Auto comprate</td><td>Data acquisto</td><td>Data consegna</td><td>Modello</td><td>Targa</td><td>Nota</td></tr>${r}</table></body></html>`;
+  <tr style="font-weight:700;background:#dde6f3"><td>Cliente</td><td>Telefono</td><td>Email</td><td>Indirizzo</td><td>Auto comprate</td><td>Data acquisto</td><td>Data consegna</td><td>Modello</td><td>Targa</td><td>Nota</td><td>Zona</td><td>Quartiere / comune</td></tr>${r}</table></body></html>`;
 }
 
 // File contatti per l'iPhone (vCard 3.0, UTF-8): nome e cognome, telefoni, email, indirizzo (quando l'esportazione
@@ -261,6 +313,13 @@ async function main() {
       await p.goto('file:///' + (base + '.html').replace(/\\/g, '/'), { waitUntil: 'networkidle0' });
       await p.pdf({ path: base + '.pdf', format: 'A4', preferCSSPageSize: true, printBackground: true, margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' } });
       fs.unlinkSync(base + '.html');
+      if (mio) {
+        const zone = path.join(out, 'I miei clienti per zona');
+        fs.writeFileSync(zone + '.html', htmlZone(d, oggi));
+        await p.goto('file:///' + (zone + '.html').replace(/\\/g, '/'), { waitUntil: 'networkidle0' });
+        await p.pdf({ path: zone + '.pdf', format: 'A4', preferCSSPageSize: true, printBackground: true, margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' } });
+        fs.unlinkSync(zone + '.html');
+      }
       fs.writeFileSync(base + '-excel.html', excelHtml(d));
       excel.push([base + '-excel.html', base + '.xlsx']);
       if (mio) fs.writeFileSync(base + '.vcf', vcard(d));
@@ -281,5 +340,5 @@ async function main() {
   }
 }
 
-module.exports = { prepara, leggi, chiaveNome };
+module.exports = { prepara, leggi, chiaveNome, htmlZone };
 if (require.main === module) main().catch(e => { console.error(e.message); process.exit(1); });
