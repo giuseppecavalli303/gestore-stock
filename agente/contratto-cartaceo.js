@@ -4,7 +4,7 @@
 // Uso: node agente/contratto-cartaceo.js [scansione.pdf]   (di base Desktop/documenti utili/Contratto cartaceo.pdf)
 const fs = require('fs');
 const path = require('path');
-const { PDFDocument, StandardFonts, TextAlignment, rgb, drawCheckMark } = require('pdf-lib');
+const { PDFDocument, StandardFonts, TextAlignment, rgb, degrees, drawCheckMark } = require('pdf-lib');
 
 // Posizioni in pixel della scansione resa a scala 2 (x1, y1 alto, x2, y2 basso); t testo, c casella, n caselle a pettine.
 const E = [805, 1135]; // colonna Euro
@@ -95,6 +95,7 @@ const CAMPI = [
   { t: 't', nome: 'Note', r: [92, 1565, 1135, 1590], multi: true },
 ];
 
+const PREMESSA = "Alle condizioni di vendita di autovetture usate, a lato riportate e d'uso, e presa visione delle stesse,";
 const NERO = rgb(0, 0, 0);   // testo compilato nero
 const spunta = (cb, w) => { const { width, height } = w.getRectangle(); return { normal: { on: drawCheckMark({ x: width / 2, y: height / 2, size: Math.min(width, height) * 0.8, thickness: 1.4, color: NERO }), off: [] } }; };
 const nome = c => c.nome.split('.').join('');   // i punti nei nomi dei campi non sono ammessi
@@ -103,6 +104,11 @@ async function crea(scansione) {
   const doc = await PDFDocument.load(fs.readFileSync(scansione));
   const page = doc.getPage(0), H = page.getHeight();
   const font = await doc.embedFont(StandardFonts.Helvetica);
+  // il modulo stampato parla di "autovetture nuove di fabbrica": copro la frase e scrivo quella per l'usato.
+  // La scansione e' un po' storta (a destra sale di circa 11 px), quindi il bianco e il testo seguono la stessa pendenza.
+  const zona = [[85, 162], [1140, 151], [1140, 182], [460, 190], [460, 208], [85, 209]];
+  page.drawSvgPath('M ' + zona.map(([x, y]) => `${x / 2} ${y / 2}`).join(' L ') + ' Z', { x: 0, y: H, color: rgb(1, 1, 1), borderWidth: 0 });
+  page.drawText(PREMESSA, { x: 92 / 2, y: H - 182 / 2, size: 9.6, font, color: rgb(0.1, 0.1, 0.1), rotate: degrees(0.6) });
   const form = doc.getForm();
   for (const c of CAMPI) {
     const [x1, y1, x2, y2] = c.r;
